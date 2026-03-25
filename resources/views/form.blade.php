@@ -216,6 +216,49 @@
             flex-wrap: wrap;
         }
 
+        .form-page .form-section-title {
+            justify-content: flex-start;
+        }
+
+        .form-page .section-toggle {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            border: 1px solid var(--slate-200);
+            border-radius: 0.5rem;
+            background: #fff;
+            color: var(--slate-600);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .form-page .section-toggle:hover {
+            border-color: var(--blue-300);
+            color: var(--blue-700);
+            background: var(--blue-50);
+        }
+
+        .form-page .btn + .section-toggle {
+            margin-left: 0.5rem;
+        }
+
+        .form-page .section-toggle svg {
+            width: 16px;
+            height: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .form-page .form-section.is-collapsed .section-toggle svg {
+            transform: rotate(-90deg);
+        }
+
+        .form-page .form-section.is-collapsed > :not(.form-section-title) {
+            display: none;
+        }
+
         @media (min-width: 1081px) {
             .form-page .quantity-group {
                 grid-column: 1;
@@ -432,70 +475,6 @@
                     <label class="form-label">LME Rate</label>
                     <input type="number" name="lme_rate" class="form-input" id="lmeRate"
                         value="{{ $costingData->lme_rate ?? '' }}" step="0.01" placeholder="8500">
-                </div>
-            </div>
-        </div>
-
-        <!-- Section C: Actual Costs -->
-        <div class="card form-section">
-            <div class="form-section-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 1v22" />
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                </svg>
-                Biaya Actual
-            </div>
-            <div class="form-grid cost-grid">
-                <div class="form-group">
-                    <label class="form-label">Material Cost (IDR)</label>
-                    <input type="number" name="material_cost" class="form-input" id="materialCost"
-                        value="{{ $costingData->material_cost ?? '' }}" required placeholder="0"
-                        onchange="calculateTotals()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Labor Cost (IDR)</label>
-                    <input type="number" name="labor_cost" class="form-input" id="laborCost"
-                        value="{{ $costingData->labor_cost ?? '' }}" required placeholder="0"
-                        onchange="calculateTotals()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Overhead Cost (IDR)</label>
-                    <input type="number" name="overhead_cost" class="form-input" id="overheadCost"
-                        value="{{ $costingData->overhead_cost ?? '' }}" required placeholder="0"
-                        onchange="calculateTotals()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Scrap Cost (IDR)</label>
-                    <input type="number" name="scrap_cost" class="form-input" id="scrapCost"
-                        value="{{ $costingData->scrap_cost ?? '' }}" required placeholder="0"
-                        onchange="calculateTotals()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Revenue (IDR)</label>
-                    <input type="number" name="revenue" class="form-input" id="revenue"
-                        value="{{ $costingData->revenue ?? '' }}" required placeholder="0"
-                        onchange="calculateTotals()">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Qty Good</label>
-                    <input type="number" name="qty_good" class="form-input" id="qtyGood"
-                        value="{{ $costingData->qty_good ?? '' }}" required placeholder="0"
-                        onchange="calculateTotals()">
-                </div>
-            </div>
-
-            <div class="calc-box" style="margin-top: 1.5rem;">
-                <div class="calc-item">
-                    <span class="calc-label">Total Cost</span>
-                    <span class="calc-value" id="calcTotalCost">Rp 0</span>
-                </div>
-                <div class="calc-item">
-                    <span class="calc-label">Cost Per Unit</span>
-                    <span class="calc-value" id="calcCostPerUnit">Rp 0</span>
-                </div>
-                <div class="calc-item">
-                    <span class="calc-label">Margin</span>
-                    <span class="calc-value" id="calcMargin">0%</span>
                 </div>
             </div>
         </div>
@@ -856,6 +835,69 @@
             </div>
         </div>
 
+        <!-- Section C: Resume COGM -->
+        <div class="card form-section">
+            <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 1v22" />
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                </svg>
+                Resume COGM
+            </div>
+            <div class="form-grid cost-grid">
+                <div class="form-group">
+                    <label class="form-label">Total Material Cost (IDR)</label>
+                    <input type="number" name="material_cost" class="form-input" id="materialCost"
+                        value="{{ $costingData->material_cost ?? '' }}" required placeholder="0"
+                        readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Process Cost (IDR)</label>
+                    <input type="number" name="labor_cost" class="form-input" id="laborCost"
+                        value="{{ $costingData->labor_cost ?? '' }}" required placeholder="0"
+                        readonly>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Depresiasi Tooling Cost (IDR)</label>
+                    <input type="number" name="overhead_cost" class="form-input" id="overheadCost"
+                        value="{{ $costingData->overhead_cost ?? '' }}" required placeholder="0"
+                        onchange="calculateTotals()">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Administrasi Cost (IDR)</label>
+                    <input type="number" name="scrap_cost" class="form-input" id="scrapCost"
+                        value="{{ $costingData->scrap_cost ?? '' }}" required placeholder="0"
+                        onchange="calculateTotals()">
+                </div>
+            </div>
+
+            <input type="hidden" name="revenue" id="revenue" value="{{ $costingData->revenue ?? 0 }}">
+            <input type="hidden" name="qty_good" id="qtyGood" value="{{ $costingData->qty_good ?? 0 }}">
+
+            <div class="calc-box" style="margin-top: 1.5rem;">
+                <div class="calc-item">
+                    <span class="calc-label">Total Material Cost</span>
+                    <span class="calc-value" id="calcTotalMaterialCost">Rp 0</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">Process Cost</span>
+                    <span class="calc-value" id="calcProcessCost">Rp 0</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">Depresiasi Tooling Cost</span>
+                    <span class="calc-value" id="calcToolingCost">Rp 0</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">Administrasi Cost</span>
+                    <span class="calc-value" id="calcAdministrasiCost">Rp 0</span>
+                </div>
+                <div class="calc-item">
+                    <span class="calc-label">COGM</span>
+                    <span class="calc-value" id="calcCogsTotal">Rp 0</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Submit Buttons -->
         <div class="form-actions">
             <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ route('dashboard', absolute: false) }}'">
@@ -1095,25 +1137,19 @@
 
 
 
-        // Calculate totals in Section B
+        // Calculate totals for Resume COGM
         function calculateTotals(recalculateMaterialTable = true) {
             const materialCost = parseFloat(document.getElementById('materialCost').value) || 0;
             const laborCost = parseFloat(document.getElementById('laborCost').value) || 0;
             const overheadCost = parseFloat(document.getElementById('overheadCost').value) || 0;
             const scrapCost = parseFloat(document.getElementById('scrapCost').value) || 0;
-            const revenue = parseFloat(document.getElementById('revenue').value) || 0;
-            const qtyGood = parseFloat(document.getElementById('qtyGood').value) || 0;
+            const cogmTotal = materialCost + laborCost + overheadCost + scrapCost;
 
-            const totalCost = materialCost + laborCost + overheadCost + scrapCost;
-            const costPerUnit = qtyGood > 0 ? totalCost / qtyGood : 0;
-            const margin = revenue > 0 ? ((revenue - totalCost) / revenue) * 100 : 0;
-
-            document.getElementById('calcTotalCost').textContent = formatRupiah(totalCost);
-            document.getElementById('calcCostPerUnit').textContent = formatRupiah(costPerUnit);
-
-            const marginElement = document.getElementById('calcMargin');
-            marginElement.textContent = margin.toFixed(2) + '%';
-            marginElement.className = 'calc-value ' + (margin >= 0 ? 'positive' : 'negative');
+            document.getElementById('calcTotalMaterialCost').textContent = formatRupiah(materialCost);
+            document.getElementById('calcProcessCost').textContent = formatRupiah(laborCost);
+            document.getElementById('calcToolingCost').textContent = formatRupiah(overheadCost);
+            document.getElementById('calcAdministrasiCost').textContent = formatRupiah(scrapCost);
+            document.getElementById('calcCogsTotal').textContent = formatRupiah(cogmTotal);
 
             // Revalidate material cost
             if (recalculateMaterialTable) {
@@ -1239,6 +1275,14 @@
             if (totalCostUnitEl) {
                 totalCostUnitEl.textContent = formatWholeNumber(totalCostUnit);
             }
+
+            // Sync process cost in Resume COGM from total cycle time cost
+            const laborCostInput = document.getElementById('laborCost');
+            if (laborCostInput) {
+                laborCostInput.value = Math.round(totalCostUnit);
+            }
+
+            calculateTotals(false);
         }
 
         function addCycleTimeRow() {
@@ -1291,8 +1335,37 @@
             });
         }
 
+        function initSectionToggles() {
+            const sections = document.querySelectorAll('.form-page .form-section');
+
+            sections.forEach((section, index) => {
+                const title = section.querySelector('.form-section-title');
+                if (!title) return;
+
+                const toggleBtn = document.createElement('button');
+                toggleBtn.type = 'button';
+                toggleBtn.className = 'section-toggle';
+                toggleBtn.setAttribute('aria-expanded', 'true');
+                toggleBtn.setAttribute('aria-controls', `section-content-${index}`);
+                toggleBtn.title = 'Hide/Show bagian ini';
+                toggleBtn.innerHTML = `
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                `;
+
+                toggleBtn.addEventListener('click', () => {
+                    const isCollapsed = section.classList.toggle('is-collapsed');
+                    toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+                });
+
+                title.appendChild(toggleBtn);
+            });
+        }
+
         // Initialize calculations on page load
         document.addEventListener('DOMContentLoaded', function () {
+            initSectionToggles();
             formatForecastDisplay();
             calculateTotals();
 
