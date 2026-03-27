@@ -1295,14 +1295,13 @@
                         </svg>
                         <span>Form Input</span>
                     </a>
-                    <a href="{{ route('document-receipts.index', absolute: false) }}"
-                        class="sidebar-nav-item {{ request()->routeIs('document-receipts.*') ? 'active' : '' }}">
+                    <a href="{{ route('tracking-documents.index', absolute: false) }}"
+                        class="sidebar-nav-item {{ request()->routeIs('tracking-documents.*') ? 'active' : '' }}">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
+                            <path d="M3 3v18h18" />
+                            <path d="M7 14l3-3 3 2 4-5" />
                         </svg>
-                        <span>Penerimaan Dokumen</span>
+                        <span>Project</span>
                     </a>
                 </div>
             </nav>

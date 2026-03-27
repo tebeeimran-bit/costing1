@@ -14,6 +14,7 @@ class CostingData extends Model
     protected $fillable = [
         'product_id',
         'customer_id',
+        'tracking_revision_id',
         'period',
         'line',
         'wo_number',
@@ -59,6 +60,11 @@ class CostingData extends Model
     public function materialBreakdowns()
     {
         return $this->hasMany(MaterialBreakdown::class);
+    }
+
+    public function trackingRevision()
+    {
+        return $this->belongsTo(DocumentRevision::class, 'tracking_revision_id');
     }
 
     public function getTotalCostAttribute()

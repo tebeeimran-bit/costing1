@@ -40,6 +40,56 @@ class DatabaseController extends Controller
         return view('database.customers', compact('customers'));
     }
 
+    public function storeCustomer(Request $request)
+    {
+        $validated = $request->validateWithBag('customerCreate', [
+            'code' => 'required|string|max:255|unique:customers,code',
+            'name' => 'required|string|max:255|unique:customers,name',
+        ]);
+
+        Customer::create([
+            'code' => trim((string) $validated['code']),
+            'name' => trim((string) $validated['name']),
+        ]);
+
+        return redirect(route('database.customers', absolute: false))
+            ->with('success', 'Customer berhasil ditambahkan.');
+    }
+
+    public function updateCustomer(Request $request, $id)
+    {
+        $customer = Customer::findOrFail($id);
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:customers,code,' . $id,
+            'name' => 'required|string|max:255|unique:customers,name,' . $id,
+        ]);
+
+        $customer->update([
+            'code' => trim((string) $validated['code']),
+            'name' => trim((string) $validated['name']),
+        ]);
+
+        return redirect(route('database.customers', absolute: false))
+            ->with('success', 'Customer berhasil diperbarui.');
+    }
+
+    public function destroyCustomer($id)
+    {
+        $customer = Customer::findOrFail($id);
+
+        $isUsed = CostingData::where('customer_id', $customer->id)->exists();
+        if ($isUsed) {
+            return redirect(route('database.customers', absolute: false))
+                ->with('warning', 'Customer tidak bisa dihapus karena sudah digunakan pada data costing.');
+        }
+
+        $customer->delete();
+
+        return redirect(route('database.customers', absolute: false))
+            ->with('success', 'Customer berhasil dihapus.');
+    }
+
     public function cycleTimeTemplates()
     {
         $templates = CycleTimeTemplate::orderBy('id')->get();

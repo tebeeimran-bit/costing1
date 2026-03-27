@@ -74,7 +74,7 @@ class DocumentReceiptController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        return redirect()->route('document-receipts.index', absolute: false)->with('success', 'Dokumen berhasil diterima dan disimpan.');
+        return redirect()->to(route('document-receipts.index', [], false))->with('success', 'Dokumen berhasil diterima dan disimpan.');
     }
 
     public function download(DocumentReceipt $documentReceipt, string $type)

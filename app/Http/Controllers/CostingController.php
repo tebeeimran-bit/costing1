@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\Customer;
 use App\Models\Material;
 use App\Models\CostingData;
+use App\Models\UnpricedPart;
+use App\Models\DocumentRevision;
 use App\Models\CycleTimeTemplate;
 use App\Models\MaterialBreakdown;
 use Illuminate\Http\Request;
@@ -140,6 +142,98 @@ class CostingController extends Controller
         $costingDataId = $request->get('id');
         $costingData = null;
         $materialBreakdowns = collect();
+        $trackingRevision = null;
+        $openUnpricedParts = collect();
+        $trackingRevisionId = $request->get('tracking_revision_id');
+        $trackingProjectPrefill = [
+            'product_id' => null,
+            'customer_id' => null,
+            'model' => null,
+            'assy_no' => null,
+            'assy_name' => null,
+        ];
+
+        if ($trackingRevisionId) {
+            $trackingRevision = DocumentRevision::with('project')->find($trackingRevisionId);
+
+            if ($trackingRevision) {
+                $openUnpricedParts = UnpricedPart::where('document_revision_id', $trackingRevision->id)
+                    ->whereNull('resolved_at')
+                    ->orderBy('part_number')
+                    ->get();
+
+                $project = $trackingRevision->project;
+                if ($project) {
+                    $normalize = fn (?string $value): string => preg_replace('/[^a-z0-9]/', '', Str::lower((string) $value));
+                    $trackingCustomer = $normalize($project->customer);
+                    $trackingModel = $normalize($project->model);
+                    $trackingPartNumber = $normalize($project->part_number);
+                    $trackingPartName = $normalize($project->part_name);
+
+                    $matchedCustomer = $customers->first(function ($customer) use ($normalize, $trackingCustomer) {
+                        if ($trackingCustomer === '') {
+                            return false;
+                        }
+
+                        $nameNorm = $normalize($customer->name);
+                        $codeNorm = $normalize($customer->code ?? '');
+
+                        return $nameNorm === $trackingCustomer
+                            || $codeNorm === $trackingCustomer
+                            || ($nameNorm !== '' && str_contains($nameNorm, $trackingCustomer))
+                            || ($nameNorm !== '' && str_contains($trackingCustomer, $nameNorm));
+                    });
+
+                    $matchedProduct = $project->product_id
+                        ? $products->firstWhere('id', (int) $project->product_id)
+                        : null;
+
+                    if (!$matchedProduct) {
+                        $matchedProduct = $products->first(function ($product) use (
+                            $normalize,
+                            $trackingModel,
+                            $trackingPartNumber,
+                            $trackingPartName
+                        ) {
+                            $productCode = $normalize($product->code ?? '');
+                            $productName = $normalize($product->name ?? '');
+
+                            $needles = array_filter([$trackingModel, $trackingPartNumber, $trackingPartName]);
+                            if (empty($needles)) {
+                                return false;
+                            }
+
+                            foreach ($needles as $needle) {
+                                if ($needle === '') {
+                                    continue;
+                                }
+
+                                if ($productCode === $needle || $productName === $needle) {
+                                    return true;
+                                }
+
+                                if (($productCode !== '' && str_contains($productCode, $needle))
+                                    || ($productName !== '' && str_contains($productName, $needle))
+                                    || ($productCode !== '' && str_contains($needle, $productCode))
+                                    || ($productName !== '' && str_contains($needle, $productName))) {
+                                    return true;
+                                }
+                            }
+
+                            return false;
+                        });
+                    }
+
+                    $trackingProjectPrefill = [
+                        'product_id' => $matchedProduct?->id,
+                        'customer_id' => $matchedCustomer?->id,
+                        'model' => $project->model,
+                        'assy_no' => $project->part_number,
+                        'assy_name' => $project->part_name,
+                    ];
+                }
+            }
+        }
 
         if ($costingDataId) {
             $costingData = CostingData::with('materialBreakdowns.material')->find($costingDataId);
@@ -156,7 +250,11 @@ class CostingController extends Controller
             'lines',
             'periods',
             'costingData',
-            'materialBreakdowns'
+            'materialBreakdowns',
+            'trackingRevision',
+            'trackingRevisionId',
+            'openUnpricedParts',
+            'trackingProjectPrefill'
         ));
     }
 
@@ -165,6 +263,7 @@ class CostingController extends Controller
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
             'customer_id' => 'required|exists:customers,id',
+            'tracking_revision_id' => 'nullable|exists:document_revisions,id',
             'period' => 'required|string',
             'line' => 'nullable|string',
             'model' => 'nullable|string',
@@ -183,6 +282,15 @@ class CostingController extends Controller
             'qty_good' => 'nullable|integer',
             'materials' => 'nullable|array',
             'materials.*.part_no' => 'nullable|string',
+            'materials.*.part_name' => 'nullable|string',
+            'materials.*.qty_req' => 'nullable|numeric',
+            'materials.*.unit' => 'nullable|string',
+            'materials.*.amount1' => 'nullable|numeric',
+            'materials.*.unit_price_basis' => 'nullable|numeric',
+            'materials.*.qty_moq' => 'nullable|numeric',
+            'materials.*.cn_type' => 'nullable|string',
+            'materials.*.import_tax' => 'nullable|numeric',
+            'manual_unpriced_prices' => 'nullable|array',
             'cycle_times' => 'nullable|array',
             'cycle_times.*.process' => 'nullable|string',
             'cycle_times.*.qty' => 'nullable|numeric',
@@ -196,27 +304,43 @@ class CostingController extends Controller
         DB::beginTransaction();
         try {
             $costingData = CostingData::create($request->except('materials'));
+            $partAggregation = [];
+            $manualUnpricedPrices = collect($request->input('manual_unpriced_prices', []))
+                ->mapWithKeys(function ($value, $key) {
+                    return [strtolower(trim((string) $key)) => floatval($value)];
+                });
 
             if ($request->has('materials')) {
                 foreach ($request->materials as $matData) {
                     if (empty($matData['part_no']))
                         continue;
 
+                    $partNumber = trim((string) ($matData['part_no'] ?? ''));
+                    $partKey = strtolower($partNumber);
+                    $partName = trim((string) ($matData['part_name'] ?? ''));
+                    $qtyReq = floatval($matData['qty_req'] ?? 0);
+                    $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
+
                     // Find or create Material
                     $material = Material::firstOrCreate(
-                        ['part_no' => $matData['part_no']],
+                        ['material_code' => $partNumber],
                         [
-                            'id_code' => $matData['id_code'] ?? null,
-                            'part_name' => $matData['part_name'] ?? null,
-                            'unit' => $matData['unit'] ?? 'PCS',
-                            'pro_code' => $matData['pro_code'] ?? null,
-                            'supplier_name' => $matData['supplier'] ?? null,
+                            'material_description' => $partName ?: null,
+                            'base_uom' => $matData['unit'] ?? 'PCS',
+                            'maker' => $matData['supplier'] ?? null,
+                            'currency' => $matData['currency'] ?? 'IDR',
+                            'price' => 0,
                         ]
                     );
 
+                    if ($manualPrice > 0) {
+                        $material->price = $manualPrice;
+                        $material->price_update = now()->toDateString();
+                        $material->save();
+                    }
+
                     // Re-calculate logic (replicating JS logic for safety)
                     $unit = strtoupper($matData['unit'] ?? 'PCS');
-                    $qtyReq = floatval($matData['qty_req'] ?? 0);
                     $moq = floatval($matData['qty_moq'] ?? 0);
                     $forecast = $request->forecast;
                     $periodYear = $request->project_period;
@@ -256,11 +380,98 @@ class CostingController extends Controller
                         'currency2' => $matData['currency'] ?? 'IDR',
                         'unit_price2' => $amount2, // Saving calculated amount2 as unit_price2 default
                     ]);
+
+                    $rowInputPrice = floatval($matData['unit_price_basis'] ?? 0);
+                    $detectedPrice = floatval($material->price ?? 0);
+                    $isUnpriced = ($detectedPrice <= 0) && ($rowInputPrice <= 0) && ($manualPrice <= 0);
+
+                    if (!isset($partAggregation[$partKey])) {
+                        $partAggregation[$partKey] = [
+                            'part_number' => $partNumber,
+                            'part_name' => $partName,
+                            'qty' => 0,
+                            'detected_price' => $detectedPrice,
+                            'manual_price' => $manualPrice > 0 ? $manualPrice : null,
+                            'is_unpriced' => false,
+                        ];
+                    }
+
+                    $partAggregation[$partKey]['qty'] += $qtyReq;
+                    $partAggregation[$partKey]['is_unpriced'] = $partAggregation[$partKey]['is_unpriced'] || $isUnpriced;
+
+                    if ($manualPrice > 0) {
+                        $partAggregation[$partKey]['manual_price'] = $manualPrice;
+                    }
                 }
             }
 
+            $trackingRevisionId = $validated['tracking_revision_id'] ?? null;
+            if ($trackingRevisionId) {
+                $trackedPartKeys = collect($partAggregation)->keys();
+
+                $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
+                    ->whereNull('resolved_at')
+                    ->get()
+                    ->keyBy(fn ($item) => strtolower($item->part_number));
+
+                foreach ($partAggregation as $partKey => $partInfo) {
+                    if ($partInfo['is_unpriced']) {
+                        UnpricedPart::updateOrCreate(
+                            [
+                                'document_revision_id' => $trackingRevisionId,
+                                'part_number' => $partInfo['part_number'],
+                                'resolved_at' => null,
+                            ],
+                            [
+                                'costing_data_id' => $costingData->id,
+                                'part_name' => $partInfo['part_name'] ?: null,
+                                'qty' => $partInfo['qty'],
+                                'detected_price' => $partInfo['detected_price'],
+                                'manual_price' => null,
+                                'notes' => 'Auto-detected from Form Input validation.',
+                            ]
+                        );
+                    } else {
+                        $existingOpen = $openItems->get($partKey);
+                        if ($existingOpen) {
+                            $existingOpen->update([
+                                'costing_data_id' => $costingData->id,
+                                'manual_price' => $partInfo['manual_price'],
+                                'resolved_at' => now(),
+                                'resolution_source' => 'manual_or_master_price',
+                            ]);
+                        }
+                    }
+                }
+
+                foreach ($openItems as $partKey => $openItem) {
+                    if (!$trackedPartKeys->contains($partKey)) {
+                        $openItem->update([
+                            'costing_data_id' => $costingData->id,
+                            'resolved_at' => now(),
+                            'resolution_source' => 'part_removed_in_current_processing',
+                        ]);
+                    }
+                }
+
+                $remainingUnpriced = UnpricedPart::where('document_revision_id', $trackingRevisionId)
+                    ->whereNull('resolved_at')
+                    ->count();
+
+                $statusPayload = $remainingUnpriced > 0
+                    ? ['status' => DocumentRevision::STATUS_PENDING_PRICING]
+                    : ['status' => DocumentRevision::STATUS_COGM_GENERATED, 'cogm_generated_at' => now()];
+
+                DocumentRevision::whereKey($trackingRevisionId)->update($statusPayload);
+            }
+
             DB::commit();
-                return redirect(route('form', absolute: false))->with('success', 'Data costing berhasil disimpan!');
+            $redirectUrl = route('form',
+                $trackingRevisionId ? ['tracking_revision_id' => $trackingRevisionId] : [],
+                false
+            );
+
+            return redirect($redirectUrl)->with('success', 'Data costing berhasil disimpan!');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();

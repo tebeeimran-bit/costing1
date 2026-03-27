@@ -345,9 +345,27 @@
         </div>
     @endif
 
+    <div class="alert alert-warning" id="unpricedTopBanner"
+        style="{{ (isset($trackingRevision) && $trackingRevision && isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? '' : 'display:none;' }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span id="unpricedTopBannerText">
+                Terdapat {{ isset($openUnpricedParts) ? $openUnpricedParts->count() : 0 }} part yang belum memiliki harga pada versi dokumen ini.
+            </span>
+    </div>
+
     <div class="form-page">
     <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm">
         @csrf
+        @if(isset($trackingRevisionId) && $trackingRevisionId)
+            <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
+        @endif
+        <input type="hidden" id="trackingRevisionId" value="{{ $trackingRevisionId ?? '' }}">
+        <input type="hidden" id="updateUnpricedPriceUrl"
+            value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.update-unpriced-price', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
 
         <!-- Section A: Filter & Header -->
         <div class="card form-section">
@@ -361,9 +379,12 @@
                 <div class="form-group">
                     <label class="form-label">Business Categories</label>
                     <select name="product_id" class="form-select" id="productInput" required>
+                        @php
+                            $selectedProductId = old('product_id', $costingData->product_id ?? ($trackingProjectPrefill['product_id'] ?? ''));
+                        @endphp
                         <option value="">-- Pilih Business Categories --</option>
                         @foreach($products as $product)
-                            <option value="{{ $product->id }}" {{ ($costingData && $costingData->product_id == $product->id) ? 'selected' : '' }}>
+                            <option value="{{ $product->id }}" {{ (string) $selectedProductId === (string) $product->id ? 'selected' : '' }}>
                                 {{ $product->code }} - {{ $product->name }}
                             </option>
                         @endforeach
@@ -372,9 +393,12 @@
                 <div class="form-group">
                     <label class="form-label">Customer</label>
                     <select name="customer_id" class="form-select" id="customerInput" required>
+                        @php
+                            $selectedCustomerId = old('customer_id', $costingData->customer_id ?? ($trackingProjectPrefill['customer_id'] ?? ''));
+                        @endphp
                         <option value="">-- Pilih Customer --</option>
                         @foreach($customers as $customer)
-                            <option value="{{ $customer->id }}" {{ ($costingData && $costingData->customer_id == $customer->id) ? 'selected' : '' }}>
+                            <option value="{{ $customer->id }}" {{ (string) $selectedCustomerId === (string) $customer->id ? 'selected' : '' }}>
                                 {{ $customer->code }} - {{ $customer->name }}
                             </option>
                         @endforeach
@@ -383,17 +407,17 @@
                 <div class="form-group">
                     <label class="form-label">Model</label>
                     <input type="text" name="model" class="form-input" placeholder="Model"
-                        value="{{ $costingData->model ?? '' }}">
+                        value="{{ old('model', $costingData->model ?? ($trackingProjectPrefill['model'] ?? '')) }}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Assy No.</label>
                     <input type="text" name="assy_no" class="form-input" placeholder="Assy No."
-                        value="{{ $costingData->assy_no ?? '' }}">
+                        value="{{ old('assy_no', $costingData->assy_no ?? ($trackingProjectPrefill['assy_no'] ?? '')) }}">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Assy Name</label>
                     <input type="text" name="assy_name" class="form-input" placeholder="Assy Name"
-                        value="{{ $costingData->assy_name ?? '' }}">
+                        value="{{ old('assy_name', $costingData->assy_name ?? ($trackingProjectPrefill['assy_name'] ?? '')) }}">
                 </div>
                 <div class="form-group quantity-group">
                     <label class="form-label">Quantity</label>
@@ -602,28 +626,28 @@
                                             placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $i }}][pro_code]" value=""
                                             placeholder="Pro Code"></td>
-                                    <td><input type="number" class="form-input amount1" value="0" step="0.0001"
+                                    <td><input type="number" class="form-input amount1" name="materials[{{ $i }}][amount1]" value="0" step="0.0001"
                                             onchange="calculateRow(this)"></td>
-                                    <td><input type="text" class="form-input unit-price-basis" value="" placeholder="Unit Price"
+                                    <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $i }}][unit_price_basis]" value="" placeholder="Unit Price"
                                             onchange="calculateRow(this)"></td>
                                     <td>
-                                        <select class="form-select currency" onchange="calculateRow(this)">
+                                        <select class="form-select currency" name="materials[{{ $i }}][currency]" onchange="calculateRow(this)">
                                             <option value="IDR">IDR</option>
                                             <option value="USD">USD</option>
                                             <option value="JPY">JPY</option>
                                         </select>
                                     </td>
-                                    <td><input type="number" class="form-input w-28 qty-moq" value="0" step="0.0001"
+                                    <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $i }}][qty_moq]" value="0" step="0.0001"
                                             onchange="calculateRow(this)"></td>
                                     <td>
-                                        <select class="form-select cn-type" onchange="calculateRow(this)">
+                                        <select class="form-select cn-type" name="materials[{{ $i }}][cn_type]" onchange="calculateRow(this)">
                                             <option value="N">N</option>
                                             <option value="C">C</option>
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $i }}][supplier]" value=""
                                             placeholder="Supplier"></td>
-                                    <td><input type="number" class="form-input import-tax" value="0" step="0.01"
+                                        <td><input type="number" class="form-input import-tax" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
                                             onchange="calculateRow(this)"></td>
                                     <td class="calculated multiply-factor">1.0000</td>
                                     <td class="calculated amount2">0.0000</td>
@@ -657,6 +681,61 @@
             </div>
 
 
+        </div>
+
+        <div class="card form-section">
+            <div class="form-section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3h18v18H3z" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="8" y1="9" x2="8" y2="21" />
+                </svg>
+                Rekapan Part Tanpa Harga
+                @if(isset($trackingRevision) && $trackingRevision)
+                    <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'excel'], absolute: false) }}"
+                        class="btn btn-secondary" style="margin-left: auto;">Export Unpriced Parts (Excel)</a>
+                    <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'pdf'], absolute: false) }}"
+                        target="_blank" class="btn btn-secondary">Export Unpriced Parts (PDF)</a>
+                @endif
+            </div>
+
+            <div class="material-table-container">
+                <table class="material-table">
+                    <thead>
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Part Name</th>
+                            <th>Qty</th>
+                            <th>Detected Price</th>
+                            <th>Input Harga (Manual)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unpricedRecapBody">
+                        @if(isset($openUnpricedParts) && $openUnpricedParts->count() > 0)
+                            @foreach($openUnpricedParts as $item)
+                                <tr>
+                                    <td>{{ $item->part_number }}</td>
+                                    <td>{{ $item->part_name ?: '-' }}</td>
+                                    <td>{{ $item->qty }}</td>
+                                    <td>{{ $item->detected_price ?? 0 }}</td>
+                                    <td>
+                                        <input type="number" step="0.0001" class="form-input unpriced-manual-price"
+                                            name="manual_unpriced_prices[{{ $item->part_number }}]"
+                                            data-part-number="{{ $item->part_number }}"
+                                            value="{{ $item->manual_price ?? '' }}" placeholder="Isi harga jika sudah ada">
+                                    </td>
+                                </tr>
+                            @endforeach
+                        @else
+                            <tr>
+                                <td colspan="5" style="text-align: center; color: var(--slate-500);">
+                                    Belum ada part tanpa harga untuk versi dokumen ini.
+                                </td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Section E: Cycle Time -->
@@ -929,6 +1008,8 @@
         // Materials data for dynamic selection
         const materials = @json($materials);
         const cycleProcessOptions = @json(($cycleTimeTemplates ?? collect())->pluck('process')->values());
+        const hasServerUnpricedData = {{ (isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? 'true' : 'false' }};
+        const unpricedSyncTimers = {};
 
         // Format number as Rupiah
         function formatRupiah(number) {
@@ -1108,6 +1189,7 @@
 
             // Recalculate all totals
             calculateTableTotal();
+            refreshUnpricedRecap();
         }
 
         // Calculate table total
@@ -1133,6 +1215,133 @@
             }
 
             return total;
+        }
+
+        function refreshUnpricedRecap() {
+            const tbody = document.getElementById('unpricedRecapBody');
+            if (!tbody) return;
+
+            const partMap = new Map();
+            const rows = document.querySelectorAll('#materialTableBody tr');
+
+            rows.forEach((row) => {
+                const partNo = (row.querySelector('.part-no')?.value || '').trim();
+                if (!partNo) return;
+
+                const partName = (row.querySelector('.part-name')?.value || '').trim();
+                const qty = parseFloat(row.querySelector('.qty-req')?.value) || 0;
+                const inputPrice = parseInputNumber(row.querySelector('.unit-price-basis')?.value || 0);
+
+                if (inputPrice > 0) {
+                    return;
+                }
+
+                const key = partNo.toLowerCase();
+                if (!partMap.has(key)) {
+                    partMap.set(key, {
+                        partNo,
+                        partName,
+                        qty: 0,
+                    });
+                }
+
+                partMap.get(key).qty += qty;
+            });
+
+            if (partMap.size === 0 && hasServerUnpricedData) {
+                return;
+            }
+
+            if (partMap.size === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+            } else {
+                tbody.innerHTML = Array.from(partMap.values()).map((item) => `
+                    <tr>
+                        <td>${item.partNo}</td>
+                        <td>${item.partName || '-'}</td>
+                        <td>${item.qty.toFixed(4)}</td>
+                        <td>0</td>
+                        <td><input type="number" step="0.0001" class="form-input unpriced-manual-price" data-part-number="${item.partNo}" name="manual_unpriced_prices[${item.partNo}]" placeholder="Isi harga jika sudah ada"></td>
+                    </tr>
+                `).join('');
+            }
+
+            const banner = document.getElementById('unpricedTopBanner');
+            const bannerText = document.getElementById('unpricedTopBannerText');
+            if (banner) {
+                banner.style.display = partMap.size > 0 ? 'flex' : 'none';
+            }
+            if (bannerText) {
+                bannerText.textContent = `Terdapat ${partMap.size} part yang belum memiliki harga pada versi dokumen ini.`;
+            }
+
+            bindUnpricedManualPriceInputs();
+        }
+
+        function bindUnpricedManualPriceInputs() {
+            const inputs = document.querySelectorAll('.unpriced-manual-price');
+            inputs.forEach((input) => {
+                if (input.dataset.boundRealtime === '1') {
+                    return;
+                }
+
+                input.dataset.boundRealtime = '1';
+                input.addEventListener('input', function () {
+                    const partNumber = this.dataset.partNumber || '';
+                    if (!partNumber) return;
+
+                    if (unpricedSyncTimers[partNumber]) {
+                        clearTimeout(unpricedSyncTimers[partNumber]);
+                    }
+
+                    unpricedSyncTimers[partNumber] = setTimeout(() => {
+                        syncManualPriceToServer(partNumber, this.value);
+                    }, 450);
+                });
+            });
+        }
+
+        function syncManualPriceToServer(partNumber, value) {
+            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
+            const url = document.getElementById('updateUnpricedPriceUrl')?.value || '';
+
+            if (!trackingRevisionId || !url) {
+                return;
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    part_number: partNumber,
+                    manual_price: value === '' ? null : Number(value)
+                })
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (!data || data.ok !== true) {
+                        return;
+                    }
+
+                    const banner = document.getElementById('unpricedTopBanner');
+                    const bannerText = document.getElementById('unpricedTopBannerText');
+                    const openCount = Number(data.open_unpriced_count || 0);
+
+                    if (banner) {
+                        banner.style.display = openCount > 0 ? 'flex' : 'none';
+                    }
+
+                    if (bannerText) {
+                        bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
+                    }
+                })
+                .catch(() => {
+                    // Silent fail: user can still save form as fallback.
+                });
         }
 
 
@@ -1185,13 +1394,13 @@
                                     <td><input type="number" class="form-input w-28 qty-req" name="materials[${rowCounter}][qty_req]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[${rowCounter}][unit]" value="PCS" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[${rowCounter}][pro_code]" value="" placeholder="Pro Code"></td>
-                                    <td><input type="number" class="form-input amount1" value="0" step="0.0001" onchange="calculateRow(this)"></td>
-                                    <td><input type="text" class="form-input unit-price-basis" value="" placeholder="Unit Price" onchange="calculateRow(this)"></td>
-                                    <td><select class="form-select currency" onchange="calculateRow(this)"><option value="IDR">IDR</option><option value="USD">USD</option><option value="JPY">JPY</option></select></td>
-                                    <td><input type="number" class="form-input w-28 qty-moq" value="0" step="0.0001" onchange="calculateRow(this)"></td>
-                                    <td><select class="form-select cn-type" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
+                                    <td><input type="number" class="form-input amount1" name="materials[${rowCounter}][amount1]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
+                                    <td><input type="text" class="form-input unit-price-basis" name="materials[${rowCounter}][unit_price_basis]" value="" placeholder="Unit Price" onchange="calculateRow(this)"></td>
+                                    <td><select class="form-select currency" name="materials[${rowCounter}][currency]" onchange="calculateRow(this)"><option value="IDR">IDR</option><option value="USD">USD</option><option value="JPY">JPY</option></select></td>
+                                    <td><input type="number" class="form-input w-28 qty-moq" name="materials[${rowCounter}][qty_moq]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
+                                    <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
                                     <td><input type="text" class="form-input supplier" name="materials[${rowCounter}][supplier]" value="" placeholder="Supplier"></td>
-                                    <td><input type="number" class="form-input import-tax" value="0" step="0.01" onchange="calculateRow(this)"></td>
+                                    <td><input type="number" class="form-input import-tax" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
                                     <td class="calculated multiply-factor">1.0000</td>
                         <td class="calculated amount2">0.0000</td>
                         <td class="calculated currency2">IDR</td>
@@ -1211,6 +1420,7 @@
             row.remove();
             renumberRows();
             calculateTableTotal();
+            refreshUnpricedRecap();
         }
 
         // Renumber rows
@@ -1376,6 +1586,9 @@
                 if (input) calculateRow(input);
             });
 
+            refreshUnpricedRecap();
+            bindUnpricedManualPriceInputs();
+
             const cycleRows = document.querySelectorAll('#cycleTimeTableBody tr');
             cycleRows.forEach(row => {
                 const input = row.querySelector('.ct-hour') || row.querySelector('.ct-sec');
@@ -1401,6 +1614,7 @@
             if (costingForm) {
                 costingForm.addEventListener('submit', function () {
                     syncForecastHidden();
+                    refreshUnpricedRecap();
                 });
             }
         });
