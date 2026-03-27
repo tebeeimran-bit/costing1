@@ -52,7 +52,7 @@ class DatabaseController extends Controller
             'name' => trim((string) $validated['name']),
         ]);
 
-        return redirect(route('database.customers', absolute: false))
+        return back()
             ->with('success', 'Customer berhasil ditambahkan.');
     }
 
@@ -70,7 +70,7 @@ class DatabaseController extends Controller
             'name' => trim((string) $validated['name']),
         ]);
 
-        return redirect(route('database.customers', absolute: false))
+        return back()
             ->with('success', 'Customer berhasil diperbarui.');
     }
 
@@ -80,13 +80,13 @@ class DatabaseController extends Controller
 
         $isUsed = CostingData::where('customer_id', $customer->id)->exists();
         if ($isUsed) {
-            return redirect(route('database.customers', absolute: false))
+            return back()
                 ->with('warning', 'Customer tidak bisa dihapus karena sudah digunakan pada data costing.');
         }
 
         $customer->delete();
 
-        return redirect(route('database.customers', absolute: false))
+        return back()
             ->with('success', 'Customer berhasil dihapus.');
     }
 

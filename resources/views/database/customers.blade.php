@@ -105,6 +105,31 @@
         </div>
     </div>
 
+    <div id="delete-customer-modal" class="customer-modal is-hidden" onclick="handleCustomerModalOverlay(event)">
+        <div class="customer-modal-content delete-modal-content">
+            <div class="customer-modal-header">
+                <h3 class="customer-modal-title">Konfirmasi Hapus</h3>
+                <button type="button" class="btn-action btn-edit" onclick="closeDeleteCustomerModal()" aria-label="Tutup">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="delete-modal-body">
+                <p class="delete-modal-text">
+                    Kamu yakin ingin menghapus customer
+                    <strong id="delete-customer-name"></strong>?
+                </p>
+                <p class="delete-modal-subtext">Data yang sudah dipakai pada costing tidak bisa dihapus.</p>
+                <div class="customer-form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeDeleteCustomerModal()">Batal</button>
+                    <button type="button" class="btn-danger" onclick="submitDeleteCustomerForm()">Ya, Hapus</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="material-table-container" style="overflow-x: auto;">
         <table class="data-table">
             <thead>
@@ -129,11 +154,10 @@
                                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                 </svg>
                             </button>
-                            <form action="{{ route('database.customers.destroy', ['id' => $customer->id], absolute: false) }}" method="POST" style="display: inline-flex;"
-                                onsubmit="return confirm('Yakin ingin menghapus customer ini?');">
+                            <form id="delete-customer-form-{{ $customer->id }}" action="{{ route('database.customers.destroy', ['id' => $customer->id], absolute: false) }}" method="POST" style="display: inline-flex;">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn-action btn-delete" title="Hapus">
+                                <button type="button" class="btn-action btn-delete" title="Hapus" onclick="openDeleteCustomerModal({{ $customer->id }}, @js($customer->name))">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                         style="width: 16px; height: 16px;">
                                         <polyline points="3 6 5 6 21 6" />
@@ -226,6 +250,26 @@
             border-color: #94a3b8;
         }
 
+        .btn-danger {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1rem;
+            border: 1px solid #dc2626;
+            background: #dc2626;
+            color: #fff;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            background: #b91c1c;
+            border-color: #b91c1c;
+        }
+
         .customer-modal {
             position: fixed;
             inset: 0;
@@ -303,9 +347,32 @@
             gap: 0.55rem;
             margin-top: 1rem;
         }
+
+        .delete-modal-content {
+            width: min(460px, 100%);
+        }
+
+        .delete-modal-body {
+            padding: 1rem 1.1rem 1.2rem;
+        }
+
+        .delete-modal-text {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #0f172a;
+            line-height: 1.5;
+        }
+
+        .delete-modal-subtext {
+            margin: 0.35rem 0 0;
+            font-size: 0.82rem;
+            color: #64748b;
+        }
     </style>
 
     <script>
+        let deleteCustomerFormId = null;
+
         function openAddCustomerModal() {
             const modal = document.getElementById('add-customer-modal');
             if (modal) {
@@ -341,12 +408,47 @@
             }
         }
 
+        function openDeleteCustomerModal(id, name) {
+            const modal = document.getElementById('delete-customer-modal');
+            const nameEl = document.getElementById('delete-customer-name');
+
+            deleteCustomerFormId = `delete-customer-form-${id}`;
+            if (nameEl) {
+                nameEl.textContent = name;
+            }
+
+            if (modal) {
+                modal.classList.remove('is-hidden');
+            }
+        }
+
+        function closeDeleteCustomerModal() {
+            const modal = document.getElementById('delete-customer-modal');
+            if (modal) {
+                modal.classList.add('is-hidden');
+            }
+            deleteCustomerFormId = null;
+        }
+
+        function submitDeleteCustomerForm() {
+            if (!deleteCustomerFormId) {
+                return;
+            }
+
+            const form = document.getElementById(deleteCustomerFormId);
+            if (form) {
+                form.submit();
+            }
+        }
+
         function handleCustomerModalOverlay(event) {
-            if (event.target && (event.target.id === 'add-customer-modal' || event.target.id === 'edit-customer-modal')) {
+            if (event.target && (event.target.id === 'add-customer-modal' || event.target.id === 'edit-customer-modal' || event.target.id === 'delete-customer-modal')) {
                 if (event.target.id === 'add-customer-modal') {
                     closeAddCustomerModal();
-                } else {
+                } else if (event.target.id === 'edit-customer-modal') {
                     closeEditCustomerModal();
+                } else {
+                    closeDeleteCustomerModal();
                 }
             }
         }
@@ -355,11 +457,15 @@
             if (event.key === 'Escape') {
                 const addModal = document.getElementById('add-customer-modal');
                 const editModal = document.getElementById('edit-customer-modal');
+                const deleteModal = document.getElementById('delete-customer-modal');
                 if (addModal && !addModal.classList.contains('is-hidden')) {
                     closeAddCustomerModal();
                 }
                 if (editModal && !editModal.classList.contains('is-hidden')) {
                     closeEditCustomerModal();
+                }
+                if (deleteModal && !deleteModal.classList.contains('is-hidden')) {
+                    closeDeleteCustomerModal();
                 }
             }
         });
