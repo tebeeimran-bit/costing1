@@ -218,6 +218,20 @@
 
         .form-page .form-section-title {
             justify-content: flex-start;
+            gap: 0.55rem;
+        }
+
+        .form-page .section-actions {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .form-page .section-actions + .section-toggle {
+            margin-left: 0.5rem !important;
         }
 
         .form-page .section-toggle {
@@ -374,18 +388,30 @@
                     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
                 </svg>
                 Informasi Project
+                <div class="section-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="informasi_project" formnovalidate>
+                        Update
+                    </button>
+                </div>
             </div>
             <div class="form-grid">
                 <div class="form-group">
                     <label class="form-label">Business Categories</label>
-                    <select name="product_id" class="form-select" id="productInput" required>
+                    <select name="business_category_id" class="form-select" id="productInput" required>
                         @php
-                            $selectedProductId = old('product_id', $costingData->product_id ?? ($trackingProjectPrefill['product_id'] ?? ''));
+                            $selectedBusinessCategoryId = old('business_category_id', $trackingProjectPrefill['business_category_id'] ?? '');
+                            if ($selectedBusinessCategoryId === '' && isset($costingData) && $costingData && $costingData->product) {
+                                $matchedCategory = $businessCategories->first(function ($category) use ($costingData) {
+                                    return trim((string) $category->code) === trim((string) $costingData->product->code)
+                                        || trim((string) $category->name) === trim((string) $costingData->product->name);
+                                });
+                                $selectedBusinessCategoryId = $matchedCategory?->id ?? '';
+                            }
                         @endphp
                         <option value="">-- Pilih Business Categories --</option>
-                        @foreach($products as $product)
-                            <option value="{{ $product->id }}" {{ (string) $selectedProductId === (string) $product->id ? 'selected' : '' }}>
-                                {{ $product->code }} - {{ $product->name }}
+                        @foreach($businessCategories as $businessCategory)
+                            <option value="{{ $businessCategory->id }}" {{ (string) $selectedBusinessCategoryId === (string) $businessCategory->id ? 'selected' : '' }}>
+                                {{ $businessCategory->code }} - {{ $businessCategory->name }}
                             </option>
                         @endforeach
                     </select>
@@ -447,22 +473,34 @@
                 <div class="form-group plant-group">
                     <label class="form-label">Plant</label>
                     <select name="line" class="form-select">
+                        @php
+                            $selectedPlant = old('line', $costingData->line ?? '');
+                        @endphp
                         <option value="">-- Pilih Plant --</option>
-                        @foreach($lines as $line)
-                            <option value="{{ $line }}">{{ $line }}</option>
+                        @foreach($plants as $plant)
+                            <option value="{{ $plant->code }}" {{ (string) $selectedPlant === (string) $plant->code ? 'selected' : '' }}>
+                                {{ $plant->code }} - {{ $plant->name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
                 <div class="form-group period-group">
                     <label class="form-label">Periode</label>
                     <select name="period" class="form-select" id="periodInput">
+                        @php
+                            $selectedPeriod = old('period', $costingData->period ?? '');
+                        @endphp
                         <option value="">-- Pilih Periode --</option>
-                        @for($i = 0; $i < 12; $i++)
-                            @php $date = now()->subMonths($i); @endphp
-                            <option value="{{ $date->format('Y-m') }}" {{ ($costingData && $costingData->period == $date->format('Y-m')) ? 'selected' : '' }}>
-                                {{ $date->format('M Y') }}
+                        @foreach($periods as $period)
+                            @php
+                                $periodLabel = preg_match('/^\d{4}-\d{2}$/', (string) $period)
+                                    ? \Carbon\Carbon::createFromFormat('Y-m', (string) $period)->translatedFormat('M Y')
+                                    : $period;
+                            @endphp
+                            <option value="{{ $period }}" {{ (string) $selectedPeriod === (string) $period ? 'selected' : '' }}>
+                                {{ $periodLabel }}
                             </option>
-                        @endfor
+                        @endforeach
                     </select>
                 </div>
             </div>
@@ -478,6 +516,11 @@
                     <line x1="12" y1="17" x2="12" y2="21" />
                 </svg>
                 Rates
+                <div class="section-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="rates" formnovalidate>
+                        Update
+                    </button>
+                </div>
             </div>
             <div class="form-grid param-grid">
                 <div class="form-group">
@@ -513,13 +556,18 @@
                     <line x1="16" y1="17" x2="8" y2="17" />
                 </svg>
                 Material
-                <button type="button" class="btn btn-secondary" style="margin-left: auto;" onclick="addMaterialRow()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Tambah Baris
-                </button>
+                <div class="section-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="material" formnovalidate>
+                        Update
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="addMaterialRow()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Tambah Baris
+                    </button>
+                </div>
             </div>
 
             <div class="material-table-container">
@@ -691,12 +739,17 @@
                     <line x1="8" y1="9" x2="8" y2="21" />
                 </svg>
                 Rekapan Part Tanpa Harga
-                @if(isset($trackingRevision) && $trackingRevision)
-                    <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'excel'], absolute: false) }}"
-                        class="btn btn-secondary" style="margin-left: auto;">Export Unpriced Parts (Excel)</a>
-                    <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'pdf'], absolute: false) }}"
-                        target="_blank" class="btn btn-secondary">Export Unpriced Parts (PDF)</a>
-                @endif
+                <div class="section-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="unpriced_parts" formnovalidate>
+                        Update
+                    </button>
+                    @if(isset($trackingRevision) && $trackingRevision)
+                        <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'excel'], absolute: false) }}"
+                            class="btn btn-secondary">Export Unpriced Parts (Excel)</a>
+                        <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'pdf'], absolute: false) }}"
+                            target="_blank" class="btn btn-secondary">Export Unpriced Parts (PDF)</a>
+                    @endif
+                </div>
             </div>
 
             <div class="material-table-container">
@@ -746,13 +799,18 @@
                     <circle cx="12" cy="12" r="10" />
                 </svg>
                 Cycle Time
-                <button type="button" class="btn btn-secondary" style="margin-left: auto;" onclick="addCycleTimeRow()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Tambah Baris
-                </button>
+                <div class="section-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="cycle_time" formnovalidate>
+                        Update
+                    </button>
+                    <button type="button" class="btn btn-secondary" onclick="addCycleTimeRow()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Tambah Baris
+                    </button>
+                </div>
             </div>
 
             <div class="cycle-table-container">
@@ -922,6 +980,11 @@
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
                 Resume COGM
+                <div class="section-actions">
+                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="resume_cogm" formnovalidate>
+                        Update
+                    </button>
+                </div>
             </div>
             <div class="form-grid cost-grid">
                 <div class="form-group">
@@ -939,13 +1002,13 @@
                 <div class="form-group">
                     <label class="form-label">Depresiasi Tooling Cost (IDR)</label>
                     <input type="number" name="overhead_cost" class="form-input" id="overheadCost"
-                        value="{{ $costingData->overhead_cost ?? '' }}" required placeholder="0"
+                        value="{{ $costingData->overhead_cost ?? '' }}" placeholder="0"
                         onchange="calculateTotals()">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Administrasi Cost (IDR)</label>
                     <input type="number" name="scrap_cost" class="form-input" id="scrapCost"
-                        value="{{ $costingData->scrap_cost ?? '' }}" required placeholder="0"
+                        value="{{ $costingData->scrap_cost ?? '' }}" placeholder="0"
                         onchange="calculateTotals()">
                 </div>
             </div>

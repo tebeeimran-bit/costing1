@@ -158,11 +158,11 @@
                 <div class="receipt-grid" style="margin-bottom: 1rem;">
                     <div class="form-group">
                         <label class="form-label">Business Categories <span style="color: var(--red-500);">*</span></label>
-                        <select name="product_id" class="form-select" required>
+                        <select name="business_category_id" class="form-select" required>
                             <option value="">-- Pilih Business Categories --</option>
-                            @foreach($products as $product)
-                                <option value="{{ $product->id }}" {{ (string) old('product_id') === (string) $product->id ? 'selected' : '' }}>
-                                    {{ $product->code }} - {{ $product->name }}
+                            @foreach($businessCategories as $businessCategory)
+                                <option value="{{ $businessCategory->id }}" {{ (string) old('business_category_id') === (string) $businessCategory->id ? 'selected' : '' }}>
+                                    {{ $businessCategory->code }} - {{ $businessCategory->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -212,8 +212,8 @@
                         <label class="form-label">Plant</label>
                         <select name="line" class="form-select">
                             <option value="">-- Pilih Plant --</option>
-                            @foreach($lines as $line)
-                                <option value="{{ $line }}" {{ old('line') === $line ? 'selected' : '' }}>{{ $line }}</option>
+                            @foreach($plants as $plant)
+                                <option value="{{ $plant->code }}" {{ old('line') === $plant->code ? 'selected' : '' }}>{{ $plant->code }} - {{ $plant->name }}</option>
                             @endforeach
                         </select>
                     </div>

@@ -286,6 +286,24 @@
             gap: 1rem;
         }
 
+        .project-edit-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .project-edit-grid .form-group,
+        .project-edit-grid .form-input,
+        .project-edit-grid .form-select {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .quantity-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.45rem;
+            min-width: 0;
+        }
+
         .receipt-grid-2 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -534,6 +552,10 @@
                 grid-template-columns: 1fr;
             }
 
+            .quantity-grid {
+                grid-template-columns: 1fr;
+            }
+
             .form-actions {
                 justify-content: stretch;
             }
@@ -735,6 +757,10 @@
                             <div class="history-sub"><strong>Nama Dokumen UMH:</strong> {{ $revision->umh_original_name ?: '-' }}</div>
                             <div class="history-sub"><strong>Remark Perubahan:</strong> {{ $revision->change_remark ?: '-' }}</div>
                             <div class="action-group" style="margin-bottom: 0.5rem; min-width: 0;">
+                                <form action="{{ route('tracking-documents.process-form-input', ['revision' => $revision->id], absolute: false) }}" method="POST" style="display: inline-flex;">
+                                    @csrf
+                                    <button type="submit" class="btn btn-primary btn-sm">Proses ke Form Input</button>
+                                </form>
                                 <a href="{{ route('tracking-documents.download', ['revision' => $revision->id, 'type' => 'partlist'], absolute: false) }}"
                                     class="btn btn-secondary btn-sm">Partlist</a>
                                 <a href="{{ route('tracking-documents.download', ['revision' => $revision->id, 'type' => 'umh'], absolute: false) }}"
@@ -774,14 +800,21 @@
                     <form action="{{ route('tracking-documents.update-project-info', ['project' => $project->id], absolute: false) }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
-                        <div class="receipt-grid" style="margin-bottom: 1rem;">
+                        <div class="receipt-grid project-edit-grid" style="margin-bottom: 1rem;">
                             <div class="form-group">
                                 <label class="form-label">Business Categories <span style="color: var(--red-500);">*</span></label>
-                                <select name="product_id" class="form-select" required>
+                                <select name="business_category_id" class="form-select" required>
                                     <option value="">-- Pilih Business Categories --</option>
-                                    @foreach($products as $product)
-                                        <option value="{{ $product->id }}" {{ (int) ($project->product_id ?? 0) === (int) $product->id ? 'selected' : '' }}>
-                                            {{ $product->code }} - {{ $product->name }}
+                                    @foreach($businessCategories as $businessCategory)
+                                        @php
+                                            $selectedBusinessCategory = false;
+                                            if (!empty($project->product)) {
+                                                $selectedBusinessCategory = trim((string) $project->product->code) === trim((string) $businessCategory->code)
+                                                    || trim((string) $project->product->name) === trim((string) $businessCategory->name);
+                                            }
+                                        @endphp
+                                        <option value="{{ $businessCategory->id }}" {{ $selectedBusinessCategory ? 'selected' : '' }}>
+                                            {{ $businessCategory->code }} - {{ $businessCategory->name }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -816,7 +849,7 @@
 
                             <div class="form-group">
                                 <label class="form-label">Quantity</label>
-                                <div style="display: grid; grid-template-columns: 1.2fr 1fr 1.2fr; gap: 0.45rem;">
+                                <div class="quantity-grid">
                                     <input type="number" name="forecast" class="form-input" min="0" value="2000" placeholder="2000">
                                     <select name="forecast_uom" class="form-select">
                                         <option value="PCE" selected>PCE</option>
@@ -838,8 +871,10 @@
                                 <label class="form-label">Plant</label>
                                 <select name="line" class="form-select">
                                     <option value="">-- Pilih Plant --</option>
-                                    @foreach($lines as $line)
-                                        <option value="{{ $line }}">{{ $line }}</option>
+                                    @foreach($plants as $plant)
+                                        <option value="{{ $plant->code }}" {{ trim((string) ($project->line ?? '')) === trim((string) $plant->code) ? 'selected' : '' }}>
+                                            {{ $plant->code }} - {{ $plant->name }}
+                                        </option>
                                     @endforeach
                                 </select>
                             </div>

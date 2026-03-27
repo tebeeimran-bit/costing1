@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\Plant;
+use App\Models\Pic;
 use App\Models\Customer;
 use App\Models\Material;
+use App\Models\BusinessCategory;
 use App\Models\CostingData;
 use App\Models\CycleTimeTemplate;
 use Illuminate\Http\Request;
@@ -108,6 +111,22 @@ class DatabaseController extends Controller
             ->with('success', 'Process template berhasil ditambahkan!');
     }
 
+    public function updateCycleTimeTemplate(Request $request, $id)
+    {
+        $template = CycleTimeTemplate::findOrFail($id);
+
+        $validated = $request->validate([
+            'process' => 'required|string|max:255|unique:cycle_time_templates,process,' . $id,
+        ]);
+
+        $template->update([
+            'process' => trim((string) $validated['process']),
+        ]);
+
+        return redirect(route('database.cycle-time-templates', absolute: false))
+            ->with('success', 'Process template berhasil diperbarui!');
+    }
+
     public function destroyCycleTimeTemplate($id)
     {
         $template = CycleTimeTemplate::findOrFail($id);
@@ -115,6 +134,144 @@ class DatabaseController extends Controller
 
         return redirect(route('database.cycle-time-templates', absolute: false))
             ->with('success', 'Process template berhasil dihapus!');
+    }
+
+    public function businessCategories()
+    {
+        $businessCategories = BusinessCategory::orderBy('code')->orderBy('name')->get();
+        return view('database.business-categories', compact('businessCategories'));
+    }
+
+    public function storeBusinessCategory(Request $request)
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:business_categories,code',
+            'name' => 'required|string|max:255|unique:business_categories,name',
+        ]);
+
+        BusinessCategory::create([
+            'code' => trim((string) $validated['code']),
+            'name' => trim((string) $validated['name']),
+        ]);
+
+        return back()->with('success', 'Business Category berhasil ditambahkan.');
+    }
+
+    public function updateBusinessCategory(Request $request, $id)
+    {
+        $businessCategory = BusinessCategory::findOrFail($id);
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:business_categories,code,' . $id,
+            'name' => 'required|string|max:255|unique:business_categories,name,' . $id,
+        ]);
+
+        $businessCategory->update([
+            'code' => trim((string) $validated['code']),
+            'name' => trim((string) $validated['name']),
+        ]);
+
+        return back()->with('success', 'Business Category berhasil diperbarui.');
+    }
+
+    public function destroyBusinessCategory($id)
+    {
+        $businessCategory = BusinessCategory::findOrFail($id);
+        $businessCategory->delete();
+
+        return back()->with('success', 'Business Category berhasil dihapus.');
+    }
+
+    public function plants()
+    {
+        $plants = Plant::orderBy('code')->orderBy('name')->get();
+        return view('database.plants', compact('plants'));
+    }
+
+    public function storePlant(Request $request)
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:plants,code',
+            'name' => 'required|string|max:255',
+        ]);
+
+        Plant::create([
+            'code' => trim((string) $validated['code']),
+            'name' => trim((string) $validated['name']),
+        ]);
+
+        return back()->with('success', 'Plant berhasil ditambahkan.');
+    }
+
+    public function updatePlant(Request $request, $id)
+    {
+        $plant = Plant::findOrFail($id);
+
+        $validated = $request->validate([
+            'code' => 'required|string|max:255|unique:plants,code,' . $id,
+            'name' => 'required|string|max:255',
+        ]);
+
+        $plant->update([
+            'code' => trim((string) $validated['code']),
+            'name' => trim((string) $validated['name']),
+        ]);
+
+        return back()->with('success', 'Plant berhasil diperbarui.');
+    }
+
+    public function destroyPlant($id)
+    {
+        $plant = Plant::findOrFail($id);
+        $plant->delete();
+
+        return back()->with('success', 'Plant berhasil dihapus.');
+    }
+
+    public function pics()
+    {
+        $pics = Pic::orderBy('type')->orderBy('name')->get();
+        return view('database.pics', compact('pics'));
+    }
+
+    public function storePic(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:engineering,marketing',
+        ]);
+
+        Pic::create([
+            'name' => trim((string) $validated['name']),
+            'type' => $validated['type'],
+        ]);
+
+        return back()->with('success', 'PIC berhasil ditambahkan.');
+    }
+
+    public function updatePic(Request $request, $id)
+    {
+        $pic = Pic::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => 'required|in:engineering,marketing',
+        ]);
+
+        $pic->update([
+            'name' => trim((string) $validated['name']),
+            'type' => $validated['type'],
+        ]);
+
+        return back()->with('success', 'PIC berhasil diperbarui.');
+    }
+
+    public function destroyPic($id)
+    {
+        $pic = Pic::findOrFail($id);
+        $pic->delete();
+
+        return back()->with('success', 'PIC berhasil dihapus.');
     }
 
     // CRUD for Parts/Materials
@@ -145,7 +302,10 @@ class DatabaseController extends Controller
 
         Material::create($validated);
 
-        return redirect(route('database.parts', absolute: false))->with('success', 'Material berhasil ditambahkan!');
+        $target = route('database.parts', absolute: false);
+        session()->flash('success', 'Material berhasil ditambahkan!');
+
+        return response('', 302, ['Location' => $target]);
     }
 
     public function editPart($id)
@@ -178,7 +338,10 @@ class DatabaseController extends Controller
 
         $material->update($validated);
 
-        return redirect(route('database.parts', absolute: false))->with('success', 'Material berhasil diperbarui!');
+        $target = route('database.parts', absolute: false);
+        session()->flash('success', 'Material berhasil diperbarui!');
+
+        return response('', 302, ['Location' => $target]);
     }
 
     public function destroyPart($id)
@@ -186,6 +349,9 @@ class DatabaseController extends Controller
         $material = Material::findOrFail($id);
         $material->delete();
 
-        return redirect(route('database.parts', absolute: false))->with('success', 'Material berhasil dihapus!');
+        $target = route('database.parts', absolute: false);
+        session()->flash('success', 'Material berhasil dihapus!');
+
+        return response('', 302, ['Location' => $target]);
     }
 }

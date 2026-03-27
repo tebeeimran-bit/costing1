@@ -84,8 +84,8 @@
                                 </svg>
                             </a>
                             <form action="{{ route('database.parts.destroy', $material->id, false) }}" method="POST"
-                                style="display: inline;"
-                                onsubmit="return confirm('Apakah Anda yakin ingin menghapus material ini?');">
+                                style="display: inline;" class="js-confirm-form"
+                                data-confirm-message="Apakah Anda yakin ingin menghapus material ini?">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn-action btn-delete" title="Hapus">

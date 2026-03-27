@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\CogmSubmission;
+use App\Models\BusinessCategory;
 use App\Models\CostingData;
 use App\Models\Customer;
 use App\Models\DocumentProject;
 use App\Models\DocumentRevision;
 use App\Models\Material;
+use App\Models\Plant;
 use App\Models\Product;
 use App\Models\UnpricedPart;
 use Illuminate\Http\Request;
@@ -20,18 +22,22 @@ class TrackingDocumentController extends Controller
     public function create()
     {
         $products = Product::orderBy('code')->get();
+        $businessCategories = BusinessCategory::orderBy('code')->orderBy('name')->get();
         $customers = Customer::orderBy('name')->get();
         $lines = Product::query()->whereNotNull('line')->distinct('line')->orderBy('line')->pluck('line');
+        $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
 
-        return view('tracking-documents.create', compact('products', 'customers', 'lines', 'periods'));
+        return view('tracking-documents.create', compact('products', 'businessCategories', 'customers', 'lines', 'plants', 'periods'));
     }
 
     public function index()
     {
         $products = Product::orderBy('code')->get();
+        $businessCategories = BusinessCategory::orderBy('code')->orderBy('name')->get();
         $customers = Customer::orderBy('name')->get();
         $lines = Product::query()->whereNotNull('line')->distinct('line')->orderBy('line')->pluck('line');
+        $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
 
         $projects = DocumentProject::with([
@@ -53,13 +59,14 @@ class TrackingDocumentController extends Controller
             ->sortByDesc('id')
             ->values();
 
-        return view('tracking-documents.index', compact('revisions', 'projects', 'products', 'customers', 'lines', 'periods'));
+        return view('tracking-documents.index', compact('revisions', 'projects', 'products', 'businessCategories', 'customers', 'lines', 'plants', 'periods'));
     }
 
     public function storeReceipt(Request $request)
     {
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
+            'product_id' => 'nullable|exists:products,id|required_without:business_category_id',
+            'business_category_id' => 'nullable|exists:business_categories,id|required_without:product_id',
             'customer_id' => 'required|exists:customers,id',
             'model' => 'required|string|max:255',
             'assy_no' => 'required|string|max:255',
@@ -95,6 +102,10 @@ class TrackingDocumentController extends Controller
         ]);
 
         DB::transaction(function () use ($validated, $request) {
+            $resolvedProduct = !empty($validated['business_category_id'])
+                ? $this->resolveProductFromBusinessCategoryId((int) $validated['business_category_id'])
+                : Product::findOrFail((int) $validated['product_id']);
+
             $customer = Customer::findOrFail((int) $validated['customer_id']);
             $customerName = trim((string) $customer->name);
             $a00Status = $validated['a00_status'] ?? 'belum_ada';
@@ -111,7 +122,7 @@ class TrackingDocumentController extends Controller
             $project = DocumentProject::firstOrCreate(
                 ['project_key' => $projectKey],
                 [
-                    'product_id' => $validated['product_id'],
+                    'product_id' => $resolvedProduct->id,
                     'customer' => $customerName,
                     'model' => $validated['model'],
                     'part_number' => $validated['assy_no'],
@@ -119,9 +130,9 @@ class TrackingDocumentController extends Controller
                 ]
             );
 
-            if ((int) ($project->product_id ?? 0) !== (int) $validated['product_id']) {
+            if ((int) ($project->product_id ?? 0) !== (int) $resolvedProduct->id) {
                 $project->update([
-                    'product_id' => $validated['product_id'],
+                    'product_id' => $resolvedProduct->id,
                 ]);
             }
 
@@ -246,6 +257,18 @@ class TrackingDocumentController extends Controller
             ->with('success', 'Status berhasil diubah ke COGM Generated.');
     }
 
+    public function processToFormInput(DocumentRevision $revision)
+    {
+        $revision->update([
+            'status' => DocumentRevision::STATUS_PENDING_FORM_INPUT,
+            'cogm_generated_at' => null,
+        ]);
+
+        $target = route('form', ['tracking_revision_id' => $revision->id], absolute: false);
+
+        return response('', 302, ['Location' => $target]);
+    }
+
     public function submitCogm(Request $request, DocumentRevision $revision)
     {
         $hasOpenUnpriced = UnpricedPart::where('document_revision_id', $revision->id)
@@ -366,7 +389,8 @@ class TrackingDocumentController extends Controller
     public function updateProjectInfo(Request $request, DocumentProject $project)
     {
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
+            'product_id' => 'nullable|exists:products,id|required_without:business_category_id',
+            'business_category_id' => 'nullable|exists:business_categories,id|required_without:product_id',
             'customer_id' => 'required|exists:customers,id',
             'model' => 'required|string|max:255',
             'part_number' => 'required|string|max:255',
@@ -410,8 +434,12 @@ class TrackingDocumentController extends Controller
         }
 
         DB::transaction(function () use ($project, $validated, $request, $normalizedCustomer, $normalizedModel, $normalizedPartNumber, $normalizedPartName, $nextProjectKey) {
+            $resolvedProduct = !empty($validated['business_category_id'])
+                ? $this->resolveProductFromBusinessCategoryId((int) $validated['business_category_id'])
+                : Product::findOrFail((int) $validated['product_id']);
+
             $project->update([
-                'product_id' => $validated['product_id'],
+                'product_id' => $resolvedProduct->id,
                 'customer' => $normalizedCustomer,
                 'model' => $normalizedModel,
                 'part_number' => $normalizedPartNumber,
@@ -677,5 +705,23 @@ class TrackingDocumentController extends Controller
             ->implode('|');
 
         return hash('sha256', $raw);
+    }
+
+    private function resolveProductFromBusinessCategoryId(int $businessCategoryId): Product
+    {
+        $businessCategory = BusinessCategory::findOrFail($businessCategoryId);
+        $code = trim((string) $businessCategory->code);
+        $name = trim((string) $businessCategory->name);
+
+        $product = Product::firstOrCreate(
+            ['code' => $code],
+            ['name' => $name]
+        );
+
+        if (trim((string) $product->name) !== $name) {
+            $product->update(['name' => $name]);
+        }
+
+        return $product;
     }
 }

@@ -235,7 +235,7 @@
         }
 
         .sidebar-dropdown.open .sidebar-submenu {
-            max-height: 300px;
+            max-height: 560px;
         }
 
         .sidebar-submenu-item {
@@ -1271,6 +1271,34 @@
                                 </svg>
                                 <span>Customer</span>
                             </a>
+                            <a href="{{ route('database.business-categories', absolute: false) }}"
+                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.business-categories*') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 7h16" />
+                                    <path d="M4 12h16" />
+                                    <path d="M4 17h10" />
+                                </svg>
+                                <span>Business Categories</span>
+                            </a>
+                            <a href="{{ route('database.plants', absolute: false) }}"
+                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.plants*') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 21h18" />
+                                    <path d="M5 21V8l7-5 7 5v13" />
+                                    <path d="M9 21v-6h6v6" />
+                                </svg>
+                                <span>Plant</span>
+                            </a>
+                            <a href="{{ route('database.pics', absolute: false) }}"
+                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.pics*') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                    <circle cx="8.5" cy="7" r="4" />
+                                    <path d="M20 8v6" />
+                                    <path d="M23 11h-6" />
+                                </svg>
+                                <span>PIC</span>
+                            </a>
                             <a href="{{ route('database.cycle-time-templates', absolute: false) }}"
                                 class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.cycle-time-templates*') ? 'active' : '' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1400,7 +1428,202 @@
         </div>
     </div>
 
+    <div id="app-confirm-modal" class="app-confirm-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="app-confirm-title" onclick="closeAppConfirmOnOverlay(event)">
+        <div class="app-confirm-card">
+            <div class="app-confirm-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 9v4" />
+                    <path d="M12 17h.01" />
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                </svg>
+            </div>
+            <h3 id="app-confirm-title" class="app-confirm-title">Konfirmasi Aksi</h3>
+            <p id="app-confirm-message" class="app-confirm-message">Apakah Anda yakin?</p>
+            <div class="app-confirm-actions">
+                <button type="button" class="app-confirm-btn app-confirm-btn-secondary" onclick="closeAppConfirm()">Batal</button>
+                <button type="button" id="app-confirm-ok" class="app-confirm-btn app-confirm-btn-danger">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .app-confirm-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 2100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(2px);
+        }
+
+        .app-confirm-modal.is-hidden {
+            display: none;
+        }
+
+        .app-confirm-card {
+            width: min(430px, 100%);
+            border-radius: 14px;
+            background: #ffffff;
+            border: 1px solid #dbe4f2;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25);
+            padding: 1.2rem;
+            animation: appConfirmPopIn 0.2s ease;
+        }
+
+        .app-confirm-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 999px;
+            background: #fff7ed;
+            color: #f97316;
+            border: 1px solid #fed7aa;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .app-confirm-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .app-confirm-title {
+            margin: 0;
+            color: #0f172a;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .app-confirm-message {
+            margin: 0.45rem 0 1rem;
+            color: #334155;
+            font-size: 0.92rem;
+            line-height: 1.5;
+        }
+
+        .app-confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.6rem;
+        }
+
+        .app-confirm-btn {
+            border: 0;
+            border-radius: 10px;
+            padding: 0.62rem 0.95rem;
+            font-weight: 600;
+            font-size: 0.86rem;
+            cursor: pointer;
+        }
+
+        .app-confirm-btn-secondary {
+            background: #f1f5f9;
+            color: #0f172a;
+            border: 1px solid #cbd5e1;
+        }
+
+        .app-confirm-btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .app-confirm-btn-danger {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: #ffffff;
+        }
+
+        .app-confirm-btn-danger:hover {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        }
+
+        @keyframes appConfirmPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+    </style>
+
     <script>
+        let appConfirmCurrentOnConfirm = null;
+
+        function openAppConfirm(message, onConfirm) {
+            const modal = document.getElementById('app-confirm-modal');
+            const messageNode = document.getElementById('app-confirm-message');
+            const okButton = document.getElementById('app-confirm-ok');
+
+            messageNode.textContent = message || 'Apakah Anda yakin ingin melanjutkan?';
+            appConfirmCurrentOnConfirm = onConfirm;
+            modal.classList.remove('is-hidden');
+            document.body.style.overflow = 'hidden';
+            okButton.focus();
+        }
+
+        function closeAppConfirm() {
+            const modal = document.getElementById('app-confirm-modal');
+            appConfirmCurrentOnConfirm = null;
+            modal.classList.add('is-hidden');
+            document.body.style.overflow = '';
+        }
+
+        function closeAppConfirmOnOverlay(event) {
+            if (event.target && event.target.id === 'app-confirm-modal') {
+                closeAppConfirm();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const okButton = document.getElementById('app-confirm-ok');
+
+            okButton.addEventListener('click', function () {
+                if (typeof appConfirmCurrentOnConfirm === 'function') {
+                    const callback = appConfirmCurrentOnConfirm;
+                    closeAppConfirm();
+                    callback();
+                    return;
+                }
+
+                closeAppConfirm();
+            });
+
+            document.addEventListener('submit', function (event) {
+                const form = event.target;
+                if (!form.classList || !form.classList.contains('js-confirm-form')) {
+                    return;
+                }
+
+                if (form.dataset.confirmed === 'true') {
+                    return;
+                }
+
+                event.preventDefault();
+                const message = form.dataset.confirmMessage || 'Apakah Anda yakin ingin melanjutkan?';
+                openAppConfirm(message, function () {
+                    form.dataset.confirmed = 'true';
+                    form.submit();
+                });
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key !== 'Escape') {
+                    return;
+                }
+
+                const modal = document.getElementById('app-confirm-modal');
+                if (!modal.classList.contains('is-hidden')) {
+                    closeAppConfirm();
+                }
+            });
+        });
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebarOverlay');

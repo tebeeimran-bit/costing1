@@ -10,6 +10,8 @@ use App\Models\UnpricedPart;
 use App\Models\DocumentRevision;
 use App\Models\CycleTimeTemplate;
 use App\Models\MaterialBreakdown;
+use App\Models\Plant;
+use App\Models\BusinessCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -132,10 +134,11 @@ class CostingController extends Controller
     public function form(Request $request)
     {
         $products = Product::all();
+        $businessCategories = BusinessCategory::orderBy('code')->orderBy('name')->get();
         $customers = Customer::all();
         $materials = Material::all();
         $cycleTimeTemplates = CycleTimeTemplate::orderBy('id')->get();
-        $lines = Product::distinct('line')->pluck('line');
+        $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
 
         // Get existing costing data if editing
@@ -146,7 +149,7 @@ class CostingController extends Controller
         $openUnpricedParts = collect();
         $trackingRevisionId = $request->get('tracking_revision_id');
         $trackingProjectPrefill = [
-            'product_id' => null,
+            'business_category_id' => null,
             'customer_id' => null,
             'model' => null,
             'assy_no' => null,
@@ -188,6 +191,20 @@ class CostingController extends Controller
                         ? $products->firstWhere('id', (int) $project->product_id)
                         : null;
 
+                    $matchedBusinessCategory = null;
+                    if ($matchedProduct) {
+                        $productCodeNorm = $normalize($matchedProduct->code ?? '');
+                        $productNameNorm = $normalize($matchedProduct->name ?? '');
+
+                        $matchedBusinessCategory = $businessCategories->first(function ($category) use ($normalize, $productCodeNorm, $productNameNorm) {
+                            $categoryCodeNorm = $normalize($category->code ?? '');
+                            $categoryNameNorm = $normalize($category->name ?? '');
+
+                            return ($productCodeNorm !== '' && $categoryCodeNorm === $productCodeNorm)
+                                || ($productNameNorm !== '' && $categoryNameNorm === $productNameNorm);
+                        });
+                    }
+
                     if (!$matchedProduct) {
                         $matchedProduct = $products->first(function ($product) use (
                             $normalize,
@@ -225,7 +242,7 @@ class CostingController extends Controller
                     }
 
                     $trackingProjectPrefill = [
-                        'product_id' => $matchedProduct?->id,
+                        'business_category_id' => $matchedBusinessCategory?->id,
                         'customer_id' => $matchedCustomer?->id,
                         'model' => $project->model,
                         'assy_no' => $project->part_number,
@@ -244,10 +261,11 @@ class CostingController extends Controller
 
         return view('form', compact(
             'products',
+            'businessCategories',
             'customers',
             'materials',
             'cycleTimeTemplates',
-            'lines',
+            'plants',
             'periods',
             'costingData',
             'materialBreakdowns',
@@ -261,7 +279,7 @@ class CostingController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'product_id' => 'required|exists:products,id',
+            'business_category_id' => 'required|exists:business_categories,id',
             'customer_id' => 'required|exists:customers,id',
             'tracking_revision_id' => 'nullable|exists:document_revisions,id',
             'period' => 'required|string',
@@ -276,8 +294,8 @@ class CostingController extends Controller
             'project_period' => 'required|integer',
             'material_cost' => 'required|numeric',
             'labor_cost' => 'required|numeric',
-            'overhead_cost' => 'required|numeric',
-            'scrap_cost' => 'required|numeric',
+            'overhead_cost' => 'nullable|numeric',
+            'scrap_cost' => 'nullable|numeric',
             'revenue' => 'nullable|numeric',
             'qty_good' => 'nullable|integer',
             'materials' => 'nullable|array',
@@ -303,7 +321,22 @@ class CostingController extends Controller
 
         DB::beginTransaction();
         try {
-            $costingData = CostingData::create($request->except('materials'));
+            $businessCategory = BusinessCategory::findOrFail((int) $validated['business_category_id']);
+            $product = Product::firstOrCreate(
+                ['code' => trim((string) $businessCategory->code)],
+                ['name' => trim((string) $businessCategory->name)]
+            );
+
+            if (trim((string) $product->name) !== trim((string) $businessCategory->name)) {
+                $product->update(['name' => trim((string) $businessCategory->name)]);
+            }
+
+            $payload = $request->except(['materials', 'business_category_id']);
+            $payload['product_id'] = $product->id;
+            $payload['overhead_cost'] = $validated['overhead_cost'] ?? 0;
+            $payload['scrap_cost'] = $validated['scrap_cost'] ?? 0;
+
+            $costingData = CostingData::create($payload);
             $partAggregation = [];
             $manualUnpricedPrices = collect($request->input('manual_unpriced_prices', []))
                 ->mapWithKeys(function ($value, $key) {
@@ -470,8 +503,9 @@ class CostingController extends Controller
                 $trackingRevisionId ? ['tracking_revision_id' => $trackingRevisionId] : [],
                 false
             );
+            session()->flash('success', 'Data costing berhasil disimpan!');
 
-            return redirect($redirectUrl)->with('success', 'Data costing berhasil disimpan!');
+            return response('', 302, ['Location' => $redirectUrl]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
