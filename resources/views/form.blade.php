@@ -159,6 +159,201 @@
             min-width: 74px;
         }
 
+        .material-row-no-header,
+        .material-row-no-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .material-row-no-header input,
+        .material-row-no-cell input {
+            width: 14px;
+            height: 14px;
+            cursor: pointer;
+            accent-color: #2563eb;
+        }
+
+        .material-row-number {
+            min-width: 1.2rem;
+            text-align: right;
+            display: inline-block;
+        }
+
+        .material-header-filter {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .material-filter-btn {
+            width: 18px;
+            height: 18px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .material-filter-btn.is-active {
+            background: #dbeafe;
+            border-color: #60a5fa;
+            color: #1d4ed8;
+        }
+
+        .material-filter-popup {
+            position: fixed;
+            z-index: 1200;
+            width: 280px;
+            max-height: 460px;
+            border: 1px solid #94a3b8;
+            border-radius: 4px;
+            background: #fff;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.2);
+            display: none;
+            overflow: hidden;
+        }
+
+        .material-filter-popup.show {
+            display: block;
+        }
+
+        .material-filter-popup-head {
+            padding: 0.45rem 0.6rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.74rem;
+            font-weight: 700;
+            color: #1e293b;
+            background: #f1f5f9;
+        }
+
+        .material-filter-popup-search {
+            padding: 0.45rem 0.6rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .material-filter-popup-sort {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.2rem;
+            padding: 0.35rem 0.35rem 0.2rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #fff;
+        }
+
+        .material-filter-popup-sort .btn {
+            justify-content: flex-start;
+            padding: 0.28rem 0.45rem;
+            font-size: 0.74rem;
+            border-radius: 3px;
+            border: 1px solid transparent;
+            background: transparent;
+            color: #0f172a;
+        }
+
+        .material-filter-popup-sort .btn.is-active {
+            background: #dbeafe;
+            border-color: #60a5fa;
+            color: #1d4ed8;
+        }
+
+        .material-filter-popup-sort .btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .material-filter-separator {
+            border-top: 1px solid #e2e8f0;
+            margin: 0.2rem 0.35rem;
+        }
+
+        .material-filter-clear-line {
+            padding: 0 0.5rem 0.35rem;
+        }
+
+        .material-filter-clear-line .btn {
+            width: 100%;
+            justify-content: flex-start;
+            border-radius: 3px;
+            background: transparent;
+            border: 1px solid transparent;
+            font-size: 0.73rem;
+            color: #0f172a;
+            padding: 0.28rem 0.45rem;
+        }
+
+        .material-filter-clear-line .btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .material-filter-popup-search input {
+            width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 2px;
+            padding: 0.32rem 0.45rem;
+            font-size: 0.74rem;
+        }
+
+        .material-filter-popup-list {
+            max-height: 230px;
+            overflow: auto;
+            padding: 0.4rem 0.6rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.22rem;
+        }
+
+        .material-filter-popup-item {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.74rem;
+            color: #334155;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+
+        .material-filter-popup-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.5rem;
+            padding: 0.45rem 0.65rem 0.55rem;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .material-filter-popup-actions .btn {
+            padding: 0.32rem 0.65rem;
+            font-size: 0.73rem;
+        }
+
+        /* Highlight import-sensitive pricing columns: Amount 1 .. Import Tax */
+        .form-page .material-table thead th:nth-child(8),
+        .form-page .material-table thead th:nth-child(9),
+        .form-page .material-table thead th:nth-child(10),
+        .form-page .material-table thead th:nth-child(11),
+        .form-page .material-table thead th:nth-child(12),
+        .form-page .material-table thead th:nth-child(13),
+        .form-page .material-table thead th:nth-child(14) {
+            background: #fff5cc;
+        }
+
+        .form-page .material-table tbody td:nth-child(8),
+        .form-page .material-table tbody td:nth-child(9),
+        .form-page .material-table tbody td:nth-child(10),
+        .form-page .material-table tbody td:nth-child(11),
+        .form-page .material-table tbody td:nth-child(12),
+        .form-page .material-table tbody td:nth-child(13),
+        .form-page .material-table tbody td:nth-child(14) {
+            background: #fffdf0;
+        }
+
         .form-page .cycle-table-container {
             max-width: 100%;
             overflow: auto;
@@ -265,6 +460,73 @@
             transition: transform 0.2s ease;
         }
 
+        .confirm-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.42);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            z-index: 1000;
+        }
+
+        .confirm-modal.is-hidden {
+            display: none;
+        }
+
+        .confirm-modal-card {
+            width: min(460px, 100%);
+            background: #fff;
+            border: 1px solid var(--slate-200);
+            border-radius: 0.95rem;
+            box-shadow: 0 24px 52px rgba(15, 23, 42, 0.24);
+            overflow: hidden;
+        }
+
+        .confirm-modal-head {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.1rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%);
+            border-bottom: 1px solid var(--slate-200);
+        }
+
+        .confirm-modal-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #9a6b00;
+            background: #fff7da;
+            border: 1px solid #f7d37a;
+            flex-shrink: 0;
+        }
+
+        .confirm-modal-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--slate-800);
+            margin: 0;
+        }
+
+        .confirm-modal-body {
+            padding: 1rem 1.1rem 1.15rem;
+            color: var(--slate-700);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .confirm-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.6rem;
+            padding: 0 1.1rem 1.1rem;
+        }
+
         .form-page .form-section.is-collapsed .section-toggle svg {
             transform: rotate(-90deg);
         }
@@ -359,6 +621,39 @@
         </div>
     @endif
 
+    @if(session('warning'))
+        <div class="alert alert-warning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <span>{{ $errors->first() }}</span>
+        </div>
+    @endif
+
     <div class="alert alert-warning" id="unpricedTopBanner"
         style="{{ (isset($trackingRevision) && $trackingRevision && isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? '' : 'display:none;' }}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -372,14 +667,20 @@
     </div>
 
     <div class="form-page">
-    <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm">
+    <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm" enctype="multipart/form-data">
         @csrf
+        <input type="hidden" name="update_section" id="updateSectionInput" value="">
+        @if(isset($costingData) && $costingData)
+            <input type="hidden" name="costing_data_id" value="{{ $costingData->id }}">
+        @endif
         @if(isset($trackingRevisionId) && $trackingRevisionId)
             <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
         @endif
         <input type="hidden" id="trackingRevisionId" value="{{ $trackingRevisionId ?? '' }}">
         <input type="hidden" id="updateUnpricedPriceUrl"
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.update-unpriced-price', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
+        <input type="hidden" id="deleteUnpricedPartUrl"
+            value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.delete-unpriced-part', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
 
         <!-- Section A: Filter & Header -->
         <div class="card form-section">
@@ -389,7 +690,7 @@
                 </svg>
                 Informasi Project
                 <div class="section-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="informasi_project" formnovalidate>
+                    <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="informasi_project" data-section="informasi_project" formnovalidate>
                         Update
                     </button>
                 </div>
@@ -517,7 +818,7 @@
                 </svg>
                 Rates
                 <div class="section-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="rates" formnovalidate>
+                    <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="rates" data-section="rates" formnovalidate>
                         Update
                     </button>
                 </div>
@@ -557,8 +858,26 @@
                 </svg>
                 Material
                 <div class="section-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="material" formnovalidate>
+                    <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="material" data-section="material" formnovalidate>
                         Update
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="triggerPartlistImport()">
+                        Import Partlist
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="materialUndoBtn" onclick="undoMaterialTable()" disabled aria-label="Undo" title="Undo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="9 14 4 9 9 4"></polyline>
+                            <path d="M20 20a8 8 0 0 0-8-8H4"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="materialRedoBtn" onclick="redoMaterialTable()" disabled aria-label="Redo" title="Redo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="15 14 20 9 15 4"></polyline>
+                            <path d="M4 20a8 8 0 0 1 8-8h8"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="materialDeleteSelectedBtn" onclick="deleteSelectedMaterialRows()">
+                        Hapus Terpilih
                     </button>
                     <button type="button" class="btn btn-secondary" onclick="addMaterialRow()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -574,7 +893,12 @@
                 <table class="material-table" id="materialTable">
                     <thead>
                         <tr>
-                            <th>No</th>
+                            <th>
+                                <span class="material-row-no-header">
+                                    <input type="checkbox" id="materialSelectAllRows" title="Pilih semua baris">
+                                    <span>No</span>
+                                </span>
+                            </th>
                             <th>Part No</th>
                             <th>ID Code</th>
                             <th>Part Name</th>
@@ -597,27 +921,110 @@
                         </tr>
                     </thead>
                     <tbody id="materialTableBody">
-                        @if($materialBreakdowns->count() > 0)
+                        @php
+                            $oldMaterialRows = old('materials');
+                        @endphp
+
+                        @if(is_array($oldMaterialRows) && count($oldMaterialRows) > 0)
+                            @foreach($oldMaterialRows as $index => $row)
+                            <tr data-row="{{ $index }}">
+                                <td>
+                                    <span class="material-row-no-cell">
+                                        <input type="checkbox" class="material-row-select" title="Pilih baris">
+                                        <span class="material-row-number">{{ $index + 1 }}</span>
+                                    </span>
+                                </td>
+                                <td><input type="text" class="form-input part-no" name="materials[{{ $index }}][part_no]"
+                                    value="{{ $row['part_no'] ?? '' }}" placeholder="Part No"></td>
+                                <td><input type="text" class="form-input id-code" name="materials[{{ $index }}][id_code]"
+                                    value="{{ $row['id_code'] ?? '' }}" placeholder="ID Code"></td>
+                                <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
+                                    value="{{ $row['part_name'] ?? '' }}" placeholder="Part Name"></td>
+                                <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]"
+                                    value="{{ $row['qty_req'] ?? 0 }}" step="0.0001" onchange="calculateRow(this)"></td>
+                                <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
+                                    value="{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}" placeholder="Unit"></td>
+                                <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
+                                    value="{{ $row['pro_code'] ?? '' }}" placeholder="Pro Code"></td>
+                                <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" value="{{ $row['amount1'] ?? 0 }}"
+                                    step="0.0001" onchange="calculateRow(this)"></td>
+                                <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
+                                    value="{{ $row['unit_price_basis_text'] ?? $row['unit_price_basis'] ?? '' }}" placeholder="Unit Price"
+                                    onchange="calculateRow(this)"></td>
+                                <td>
+                                @php $rowCurrency = $row['currency'] ?? 'IDR'; @endphp
+                                <select class="form-select currency" name="materials[{{ $index }}][currency]" onchange="calculateRow(this)">
+                                    <option value="IDR" {{ $rowCurrency == 'IDR' ? 'selected' : '' }}>IDR</option>
+                                    <option value="USD" {{ $rowCurrency == 'USD' ? 'selected' : '' }}>USD</option>
+                                    <option value="JPY" {{ $rowCurrency == 'JPY' ? 'selected' : '' }}>JPY</option>
+                                </select>
+                                </td>
+                                <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $row['qty_moq'] ?? 0 }}"
+                                    step="0.0001" onchange="calculateRow(this)"></td>
+                                <td>
+                                @php $rowCn = $row['cn_type'] ?? 'N'; @endphp
+                                <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
+                                    <option value="N" {{ $rowCn == 'N' ? 'selected' : '' }}>N</option>
+                                    <option value="C" {{ $rowCn == 'C' ? 'selected' : '' }}>C</option>
+                                </select>
+                                </td>
+                                <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
+                                    value="{{ $row['supplier'] ?? '' }}" placeholder="Supplier"></td>
+                                <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
+                                    value="{{ $row['import_tax'] ?? 0 }}" step="0.01" onchange="calculateRow(this)"></td>
+                                <td class="calculated multiply-factor">1.0000</td>
+                                <td class="calculated amount2">0.0000</td>
+                                <td class="calculated currency2">{{ $rowCurrency }}</td>
+                                <td class="calculated unit-price2">{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}</td>
+                                <td class="calculated total-price">Rp 0</td>
+                                <td>
+                                <button type="button" class="btn btn-secondary" onclick="removeRow(this)"
+                                    style="padding: 0.5rem;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path
+                                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                    </svg>
+                                </button>
+                                </td>
+                            </tr>
+                            @endforeach
+                        @elseif($materialBreakdowns->count() > 0)
                             @foreach($materialBreakdowns as $index => $breakdown)
+                                @php
+                                    $partNoDisplay = trim((string) ($breakdown->part_no ?? ''));
+                                    if ($partNoDisplay === '') {
+                                        $partNoDisplay = $breakdown->material->material_code ?? '';
+                                        if (str_starts_with((string) $partNoDisplay, '__ROW_')) {
+                                            $partNoDisplay = '-';
+                                        }
+                                    }
+                                @endphp
                                 <tr data-row="{{ $index }}">
-                                    <td>{{ $index + 1 }}</td>
+                                    <td>
+                                        <span class="material-row-no-cell">
+                                            <input type="checkbox" class="material-row-select" title="Pilih baris">
+                                            <span class="material-row-number">{{ $index + 1 }}</span>
+                                        </span>
+                                    </td>
                                     <td><input type="text" class="form-input part-no" name="materials[{{ $index }}][part_no]"
-                                            value="{{ $breakdown->material->part_no ?? '' }}" placeholder="Part No"></td>
+                                    value="{{ $partNoDisplay }}" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[{{ $index }}][id_code]"
-                                            value="{{ $breakdown->material->id_code ?? '' }}" placeholder="ID Code"></td>
+                                    value="{{ $breakdown->id_code ?? '' }}" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
-                                            value="{{ $breakdown->material->part_name ?? '' }}" placeholder="Part Name"></td>
+                                    value="{{ $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
                                     <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]"
                                             value="{{ $breakdown->qty_req }}" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
-                                            value="{{ $breakdown->material->unit ?? 'PCS' }}" placeholder="Unit"></td>
+                                    value="{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
-                                            value="{{ $breakdown->material->pro_code ?? '' }}" placeholder="Pro Code"></td>
+                                            value="{{ $breakdown->pro_code ?? '' }}" placeholder="Pro Code"></td>
                                     <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" value="{{ $breakdown->amount1 }}"
                                             step="0.0001" onchange="calculateRow(this)"></td>
-                                    <td><input type="number" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
-                                            value="{{ $breakdown->unit_price_basis }}" placeholder="Unit Price"
-                                            step="0.0001" onchange="calculateRow(this)">
+                                        <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
+                                            value="{{ $breakdown->unit_price_basis_text ?? $breakdown->unit_price_basis }}" placeholder="Unit Price"
+                                            onchange="calculateRow(this)">
                                     </td>
                                     <td>
                                         <select class="form-select currency" name="materials[{{ $index }}][currency]" onchange="calculateRow(this)">
@@ -635,14 +1042,14 @@
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
-                                            value="{{ $breakdown->material->supplier_name ?? '' }}" placeholder="Supplier"></td>
+                                            value="{{ $breakdown->material->maker ?? '' }}" placeholder="Supplier"></td>
                                     <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
                                             value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
                                     </td>
                                     <td class="calculated multiply-factor">1.0000</td>
                                     <td class="calculated amount2">{{ number_format($breakdown->amount2 ?? 0, 4) }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
-                                    <td class="calculated unit-price2">{{ $breakdown->material->unit ?? 'PCS' }}</td>
+                                        <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
                                     <td class="calculated total-price">Rp 0</td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeRow(this)"
@@ -661,7 +1068,12 @@
                             <!-- Default empty rows -->
                             @for($i = 0; $i < 5; $i++)
                                 <tr data-row="{{ $i }}">
-                                    <td>{{ $i + 1 }}</td>
+                                    <td>
+                                        <span class="material-row-no-cell">
+                                            <input type="checkbox" class="material-row-select" title="Pilih baris">
+                                            <span class="material-row-number">{{ $i + 1 }}</span>
+                                        </span>
+                                    </td>
                                     <td><input type="text" class="form-input part-no" name="materials[{{ $i }}][part_no]" value=""
                                             placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[{{ $i }}][id_code]" value=""
@@ -740,7 +1152,7 @@
                 </svg>
                 Rekapan Part Tanpa Harga
                 <div class="section-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="unpriced_parts" formnovalidate>
+                    <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="unpriced_parts" data-section="unpriced_parts" formnovalidate>
                         Update
                     </button>
                     @if(isset($trackingRevision) && $trackingRevision)
@@ -761,6 +1173,7 @@
                             <th>Qty</th>
                             <th>Detected Price</th>
                             <th>Input Harga (Manual)</th>
+                            <th>Aksi</th>
                         </tr>
                     </thead>
                     <tbody id="unpricedRecapBody">
@@ -777,11 +1190,16 @@
                                             data-part-number="{{ $item->part_number }}"
                                             value="{{ $item->manual_price ?? '' }}" placeholder="Isi harga jika sudah ada">
                                     </td>
+                                    <td>
+                                        <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="{{ $item->part_number }}">
+                                            Hapus
+                                        </button>
+                                    </td>
                                 </tr>
                             @endforeach
                         @else
                             <tr>
-                                <td colspan="5" style="text-align: center; color: var(--slate-500);">
+                                <td colspan="6" style="text-align: center; color: var(--slate-500);">
                                     Belum ada part tanpa harga untuk versi dokumen ini.
                                 </td>
                             </tr>
@@ -800,7 +1218,7 @@
                 </svg>
                 Cycle Time
                 <div class="section-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="cycle_time" formnovalidate>
+                    <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="cycle_time" data-section="cycle_time" formnovalidate>
                         Update
                     </button>
                     <button type="button" class="btn btn-secondary" onclick="addCycleTimeRow()">
@@ -981,7 +1399,7 @@
                 </svg>
                 Resume COGM
                 <div class="section-actions">
-                    <button type="submit" class="btn btn-primary btn-sm" name="update_section" value="resume_cogm" formnovalidate>
+                    <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="resume_cogm" data-section="resume_cogm" formnovalidate>
                         Update
                     </button>
                 </div>
@@ -1059,17 +1477,68 @@
             </button>
         </div>
     </form>
+
+    <form action="{{ route('costing.import-partlist', absolute: false) }}" method="POST" id="partlistImportForm" enctype="multipart/form-data" style="display:none;">
+        @csrf
+        @if(isset($costingData) && $costingData)
+            <input type="hidden" name="costing_data_id" value="{{ $costingData->id }}">
+        @endif
+        @if(isset($trackingRevisionId) && $trackingRevisionId)
+            <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
+        @endif
+        <input type="hidden" name="forecast" id="importForecast" value="{{ $forecastValue ?? 0 }}">
+        <input type="hidden" name="project_period" id="importProjectPeriod" value="{{ $costingData->project_period ?? 2 }}">
+        <input type="file" name="import_partlist_file" id="importPartlistFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitPartlistImport(); }">
+    </form>
+
+    <div id="partlistImportConfirmModal" class="confirm-modal is-hidden" aria-hidden="true">
+        <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="partlistImportConfirmTitle">
+            <div class="confirm-modal-head">
+                <span class="confirm-modal-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </span>
+                <h3 id="partlistImportConfirmTitle" class="confirm-modal-title">Konfirmasi Update Partlist</h3>
+            </div>
+            <div class="confirm-modal-body">
+                Yakin ingin mengupdate partlist? Data material yang ada akan digantikan dari file partlist.
+            </div>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-secondary" id="partlistImportCancelBtn">Batal</button>
+                <button type="button" class="btn btn-primary" id="partlistImportOkBtn">Ya, Update Partlist</button>
+            </div>
+        </div>
+    </div>
     </div>
 @endsection
 
 @section('scripts')
     <script>
         // Global variables
-        let rowCounter = {{ $materialBreakdowns->count() > 0 ? $materialBreakdowns->count() : 5 }};
+        let rowCounter = {{ is_array(old('materials')) && count(old('materials')) > 0 ? count(old('materials')) : ($materialBreakdowns->count() > 0 ? $materialBreakdowns->count() : 5) }};
         let cycleRowCounter = {{ $initialCycleCount }};
+        let materialUndoHistory = [];
+        let materialRedoHistory = [];
+        const materialUndoLimit = 50;
+        let materialHistoryApplying = false;
+        const materialFilterState = {};
+        const materialFilterableColumns = [1, 2, 3, 5, 6, 9, 11, 12];
+        let materialFilterPopup = null;
+        let activeMaterialFilterColumn = null;
+        let materialSortState = { column: null, direction: null };
 
         // Materials data for dynamic selection
         const materials = @json($materials);
+        const materialMasterByCode = new Map();
+        materials.forEach((item) => {
+            const codeKey = String(item?.material_code || '').trim().toUpperCase();
+            if (codeKey !== '') {
+                materialMasterByCode.set(codeKey, item);
+            }
+        });
         const cycleProcessOptions = @json(($cycleTimeTemplates ?? collect())->pluck('process')->values());
         const hasServerUnpricedData = {{ (isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? 'true' : 'false' }};
         const unpricedSyncTimers = {};
@@ -1178,6 +1647,88 @@
             str = str.replace(/,/g, '.');
 
             return parseFloat(str) || 0;
+        }
+
+        function findMaterialMasterForRow(row) {
+            if (!row) return null;
+
+            const partNo = String(row.querySelector('.part-no')?.value || '').trim().toUpperCase();
+            const idCode = String(row.querySelector('.id-code')?.value || '').trim().toUpperCase();
+
+            if (partNo && materialMasterByCode.has(partNo)) {
+                return materialMasterByCode.get(partNo);
+            }
+
+            if (idCode && materialMasterByCode.has(idCode)) {
+                return materialMasterByCode.get(idCode);
+            }
+
+            return null;
+        }
+
+        function applyMasterMaterialToRow(row) {
+            const master = findMaterialMasterForRow(row);
+            if (!master || !row) {
+                return false;
+            }
+
+            const partNameInput = row.querySelector('.part-name');
+            const unitInput = row.querySelector('.unit');
+            const supplierInput = row.querySelector('.supplier');
+            const amount1Input = row.querySelector('.amount1');
+            const qtyMoqInput = row.querySelector('.qty-moq');
+            const importTaxInput = row.querySelector('.import-tax');
+            const currencySelect = row.querySelector('.currency');
+            const cnTypeSelect = row.querySelector('.cn-type');
+
+            if (partNameInput && String(partNameInput.value || '').trim() === '') {
+                partNameInput.value = String(master.material_description || '').toUpperCase();
+            }
+
+            if (unitInput && String(unitInput.value || '').trim() === '') {
+                unitInput.value = String(master.base_uom || 'PCS').toUpperCase();
+            }
+
+            if (supplierInput && String(supplierInput.value || '').trim() === '') {
+                supplierInput.value = String(master.maker || '').toUpperCase();
+            }
+
+            if (currencySelect && String(currencySelect.value || '').trim() === '') {
+                const currency = String(master.currency || 'IDR').toUpperCase();
+                if (['IDR', 'USD', 'JPY'].includes(currency)) {
+                    currencySelect.value = currency;
+                }
+            }
+
+            if (cnTypeSelect) {
+                const current = String(cnTypeSelect.value || '').toUpperCase();
+                if (current !== 'C' && current !== 'N') {
+                    const fromMaster = String(master.cn || 'N').toUpperCase();
+                    cnTypeSelect.value = fromMaster === 'C' ? 'C' : 'N';
+                }
+            }
+
+            if (qtyMoqInput) {
+                const currentMoq = parseInputNumber(qtyMoqInput.value || 0);
+                const masterMoq = Number(master.moq || 0);
+                if (currentMoq <= 0 && masterMoq > 0) {
+                    qtyMoqInput.value = String(masterMoq);
+                }
+            }
+
+            if (importTaxInput && String(importTaxInput.value || '').trim() === '' && master.add_cost_import_tax !== null && master.add_cost_import_tax !== undefined) {
+                importTaxInput.value = String(master.add_cost_import_tax || 0);
+            }
+
+            if (amount1Input) {
+                const currentAmount1 = parseInputNumber(amount1Input.value || 0);
+                const masterPrice = Number(master.price || 0);
+                if (currentAmount1 <= 0 && masterPrice > 0) {
+                    amount1Input.value = String(masterPrice);
+                }
+            }
+
+            return true;
         }
 
         // Calculate row total
@@ -1293,9 +1844,10 @@
 
                 const partName = (row.querySelector('.part-name')?.value || '').trim();
                 const qty = parseFloat(row.querySelector('.qty-req')?.value) || 0;
-                const inputPrice = parseInputNumber(row.querySelector('.unit-price-basis')?.value || 0);
+                const amount1Price = parseInputNumber(row.querySelector('.amount1')?.value || 0);
 
-                if (inputPrice > 0) {
+                // Rule: jika Amount 1 terisi, part dianggap sudah punya harga.
+                if (amount1Price > 0) {
                     return;
                 }
 
@@ -1316,7 +1868,7 @@
             }
 
             if (partMap.size === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
             } else {
                 tbody.innerHTML = Array.from(partMap.values()).map((item) => `
                     <tr>
@@ -1325,6 +1877,7 @@
                         <td>${item.qty.toFixed(4)}</td>
                         <td>0</td>
                         <td><input type="number" step="0.0001" class="form-input unpriced-manual-price" data-part-number="${item.partNo}" name="manual_unpriced_prices[${item.partNo}]" placeholder="Isi harga jika sudah ada"></td>
+                        <td><button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="${item.partNo}">Hapus</button></td>
                     </tr>
                 `).join('');
             }
@@ -1339,6 +1892,7 @@
             }
 
             bindUnpricedManualPriceInputs();
+            bindUnpricedDeleteButtons();
         }
 
         function bindUnpricedManualPriceInputs() {
@@ -1360,6 +1914,28 @@
                     unpricedSyncTimers[partNumber] = setTimeout(() => {
                         syncManualPriceToServer(partNumber, this.value);
                     }, 450);
+                });
+            });
+        }
+
+        function bindUnpricedDeleteButtons() {
+            const buttons = document.querySelectorAll('.unpriced-delete-btn');
+            buttons.forEach((button) => {
+                if (button.dataset.boundDelete === '1') {
+                    return;
+                }
+
+                button.dataset.boundDelete = '1';
+                button.addEventListener('click', function () {
+                    const partNumber = this.dataset.partNumber || '';
+                    if (!partNumber) return;
+
+                    const confirmed = window.confirm(`Hapus part tanpa harga "${partNumber}"?`);
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    deleteUnpricedPart(partNumber);
                 });
             });
         }
@@ -1407,6 +1983,58 @@
                 });
         }
 
+        function deleteUnpricedPart(partNumber) {
+            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
+            const url = document.getElementById('deleteUnpricedPartUrl')?.value || '';
+
+            if (!trackingRevisionId || !url) {
+                return;
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    part_number: partNumber
+                })
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (!data || data.ok !== true) {
+                        return;
+                    }
+
+                    const row = document.querySelector(`#unpricedRecapBody .unpriced-delete-btn[data-part-number="${CSS.escape(partNumber)}"]`)?.closest('tr');
+                    if (row) {
+                        row.remove();
+                    }
+
+                    const tbody = document.getElementById('unpricedRecapBody');
+                    if (tbody && tbody.children.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                    }
+
+                    const banner = document.getElementById('unpricedTopBanner');
+                    const bannerText = document.getElementById('unpricedTopBannerText');
+                    const openCount = Number(data.open_unpriced_count || 0);
+
+                    if (banner) {
+                        banner.style.display = openCount > 0 ? 'flex' : 'none';
+                    }
+
+                    if (bannerText) {
+                        bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
+                    }
+                })
+                .catch(() => {
+                    // Silent fail
+                });
+        }
+
 
 
         // Calculate totals for Resume COGM
@@ -1445,12 +2073,13 @@
 
         // Add new material row
         function addMaterialRow() {
+            const beforeSnapshot = getMaterialStateSnapshot();
             const tbody = document.getElementById('materialTableBody');
             const newRow = document.createElement('tr');
             newRow.setAttribute('data-row', rowCounter);
 
             newRow.innerHTML = `
-                                    <td>${rowCounter + 1}</td>
+                                    <td><span class="material-row-no-cell"><input type="checkbox" class="material-row-select" title="Pilih baris"><span class="material-row-number">${rowCounter + 1}</span></span></td>
                                     <td><input type="text" class="form-input part-no" name="materials[${rowCounter}][part_no]" value="" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[${rowCounter}][id_code]" value="" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[${rowCounter}][part_name]" value="" placeholder="Part Name"></td>
@@ -1475,23 +2104,902 @@
             tbody.appendChild(newRow);
             rowCounter++;
             renumberRows();
+
+            const afterSnapshot = getMaterialStateSnapshot();
+            pushMaterialHistoryAction({
+                type: 'snapshot',
+                before: beforeSnapshot,
+                after: afterSnapshot,
+            });
+            applyMaterialFilters();
+            updateMaterialSelectAllRowsState();
         }
 
         // Remove row
         function removeRow(button) {
+            const beforeSnapshot = getMaterialStateSnapshot();
             const row = button.closest('tr');
             row.remove();
             renumberRows();
             calculateTableTotal();
             refreshUnpricedRecap();
+
+            const afterSnapshot = getMaterialStateSnapshot();
+            pushMaterialHistoryAction({
+                type: 'snapshot',
+                before: beforeSnapshot,
+                after: afterSnapshot,
+            });
+            applyMaterialFilters();
+
+            submitMaterialSection();
         }
 
         // Renumber rows
         function renumberRows() {
             const rows = document.querySelectorAll('#materialTableBody tr');
             rows.forEach((row, index) => {
-                row.cells[0].textContent = index + 1;
+                const numberEl = row.querySelector('.material-row-number');
+                if (numberEl) {
+                    numberEl.textContent = String(index + 1);
+                } else if (row.cells[0]) {
+                    row.cells[0].textContent = index + 1;
+                }
             });
+
+            updateMaterialSelectAllRowsState();
+        }
+
+        function updateMaterialSelectAllRowsState() {
+            const master = document.getElementById('materialSelectAllRows');
+            if (!(master instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const rowCheckboxes = Array.from(document.querySelectorAll('#materialTableBody .material-row-select'));
+            if (rowCheckboxes.length === 0) {
+                master.checked = false;
+                master.indeterminate = false;
+                return;
+            }
+
+            const checkedCount = rowCheckboxes.filter((cb) => cb instanceof HTMLInputElement && cb.checked).length;
+            master.checked = checkedCount === rowCheckboxes.length;
+            master.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+        }
+
+        function deleteSelectedMaterialRows() {
+            const selectedRows = Array.from(document.querySelectorAll('#materialTableBody .material-row-select:checked'))
+                .map((cb) => cb.closest('tr'))
+                .filter((row) => row instanceof HTMLTableRowElement);
+
+            if (selectedRows.length === 0) {
+                return;
+            }
+
+            const beforeSnapshot = getMaterialStateSnapshot();
+            selectedRows.forEach((row) => row.remove());
+
+            renumberRows();
+            calculateTableTotal();
+            refreshUnpricedRecap();
+
+            const afterSnapshot = getMaterialStateSnapshot();
+            pushMaterialHistoryAction({
+                type: 'snapshot',
+                before: beforeSnapshot,
+                after: afterSnapshot,
+            });
+
+            applyMaterialFilters();
+            updateMaterialSelectAllRowsState();
+
+            submitMaterialSection();
+        }
+
+        function submitMaterialSection() {
+            const form = document.getElementById('costingForm');
+            const materialUpdateBtn = document.querySelector('.section-update-btn[data-section="material"]');
+            if (!form || !materialUpdateBtn) {
+                return;
+            }
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit(materialUpdateBtn);
+                return;
+            }
+
+            materialUpdateBtn.click();
+        }
+
+        function getMaterialStateSnapshot() {
+            const tbody = document.getElementById('materialTableBody');
+            if (!tbody) {
+                return null;
+            }
+
+            const clone = tbody.cloneNode(true);
+            const liveControls = Array.from(tbody.querySelectorAll('input, select, textarea'));
+            const cloneControls = Array.from(clone.querySelectorAll('input, select, textarea'));
+
+            cloneControls.forEach((control, index) => {
+                const liveControl = liveControls[index];
+                if (!liveControl) {
+                    return;
+                }
+
+                if (control instanceof HTMLInputElement) {
+                    control.value = liveControl.value;
+                    if (control.type === 'checkbox' || control.type === 'radio') {
+                        control.checked = liveControl.checked;
+                    }
+                } else if (control instanceof HTMLSelectElement) {
+                    control.value = liveControl.value;
+                    Array.from(control.options).forEach((option) => {
+                        option.selected = option.value === liveControl.value;
+                    });
+                } else if (control instanceof HTMLTextAreaElement) {
+                    control.value = liveControl.value;
+                    control.textContent = liveControl.value;
+                }
+            });
+
+            return {
+                html: clone.innerHTML,
+                rowCounter,
+            };
+        }
+
+        function updateMaterialUndoButtonState() {
+            const undoBtn = document.getElementById('materialUndoBtn');
+            const redoBtn = document.getElementById('materialRedoBtn');
+            if (!undoBtn) return;
+            undoBtn.disabled = materialUndoHistory.length === 0;
+            if (redoBtn) {
+                redoBtn.disabled = materialRedoHistory.length === 0;
+            }
+        }
+
+        function pushMaterialHistoryAction(action) {
+            if (!action || materialHistoryApplying) {
+                return;
+            }
+
+            materialUndoHistory.push(action);
+            if (materialUndoHistory.length > materialUndoLimit) {
+                materialUndoHistory.shift();
+            }
+
+            materialRedoHistory = [];
+
+            updateMaterialUndoButtonState();
+        }
+
+        function commitActiveMaterialFieldChange() {
+            const active = document.activeElement;
+            if (!(active instanceof HTMLElement)) {
+                return;
+            }
+
+            if (!active.matches('#materialTableBody input.form-input, #materialTableBody select.form-select')) {
+                return;
+            }
+
+            const previousValue = active.dataset.undoValue ?? '';
+            const currentValue = active.value ?? '';
+            if (previousValue === currentValue) {
+                return;
+            }
+
+            pushMaterialHistoryAction({
+                type: 'field',
+                name: active.name,
+                oldValue: previousValue,
+                newValue: currentValue,
+            });
+
+            active.dataset.undoValue = currentValue;
+        }
+
+        function applyMaterialFieldValueByName(name, value) {
+            if (!name) {
+                return;
+            }
+
+            const escapedName = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+                ? CSS.escape(name)
+                : name.replace(/([\[\]\.\:\#])/g, '\\$1');
+
+            const target = document.querySelector(`#materialTableBody [name="${escapedName}"]`);
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            target.value = value ?? '';
+
+            if (target instanceof HTMLInputElement && target.type === 'text') {
+                target.value = String(target.value || '').toUpperCase();
+            }
+
+            target.dataset.undoValue = target.value ?? '';
+
+            recalculateAllRows();
+            refreshUnpricedRecap();
+
+            const focused = document.activeElement;
+            if (focused instanceof HTMLElement && focused.matches('#materialTableBody input.form-input, #materialTableBody select.form-select')) {
+                focused.dataset.undoValue = focused.value ?? '';
+            }
+        }
+
+        function markMaterialControlsUndoBase() {
+            const controls = document.querySelectorAll('#materialTableBody input.form-input, #materialTableBody select.form-select');
+            controls.forEach((control) => {
+                control.dataset.undoValue = control.value ?? '';
+            });
+        }
+
+        function applyMaterialAction(action, direction) {
+            if (!action) {
+                return;
+            }
+
+            materialHistoryApplying = true;
+
+            if (action.type === 'field') {
+                const targetValue = direction === 'undo' ? action.oldValue : action.newValue;
+                applyMaterialFieldValueByName(action.name, targetValue);
+            } else if (action.type === 'snapshot') {
+                const snapshot = direction === 'undo' ? action.before : action.after;
+                restoreMaterialSnapshot(snapshot);
+            }
+
+            materialHistoryApplying = false;
+
+            markMaterialControlsUndoBase();
+
+            updateMaterialUndoButtonState();
+        }
+
+        function restoreMaterialSnapshot(snapshot) {
+            if (!snapshot) {
+                return;
+            }
+
+            const tbody = document.getElementById('materialTableBody');
+            if (!tbody) {
+                return;
+            }
+
+            tbody.innerHTML = snapshot.html;
+            rowCounter = snapshot.rowCounter;
+
+            renumberRows();
+            normalizeMaterialTextInputs();
+            recalculateAllRows();
+            refreshUnpricedRecap();
+            bindUnpricedManualPriceInputs();
+            bindUnpricedDeleteButtons();
+            applyMaterialFilters();
+        }
+
+        function getMaterialRowFilterValue(row, columnIndex) {
+            const cell = row.cells[columnIndex];
+            if (!cell) return '';
+
+            const control = cell.querySelector('input, select, textarea');
+            if (control) {
+                return String(control.value ?? '').trim();
+            }
+
+            return String(cell.textContent ?? '').trim();
+        }
+
+        function getMaterialColumnValues(columnIndex) {
+            const rows = Array.from(document.querySelectorAll('#materialTableBody tr'));
+            const values = new Set();
+
+            rows.forEach((row) => {
+                const value = getMaterialRowFilterValue(row, columnIndex);
+                values.add(value === '' ? '(Blanks)' : value);
+            });
+
+            return Array.from(values).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        }
+
+        function applyMaterialFilters() {
+            const rows = Array.from(document.querySelectorAll('#materialTableBody tr'));
+
+            rows.forEach((row) => {
+                let visible = true;
+
+                for (const [columnKey, selectedValues] of Object.entries(materialFilterState)) {
+                    if (!(selectedValues instanceof Set) || selectedValues.size === 0) {
+                        continue;
+                    }
+
+                    const columnIndex = Number(columnKey);
+                    const rawValue = getMaterialRowFilterValue(row, columnIndex);
+                    const normalizedValue = rawValue === '' ? '(Blanks)' : rawValue;
+
+                    if (!selectedValues.has(normalizedValue)) {
+                        visible = false;
+                        break;
+                    }
+                }
+
+                row.style.display = visible ? '' : 'none';
+            });
+
+            if (materialSortState.column !== null && materialSortState.direction) {
+                const columnIndex = Number(materialSortState.column);
+                const direction = materialSortState.direction === 'desc' ? -1 : 1;
+                const tbody = document.getElementById('materialTableBody');
+
+                if (tbody) {
+                    rows.sort((a, b) => {
+                        const va = getMaterialRowFilterValue(a, columnIndex);
+                        const vb = getMaterialRowFilterValue(b, columnIndex);
+
+                        const na = Number(va);
+                        const nb = Number(vb);
+                        const bothNumeric = !Number.isNaN(na) && !Number.isNaN(nb) && va !== '' && vb !== '';
+
+                        if (bothNumeric) {
+                            if (na === nb) return 0;
+                            return (na < nb ? -1 : 1) * direction;
+                        }
+
+                        return va.localeCompare(vb, undefined, { sensitivity: 'base', numeric: true }) * direction;
+                    });
+
+                    rows.forEach((row) => tbody.appendChild(row));
+                    renumberRows();
+                }
+            }
+
+            updateMaterialFilterButtonsState();
+        }
+
+        function updateMaterialFilterButtonsState() {
+            const table = document.getElementById('materialTable');
+            if (!table) return;
+
+            table.querySelectorAll('.material-filter-btn').forEach((btn) => {
+                const col = Number(btn.dataset.col || -1);
+                const activeSet = materialFilterState[col];
+                const hasFilter = activeSet instanceof Set && activeSet.size > 0;
+                const hasSort = materialSortState.column === col && !!materialSortState.direction;
+                btn.classList.toggle('is-active', hasFilter || hasSort);
+            });
+        }
+
+        function setMaterialSort(columnIndex, direction) {
+            if (materialSortState.column === columnIndex && materialSortState.direction === direction) {
+                materialSortState = { column: null, direction: null };
+            } else {
+                materialSortState = { column: columnIndex, direction };
+            }
+
+            applyMaterialFilters();
+
+            if (activeMaterialFilterColumn !== null) {
+                const sortAscBtn = materialFilterPopup?.querySelector('.material-filter-sort-asc');
+                const sortDescBtn = materialFilterPopup?.querySelector('.material-filter-sort-desc');
+                const ascActive = materialSortState.column === activeMaterialFilterColumn && materialSortState.direction === 'asc';
+                const descActive = materialSortState.column === activeMaterialFilterColumn && materialSortState.direction === 'desc';
+                sortAscBtn?.classList.toggle('is-active', ascActive);
+                sortDescBtn?.classList.toggle('is-active', descActive);
+            }
+        }
+
+        function closeMaterialFilterPopup() {
+            if (!materialFilterPopup) return;
+            materialFilterPopup.classList.remove('show');
+            activeMaterialFilterColumn = null;
+        }
+
+        function renderMaterialFilterOptions(columnIndex, keyword = '') {
+            if (!materialFilterPopup) return;
+
+            const list = materialFilterPopup.querySelector('.material-filter-popup-list');
+            if (!list) return;
+
+            const selected = materialFilterState[columnIndex] instanceof Set
+                ? new Set(materialFilterState[columnIndex])
+                : null;
+            const values = getMaterialColumnValues(columnIndex).filter((v) => v.toLowerCase().includes(keyword.toLowerCase()));
+
+            list.innerHTML = '';
+
+            const selectAllItem = document.createElement('label');
+            selectAllItem.className = 'material-filter-popup-item';
+            const selectAllCheckbox = document.createElement('input');
+            selectAllCheckbox.type = 'checkbox';
+            selectAllCheckbox.className = 'material-filter-select-all-checkbox';
+            selectAllCheckbox.checked = values.length > 0 && values.every((v) => !selected || selected.has(v));
+            const selectAllText = document.createElement('span');
+            selectAllText.textContent = '(Select All)';
+            selectAllItem.appendChild(selectAllCheckbox);
+            selectAllItem.appendChild(selectAllText);
+            list.appendChild(selectAllItem);
+
+            selectAllCheckbox.addEventListener('change', function () {
+                const checked = this.checked;
+                list.querySelectorAll('.material-filter-value-checkbox').forEach((cb) => {
+                    cb.checked = checked;
+                });
+            });
+
+            values.forEach((value) => {
+                const item = document.createElement('label');
+                item.className = 'material-filter-popup-item';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'material-filter-value-checkbox';
+                checkbox.value = value;
+                checkbox.checked = !selected || selected.has(value);
+
+                const text = document.createElement('span');
+                text.textContent = value;
+
+                item.appendChild(checkbox);
+                item.appendChild(text);
+                list.appendChild(item);
+            });
+        }
+
+        function openMaterialFilterPopup(columnIndex, title, anchorElement) {
+            if (!materialFilterPopup || !anchorElement) return;
+
+            activeMaterialFilterColumn = columnIndex;
+            materialFilterPopup.querySelector('.material-filter-popup-head').textContent = `Filter: ${title}`;
+
+            const searchInput = materialFilterPopup.querySelector('.material-filter-search-input');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+
+            const sortAscBtn = materialFilterPopup.querySelector('.material-filter-sort-asc');
+            const sortDescBtn = materialFilterPopup.querySelector('.material-filter-sort-desc');
+            const clearLineBtn = materialFilterPopup.querySelector('.material-filter-clear-line-btn');
+            const ascActive = materialSortState.column === columnIndex && materialSortState.direction === 'asc';
+            const descActive = materialSortState.column === columnIndex && materialSortState.direction === 'desc';
+            sortAscBtn?.classList.toggle('is-active', ascActive);
+            sortDescBtn?.classList.toggle('is-active', descActive);
+            if (clearLineBtn) {
+                clearLineBtn.textContent = `Clear Filter From "${title.toUpperCase()}"`;
+            }
+
+            renderMaterialFilterOptions(columnIndex, '');
+
+            const rect = anchorElement.getBoundingClientRect();
+            materialFilterPopup.style.top = `${Math.min(window.innerHeight - 380, rect.bottom + 8)}px`;
+            materialFilterPopup.style.left = `${Math.max(8, Math.min(window.innerWidth - 280, rect.left))}px`;
+            materialFilterPopup.classList.add('show');
+        }
+
+        function initMaterialFilterPopup() {
+            if (materialFilterPopup) return;
+
+            materialFilterPopup = document.createElement('div');
+            materialFilterPopup.className = 'material-filter-popup';
+            materialFilterPopup.innerHTML = `
+                <div class="material-filter-popup-head">Filter</div>
+                <div class="material-filter-popup-sort">
+                    <button type="button" class="btn btn-secondary btn-sm material-filter-sort-asc">Sort A to Z</button>
+                    <button type="button" class="btn btn-secondary btn-sm material-filter-sort-desc">Sort Z to A</button>
+                </div>
+                <div class="material-filter-separator"></div>
+                <div class="material-filter-clear-line">
+                    <button type="button" class="btn btn-secondary btn-sm material-filter-clear-line-btn">Clear Filter</button>
+                </div>
+                <div class="material-filter-popup-search">
+                    <input type="text" class="material-filter-search-input" placeholder="Search...">
+                </div>
+                <div class="material-filter-popup-list"></div>
+                <div class="material-filter-popup-actions">
+                    <button type="button" class="btn btn-secondary btn-sm material-filter-cancel-btn">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm material-filter-apply-btn">OK</button>
+                </div>
+            `;
+
+            document.body.appendChild(materialFilterPopup);
+
+            const searchInput = materialFilterPopup.querySelector('.material-filter-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', function () {
+                    if (activeMaterialFilterColumn === null) return;
+                    renderMaterialFilterOptions(activeMaterialFilterColumn, this.value || '');
+                });
+            }
+
+            const sortAscBtn = materialFilterPopup.querySelector('.material-filter-sort-asc');
+            sortAscBtn?.addEventListener('click', function () {
+                if (activeMaterialFilterColumn === null) return;
+                setMaterialSort(activeMaterialFilterColumn, 'asc');
+            });
+
+            const sortDescBtn = materialFilterPopup.querySelector('.material-filter-sort-desc');
+            sortDescBtn?.addEventListener('click', function () {
+                if (activeMaterialFilterColumn === null) return;
+                setMaterialSort(activeMaterialFilterColumn, 'desc');
+            });
+
+            const clearLineBtn = materialFilterPopup.querySelector('.material-filter-clear-line-btn');
+            clearLineBtn?.addEventListener('click', function () {
+                if (activeMaterialFilterColumn === null) return;
+                delete materialFilterState[activeMaterialFilterColumn];
+                applyMaterialFilters();
+                closeMaterialFilterPopup();
+            });
+
+            const cancelBtn = materialFilterPopup.querySelector('.material-filter-cancel-btn');
+            cancelBtn?.addEventListener('click', function () {
+                closeMaterialFilterPopup();
+            });
+
+            const applyBtn = materialFilterPopup.querySelector('.material-filter-apply-btn');
+            applyBtn?.addEventListener('click', function () {
+                if (activeMaterialFilterColumn === null) return;
+
+                const checked = Array.from(materialFilterPopup.querySelectorAll('.material-filter-popup-list .material-filter-value-checkbox:checked'))
+                    .map((el) => el.value);
+
+                const allValues = getMaterialColumnValues(activeMaterialFilterColumn);
+                if (checked.length === 0 || checked.length === allValues.length) {
+                    delete materialFilterState[activeMaterialFilterColumn];
+                } else {
+                    materialFilterState[activeMaterialFilterColumn] = new Set(checked);
+                }
+
+                applyMaterialFilters();
+                closeMaterialFilterPopup();
+            });
+
+            document.addEventListener('click', function (event) {
+                if (!materialFilterPopup || !materialFilterPopup.classList.contains('show')) return;
+                const target = event.target;
+                if (!(target instanceof Node)) return;
+
+                const clickedFilterBtn = target instanceof Element && target.closest('.material-filter-btn');
+                if (materialFilterPopup.contains(target) || clickedFilterBtn) {
+                    return;
+                }
+
+                closeMaterialFilterPopup();
+            });
+        }
+
+        function initMaterialHeaderFilters() {
+            const table = document.getElementById('materialTable');
+            if (!table) return;
+
+            const headerCells = table.querySelectorAll('thead th');
+            headerCells.forEach((th, index) => {
+                if (!materialFilterableColumns.includes(index)) {
+                    return;
+                }
+
+                if (th.dataset.filterReady === '1') {
+                    return;
+                }
+
+                const title = (th.textContent || '').trim();
+                th.dataset.filterReady = '1';
+                th.dataset.filterTitle = title;
+
+                const wrap = document.createElement('span');
+                wrap.className = 'material-header-filter';
+
+                const label = document.createElement('span');
+                label.textContent = title;
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'material-filter-btn';
+                btn.dataset.col = String(index);
+                btn.title = `Filter ${title}`;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 4 21 4 14 12 14 19 10 21 10 12 3 4"></polygon></svg>';
+
+                btn.addEventListener('click', function (event) {
+                    event.stopPropagation();
+                    if (materialFilterPopup?.classList.contains('show') && activeMaterialFilterColumn === index) {
+                        closeMaterialFilterPopup();
+                        return;
+                    }
+                    openMaterialFilterPopup(index, title, btn);
+                });
+
+                th.textContent = '';
+                wrap.appendChild(label);
+                wrap.appendChild(btn);
+                th.appendChild(wrap);
+            });
+
+            updateMaterialFilterButtonsState();
+        }
+
+        function undoMaterialTable() {
+            // Capture pending active-cell edit first, then revert exactly one action.
+            commitActiveMaterialFieldChange();
+
+            if (materialUndoHistory.length === 0) {
+                return;
+            }
+
+            const action = materialUndoHistory.pop();
+            if (!action) {
+                updateMaterialUndoButtonState();
+                return;
+            }
+
+            applyMaterialAction(action, 'undo');
+
+            materialRedoHistory.push(action);
+            if (materialRedoHistory.length > materialUndoLimit) {
+                materialRedoHistory.shift();
+            }
+
+            updateMaterialUndoButtonState();
+        }
+
+        function redoMaterialTable() {
+            if (materialRedoHistory.length === 0) {
+                return;
+            }
+
+            const next = materialRedoHistory.pop();
+            if (!next) {
+                updateMaterialUndoButtonState();
+                return;
+            }
+
+            applyMaterialAction(next, 'redo');
+
+            materialUndoHistory.push(next);
+            if (materialUndoHistory.length > materialUndoLimit) {
+                materialUndoHistory.shift();
+            }
+
+            updateMaterialUndoButtonState();
+        }
+
+        function normalizeMaterialTextInputs(scope = document) {
+            const textInputs = scope.querySelectorAll('#materialTableBody input[type="text"]');
+            textInputs.forEach((input) => {
+                const value = String(input.value || '');
+                const upper = value.toUpperCase();
+                if (upper !== value) {
+                    input.value = upper;
+                }
+            });
+        }
+
+        function moveMaterialFocusByArrow(currentElement, key) {
+            const currentRow = currentElement.closest('tr');
+            if (!currentRow) return;
+
+            const rows = Array.from(document.querySelectorAll('#materialTableBody tr'));
+            const currentRowIndex = rows.indexOf(currentRow);
+            if (currentRowIndex < 0) return;
+
+            const getEditableCells = (row) => Array.from(row.querySelectorAll('input.form-input, select.form-select'));
+            const currentCells = getEditableCells(currentRow);
+            const currentCellIndex = currentCells.indexOf(currentElement);
+            if (currentCellIndex < 0) return;
+
+            let nextRowIndex = currentRowIndex;
+            let nextCellIndex = currentCellIndex;
+
+            if (key === 'ArrowLeft') nextCellIndex -= 1;
+            if (key === 'ArrowRight') nextCellIndex += 1;
+            if (key === 'ArrowUp') nextRowIndex -= 1;
+            if (key === 'ArrowDown') nextRowIndex += 1;
+
+            if (key === 'ArrowLeft' || key === 'ArrowRight') {
+                if (nextCellIndex < 0 || nextCellIndex >= currentCells.length) {
+                    return;
+                }
+
+                const target = currentCells[nextCellIndex];
+                if (!target) return;
+
+                target.focus();
+                if (target.tagName === 'INPUT') {
+                    target.select();
+                }
+                return;
+            }
+
+            if (nextRowIndex < 0 || nextRowIndex >= rows.length) {
+                return;
+            }
+
+            const nextRow = rows[nextRowIndex];
+            const nextRowCells = getEditableCells(nextRow);
+            if (!nextRowCells.length) return;
+
+            const target = nextRowCells[Math.min(currentCellIndex, nextRowCells.length - 1)];
+            if (!target) return;
+
+            target.focus();
+            if (target.tagName === 'INPUT') {
+                target.select();
+            }
+        }
+
+        function moveMaterialFocusLinear(currentElement, step) {
+            const currentRow = currentElement.closest('tr');
+            if (!currentRow) return;
+
+            const rows = Array.from(document.querySelectorAll('#materialTableBody tr'));
+            const currentRowIndex = rows.indexOf(currentRow);
+            if (currentRowIndex < 0) return;
+
+            const getEditableCells = (row) => Array.from(row.querySelectorAll('input.form-input, select.form-select'));
+            const currentCells = getEditableCells(currentRow);
+            const currentCellIndex = currentCells.indexOf(currentElement);
+            if (currentCellIndex < 0) return;
+
+            let nextRowIndex = currentRowIndex;
+            let nextCellIndex = currentCellIndex + step;
+
+            if (nextCellIndex >= currentCells.length) {
+                nextRowIndex += 1;
+                if (nextRowIndex >= rows.length) {
+                    return;
+                }
+                nextCellIndex = 0;
+            } else if (nextCellIndex < 0) {
+                nextRowIndex -= 1;
+                if (nextRowIndex < 0) {
+                    return;
+                }
+                const prevCells = getEditableCells(rows[nextRowIndex]);
+                nextCellIndex = Math.max(prevCells.length - 1, 0);
+            }
+
+            const nextCells = getEditableCells(rows[nextRowIndex]);
+            if (!nextCells.length) return;
+
+            const target = nextCells[Math.min(nextCellIndex, nextCells.length - 1)];
+            if (!target) return;
+
+            target.focus();
+            if (target.tagName === 'INPUT') {
+                target.select();
+            }
+        }
+
+        function bindMaterialTableBehaviors() {
+            const materialBody = document.getElementById('materialTableBody');
+            if (!materialBody || materialBody.dataset.boundBehavior === '1') {
+                return;
+            }
+
+            materialBody.dataset.boundBehavior = '1';
+
+            materialBody.addEventListener('input', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                if (target.type !== 'text') {
+                    return;
+                }
+
+                const currentValue = String(target.value || '');
+                const upperValue = currentValue.toUpperCase();
+                if (upperValue === currentValue) {
+                    return;
+                }
+
+                const start = target.selectionStart;
+                const end = target.selectionEnd;
+                target.value = upperValue;
+                if (start !== null && end !== null) {
+                    target.setSelectionRange(start, end);
+                }
+            });
+
+            materialBody.addEventListener('focusin', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (!target.matches('input.form-input, select.form-select')) {
+                    return;
+                }
+
+                target.dataset.undoValue = target.value ?? '';
+            });
+
+            materialBody.addEventListener('change', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (target.matches('.part-no, .id-code')) {
+                    const row = target.closest('tr');
+                    if (row instanceof HTMLTableRowElement) {
+                        const updated = applyMasterMaterialToRow(row);
+                        if (updated) {
+                            const input = row.querySelector('.qty-req') || row.querySelector('.amount1') || row.querySelector('.unit-price-basis');
+                            if (input) {
+                                calculateRow(input);
+                            }
+                        }
+                    }
+                }
+
+                if (target.matches('.material-row-select')) {
+                    updateMaterialSelectAllRowsState();
+                    return;
+                }
+
+                if (!target.matches('input.form-input, select.form-select')) {
+                    return;
+                }
+
+                const previousValue = target.dataset.undoValue ?? '';
+                const currentValue = target.value ?? '';
+                if (previousValue === currentValue) {
+                    return;
+                }
+
+                pushMaterialHistoryAction({
+                    type: 'field',
+                    name: target.name,
+                    oldValue: previousValue,
+                    newValue: currentValue,
+                });
+
+                target.dataset.undoValue = currentValue;
+                applyMaterialFilters();
+            });
+
+            materialBody.addEventListener('keydown', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (!target.matches('input.form-input, select.form-select')) {
+                    return;
+                }
+
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    moveMaterialFocusLinear(target, event.shiftKey ? -1 : 1);
+                    return;
+                }
+
+                if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+                    return;
+                }
+
+                event.preventDefault();
+                moveMaterialFocusByArrow(target, event.key);
+            });
+
+            const masterSelectAll = document.getElementById('materialSelectAllRows');
+            if (masterSelectAll && masterSelectAll.dataset.boundSelectAll !== '1') {
+                masterSelectAll.dataset.boundSelectAll = '1';
+                masterSelectAll.addEventListener('change', function () {
+                    const checked = !!this.checked;
+                    document.querySelectorAll('#materialTableBody .material-row-select').forEach((cb) => {
+                        if (cb instanceof HTMLInputElement) {
+                            cb.checked = checked;
+                        }
+                    });
+                    updateMaterialSelectAllRowsState();
+                });
+            }
         }
 
         function calculateCycleRow(element) {
@@ -1636,21 +3144,190 @@
             });
         }
 
+        function shouldKeepFieldForSection(fieldName, section) {
+            if (!fieldName) return false;
+
+            const alwaysKeep = [
+                '_token',
+                'costing_data_id',
+                'tracking_revision_id',
+                'update_section',
+                'import_partlist',
+                'import_partlist_file'
+            ];
+
+            if (alwaysKeep.includes(fieldName)) {
+                return true;
+            }
+
+            const sectionExactFields = {
+                informasi_project: ['business_category_id', 'customer_id', 'period', 'line', 'model', 'assy_no', 'assy_name', 'forecast', 'project_period'],
+                rates: ['exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate'],
+                material: ['forecast', 'project_period', 'material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'import_partlist'],
+                unpriced_parts: ['tracking_revision_id'],
+                cycle_time: ['cycle_times'],
+                resume_cogm: ['material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good']
+            };
+
+            const sectionPrefixes = {
+                material: ['materials[', 'manual_unpriced_prices['],
+                unpriced_parts: ['manual_unpriced_prices['],
+                cycle_time: ['cycle_times[']
+            };
+
+            const exact = sectionExactFields[section] || [];
+            if (exact.includes(fieldName)) {
+                return true;
+            }
+
+            const prefixes = sectionPrefixes[section] || [];
+            return prefixes.some(prefix => fieldName.startsWith(prefix));
+        }
+
+        function prepareSectionOnlySubmit(section, submitter) {
+            if (!section) return;
+
+            const form = document.getElementById('costingForm');
+            if (!form) return;
+
+            form.querySelectorAll('input, select, textarea, button').forEach((el) => {
+                if (el === submitter) {
+                    return;
+                }
+
+                if (!el.name) {
+                    return;
+                }
+
+                if (shouldKeepFieldForSection(el.name, section)) {
+                    return;
+                }
+
+                if (!el.disabled) {
+                    el.dataset.sectionDisabled = '1';
+                    el.disabled = true;
+                }
+            });
+        }
+
+        function showPartlistImportConfirmModal() {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('partlistImportConfirmModal');
+                const okBtn = document.getElementById('partlistImportOkBtn');
+                const cancelBtn = document.getElementById('partlistImportCancelBtn');
+
+                if (!modal || !okBtn || !cancelBtn) {
+                    resolve(false);
+                    return;
+                }
+
+                const closeWith = (result) => {
+                    modal.classList.add('is-hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    modal.removeEventListener('click', handleOverlay);
+                    document.removeEventListener('keydown', handleEsc);
+                    resolve(result);
+                };
+
+                const handleOk = () => closeWith(true);
+                const handleCancel = () => closeWith(false);
+                const handleOverlay = (event) => {
+                    if (event.target === modal) {
+                        closeWith(false);
+                    }
+                };
+                const handleEsc = (event) => {
+                    if (event.key === 'Escape') {
+                        closeWith(false);
+                    }
+                };
+
+                modal.classList.remove('is-hidden');
+                modal.setAttribute('aria-hidden', 'false');
+
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+                modal.addEventListener('click', handleOverlay);
+                document.addEventListener('keydown', handleEsc);
+            });
+        }
+
+        async function triggerPartlistImport() {
+            const fileInput = document.getElementById('importPartlistFileInput');
+            if (!fileInput) return;
+
+            const hasFilledMaterial = Array.from(document.querySelectorAll('#materialTableBody tr')).some((row) => {
+                const partNo = (row.querySelector('.part-no')?.value || '').trim();
+                const partName = (row.querySelector('.part-name')?.value || '').trim();
+                const amount1 = parseInputNumber(row.querySelector('.amount1')?.value || 0);
+                const qtyReq = parseInputNumber(row.querySelector('.qty-req')?.value || 0);
+                return partNo !== '' || partName !== '' || amount1 > 0 || qtyReq > 0;
+            });
+
+            if (hasFilledMaterial) {
+                const confirmed = await showPartlistImportConfirmModal();
+                if (!confirmed) {
+                    return;
+                }
+            }
+
+            fileInput.value = '';
+            fileInput.click();
+        }
+
+        function submitPartlistImport() {
+            const form = document.getElementById('partlistImportForm');
+            const importForecast = document.getElementById('importForecast');
+            const importProjectPeriod = document.getElementById('importProjectPeriod');
+            const forecastHidden = document.getElementById('forecast');
+            const projectPeriod = document.getElementById('projectPeriod');
+
+            if (!form) return;
+
+            syncForecastHidden();
+
+            if (importForecast && forecastHidden) {
+                importForecast.value = forecastHidden.value || '0';
+            }
+
+            if (importProjectPeriod && projectPeriod) {
+                importProjectPeriod.value = projectPeriod.value || '0';
+            }
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+                return;
+            }
+
+            form.submit();
+        }
+
         // Initialize calculations on page load
         document.addEventListener('DOMContentLoaded', function () {
             initSectionToggles();
+            bindMaterialTableBehaviors();
+            initMaterialFilterPopup();
+            initMaterialHeaderFilters();
+            normalizeMaterialTextInputs();
+            markMaterialControlsUndoBase();
+            applyMaterialFilters();
+            updateMaterialSelectAllRowsState();
             formatForecastDisplay();
             calculateTotals();
 
             // Calculate all rows
             const rows = document.querySelectorAll('#materialTableBody tr');
             rows.forEach(row => {
+                applyMasterMaterialToRow(row);
                 const input = row.querySelector('.qty-req');
                 if (input) calculateRow(input);
             });
 
             refreshUnpricedRecap();
             bindUnpricedManualPriceInputs();
+            bindUnpricedDeleteButtons();
 
             const cycleRows = document.querySelectorAll('#cycleTimeTableBody tr');
             cycleRows.forEach(row => {
@@ -1675,9 +3352,22 @@
 
             const costingForm = document.getElementById('costingForm');
             if (costingForm) {
-                costingForm.addEventListener('submit', function () {
+                costingForm.addEventListener('submit', function (event) {
+                    normalizeMaterialTextInputs();
                     syncForecastHidden();
                     refreshUnpricedRecap();
+
+                    const submitter = event.submitter;
+                    const updateSectionInput = document.getElementById('updateSectionInput');
+                    const section = submitter?.dataset?.section || '';
+
+                    if (updateSectionInput) {
+                        updateSectionInput.value = section;
+                    }
+
+                    if (section) {
+                        prepareSectionOnlySubmit(section, submitter);
+                    }
                 });
             }
         });

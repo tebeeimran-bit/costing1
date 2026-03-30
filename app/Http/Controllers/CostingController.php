@@ -14,7 +14,12 @@ use App\Models\Plant;
 use App\Models\BusinessCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use ZipArchive;
 
 class CostingController extends Controller
 {
@@ -136,7 +141,9 @@ class CostingController extends Controller
         $products = Product::all();
         $businessCategories = BusinessCategory::orderBy('code')->orderBy('name')->get();
         $customers = Customer::all();
-        $materials = Material::all();
+        $materials = $this->validMasterMaterialsQuery()
+            ->orderBy('material_code')
+            ->get();
         $cycleTimeTemplates = CycleTimeTemplate::orderBy('id')->get();
         $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
@@ -252,6 +259,12 @@ class CostingController extends Controller
             }
         }
 
+        if (!$costingDataId && $trackingRevisionId) {
+            $costingDataId = CostingData::where('tracking_revision_id', $trackingRevisionId)
+                ->latest('id')
+                ->value('id');
+        }
+
         if ($costingDataId) {
             $costingData = CostingData::with('materialBreakdowns.material')->find($costingDataId);
             if ($costingData) {
@@ -278,10 +291,23 @@ class CostingController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $updateSection = trim((string) $request->input('update_section', ''));
+        $importFileUploaded = $request->hasFile('import_partlist_file');
+
+        if ($importFileUploaded && $updateSection === '') {
+            $updateSection = 'material';
+        }
+
+        $baseRules = [
+            'costing_data_id' => 'nullable|exists:costing_data,id',
+            'tracking_revision_id' => 'nullable|exists:document_revisions,id',
+            'update_section' => 'nullable|string',
+            'import_partlist' => 'nullable|boolean',
+        ];
+
+        $fullRules = [
             'business_category_id' => 'required|exists:business_categories,id',
             'customer_id' => 'required|exists:customers,id',
-            'tracking_revision_id' => 'nullable|exists:document_revisions,id',
             'period' => 'required|string',
             'line' => 'nullable|string',
             'model' => 'nullable|string',
@@ -304,7 +330,7 @@ class CostingController extends Controller
             'materials.*.qty_req' => 'nullable|numeric',
             'materials.*.unit' => 'nullable|string',
             'materials.*.amount1' => 'nullable|numeric',
-            'materials.*.unit_price_basis' => 'nullable|numeric',
+            'materials.*.unit_price_basis' => 'nullable|string',
             'materials.*.qty_moq' => 'nullable|numeric',
             'materials.*.cn_type' => 'nullable|string',
             'materials.*.import_tax' => 'nullable|numeric',
@@ -317,64 +343,356 @@ class CostingController extends Controller
             'cycle_times.*.time_sec_per_qty' => 'nullable|numeric',
             'cycle_times.*.cost_per_sec' => 'nullable|numeric',
             'cycle_times.*.cost_per_unit' => 'nullable|numeric',
-        ]);
+        ];
+
+        $sectionRules = [
+            'informasi_project' => [
+                'business_category_id' => 'required|exists:business_categories,id',
+                'customer_id' => 'required|exists:customers,id',
+                'period' => 'required|string',
+                'line' => 'nullable|string',
+                'model' => 'nullable|string',
+                'assy_no' => 'nullable|string',
+                'assy_name' => 'nullable|string',
+                'forecast' => 'required|integer',
+                'project_period' => 'required|integer',
+            ],
+            'rates' => [
+                'exchange_rate_usd' => 'required|numeric',
+                'exchange_rate_jpy' => 'required|numeric',
+                'lme_rate' => 'nullable|numeric',
+            ],
+            'material' => [
+                'forecast' => 'required|integer',
+                'project_period' => 'required|integer',
+                'materials' => 'nullable|array',
+                'materials.*.part_no' => 'nullable|string',
+                'materials.*.part_name' => 'nullable|string',
+                'materials.*.qty_req' => 'nullable|numeric',
+                'materials.*.unit' => 'nullable|string',
+                'materials.*.amount1' => 'nullable|numeric',
+                'materials.*.unit_price_basis' => 'nullable|string',
+                'materials.*.qty_moq' => 'nullable|numeric',
+                'materials.*.cn_type' => 'nullable|string',
+                'materials.*.import_tax' => 'nullable|numeric',
+                'manual_unpriced_prices' => 'nullable|array',
+            ],
+            'unpriced_parts' => [
+                'manual_unpriced_prices' => 'nullable|array',
+            ],
+            'cycle_time' => [
+                'cycle_times' => 'nullable|array',
+                'cycle_times.*.process' => 'nullable|string',
+                'cycle_times.*.qty' => 'nullable|numeric',
+                'cycle_times.*.time_hour' => 'nullable|numeric',
+                'cycle_times.*.time_sec' => 'nullable|numeric',
+                'cycle_times.*.time_sec_per_qty' => 'nullable|numeric',
+                'cycle_times.*.cost_per_sec' => 'nullable|numeric',
+                'cycle_times.*.cost_per_unit' => 'nullable|numeric',
+            ],
+            'resume_cogm' => [
+                'material_cost' => 'required|numeric',
+                'labor_cost' => 'required|numeric',
+                'overhead_cost' => 'nullable|numeric',
+                'scrap_cost' => 'nullable|numeric',
+                'revenue' => 'nullable|numeric',
+                'qty_good' => 'nullable|integer',
+            ],
+        ];
+
+        if ($updateSection !== '' && !array_key_exists($updateSection, $sectionRules)) {
+            return back()->with('error', 'Section update tidak valid.')->withInput();
+        }
+
+        $rules = $updateSection !== ''
+            ? array_merge($baseRules, $sectionRules[$updateSection])
+            : array_merge($baseRules, $fullRules);
+
+        if ($updateSection === 'material' && ($request->boolean('import_partlist') || $importFileUploaded)) {
+            $rules['import_partlist_file'] = 'nullable';
+        }
+
+        $messages = [
+            'import_partlist_file.required' => 'File partlist wajib dipilih.',
+            'import_partlist_file.file' => 'File partlist tidak valid.',
+            'import_partlist_file.uploaded' => 'Upload gagal. Kemungkinan ukuran file melebihi batas server. Naikkan upload_max_filesize dan post_max_size di PHP.',
+            'import_partlist_file.mimes' => 'Format file harus .xlsx sesuai template partlist.',
+            'import_partlist_file.max' => 'Ukuran file partlist terlalu besar (maks 20MB).',
+        ];
+
+        $validated = $request->validate($rules, $messages);
+        $importRequested = $updateSection === 'material' && ($request->boolean('import_partlist') || $importFileUploaded);
+        $importFromPartlist = $updateSection === 'material' && $importFileUploaded;
+        $importedMaterialRows = [];
+
+        if ($importRequested) {
+            $trackingRevisionId = isset($validated['tracking_revision_id']) ? (int) $validated['tracking_revision_id'] : null;
+            $uploadedPartlistFile = $request->file('import_partlist_file');
+            $uploadErrorCode = (int) ($_FILES['import_partlist_file']['error'] ?? UPLOAD_ERR_NO_FILE);
+
+            if ($uploadedPartlistFile) {
+                if (!$uploadedPartlistFile->isValid()) {
+                    $errorCode = (int) $uploadedPartlistFile->getError();
+                    return back()->with('error', 'Upload file partlist gagal: ' . $this->uploadErrorCodeToMessage($errorCode))->withInput();
+                }
+            }
+
+            if ($uploadedPartlistFile) {
+                $ext = strtolower((string) $uploadedPartlistFile->getClientOriginalExtension());
+                if ($ext !== 'xlsx') {
+                    return back()->with('error', 'Format file harus .xlsx sesuai template partlist.')->withInput();
+                }
+
+                if ($uploadedPartlistFile->getSize() > (20 * 1024 * 1024)) {
+                    return back()->with('error', 'Ukuran file partlist terlalu besar (maks 20MB).')->withInput();
+                }
+            } else {
+                if ($uploadErrorCode !== UPLOAD_ERR_NO_FILE) {
+                    return back()->with('error', 'Upload file partlist gagal: ' . $this->uploadErrorCodeToMessage($uploadErrorCode))->withInput();
+                }
+
+                if ($uploadErrorCode === UPLOAD_ERR_NO_FILE && !$trackingRevisionId) {
+                    return back()->with('warning', 'Silakan pilih file partlist terlebih dahulu sebelum import.')->withInput();
+                }
+            }
+
+            $importResult = $this->loadPartlistMaterialRows($trackingRevisionId, $uploadedPartlistFile);
+
+            if (!empty($importResult['error'])) {
+                return back()->with('error', $importResult['error'])->withInput();
+            }
+
+            $importedMaterialRows = $importResult['rows'];
+            $importedMaterialRows = array_map(function ($row) {
+                $partNo = trim((string) ($row['part_no'] ?? ''));
+                $idCode = trim((string) ($row['id_code'] ?? ''));
+
+                if (($partNo === '' || $partNo === '-') && $idCode !== '' && $idCode !== '-') {
+                    $row['part_no'] = $idCode;
+                }
+
+                return $row;
+            }, $importedMaterialRows);
+            $importedMaterialRows = array_values($importedMaterialRows);
+
+            if (count($importedMaterialRows) === 0) {
+                return back()->with('warning', 'Data partlist tidak ditemukan. Pastikan data diisi mulai kolom E-J dari baris 12 ke bawah (sesuai template).')->withInput();
+            }
+        }
 
         DB::beginTransaction();
         try {
-            $businessCategory = BusinessCategory::findOrFail((int) $validated['business_category_id']);
-            $product = Product::firstOrCreate(
-                ['code' => trim((string) $businessCategory->code)],
-                ['name' => trim((string) $businessCategory->name)]
-            );
+            $costingDataId = $validated['costing_data_id'] ?? null;
+            $trackingRevisionId = $validated['tracking_revision_id'] ?? null;
+            $costingData = null;
 
-            if (trim((string) $product->name) !== trim((string) $businessCategory->name)) {
-                $product->update(['name' => trim((string) $businessCategory->name)]);
+            if ($costingDataId) {
+                $costingData = CostingData::whereKey($costingDataId)
+                    ->lockForUpdate()
+                    ->first();
             }
 
-            $payload = $request->except(['materials', 'business_category_id']);
-            $payload['product_id'] = $product->id;
-            $payload['overhead_cost'] = $validated['overhead_cost'] ?? 0;
-            $payload['scrap_cost'] = $validated['scrap_cost'] ?? 0;
+            if (!$costingData && $trackingRevisionId) {
+                $costingData = CostingData::where('tracking_revision_id', $trackingRevisionId)
+                    ->latest('id')
+                    ->lockForUpdate()
+                    ->first();
+            }
 
-            $costingData = CostingData::create($payload);
-            $partAggregation = [];
+            $productId = $costingData?->product_id;
+            if ($request->filled('business_category_id')) {
+                $businessCategory = BusinessCategory::findOrFail((int) $request->input('business_category_id'));
+                $product = Product::firstOrCreate(
+                    ['code' => trim((string) $businessCategory->code)],
+                    ['name' => trim((string) $businessCategory->name)]
+                );
+
+                if (trim((string) $product->name) !== trim((string) $businessCategory->name)) {
+                    $product->update(['name' => trim((string) $businessCategory->name)]);
+                }
+
+                $productId = $product->id;
+            }
+
+            $fillableRequestFields = [
+                'customer_id',
+                'tracking_revision_id',
+                'period',
+                'line',
+                'model',
+                'assy_no',
+                'assy_name',
+                'exchange_rate_usd',
+                'exchange_rate_jpy',
+                'lme_rate',
+                'forecast',
+                'project_period',
+                'material_cost',
+                'labor_cost',
+                'overhead_cost',
+                'scrap_cost',
+                'revenue',
+                'qty_good',
+                'cycle_times',
+            ];
+
+            $basePayload = $request->only($fillableRequestFields);
+
+            if (array_key_exists('overhead_cost', $basePayload)) {
+                $basePayload['overhead_cost'] = $validated['overhead_cost'] ?? 0;
+            }
+
+            if (array_key_exists('scrap_cost', $basePayload)) {
+                $basePayload['scrap_cost'] = $validated['scrap_cost'] ?? 0;
+            }
+
+            $sectionPayloadMap = [
+                'informasi_project' => ['customer_id', 'tracking_revision_id', 'period', 'line', 'model', 'assy_no', 'assy_name', 'forecast', 'project_period'],
+                'rates' => ['exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate', 'tracking_revision_id'],
+                'material' => ['forecast', 'project_period', 'material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'tracking_revision_id'],
+                'unpriced_parts' => ['tracking_revision_id'],
+                'cycle_time' => ['cycle_times', 'tracking_revision_id'],
+                'resume_cogm' => ['material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'tracking_revision_id'],
+            ];
+
+            $payload = $updateSection !== ''
+                ? array_intersect_key($basePayload, array_flip($sectionPayloadMap[$updateSection]))
+                : $basePayload;
+
+            if ($trackingRevisionId) {
+                $payload['tracking_revision_id'] = $trackingRevisionId;
+            }
+
+            if ($productId) {
+                $payload['product_id'] = $productId;
+            }
+
+            if ($costingData) {
+                if (!empty($payload)) {
+                    $costingData->update($payload);
+                }
+            } else {
+                $requiredOnCreate = ['product_id', 'customer_id', 'period'];
+                foreach ($requiredOnCreate as $requiredField) {
+                    if (!array_key_exists($requiredField, $payload) || $payload[$requiredField] === null || $payload[$requiredField] === '') {
+                        DB::rollBack();
+                        return back()->with('error', 'Simpan Informasi Project terlebih dahulu sebelum update section lain.')->withInput();
+                    }
+                }
+
+                $payload = array_merge([
+                    'exchange_rate_usd' => 15500,
+                    'exchange_rate_jpy' => 103,
+                    'forecast' => 0,
+                    'project_period' => 0,
+                    'material_cost' => 0,
+                    'labor_cost' => 0,
+                    'overhead_cost' => 0,
+                    'scrap_cost' => 0,
+                    'revenue' => 0,
+                    'qty_good' => 0,
+                    'cycle_times' => [],
+                ], $payload);
+
+                $costingData = CostingData::create($payload);
+            }
+
             $manualUnpricedPrices = collect($request->input('manual_unpriced_prices', []))
                 ->mapWithKeys(function ($value, $key) {
                     return [strtolower(trim((string) $key)) => floatval($value)];
                 });
+            $partAggregation = [];
 
-            if ($request->has('materials')) {
-                foreach ($request->materials as $matData) {
-                    if (empty($matData['part_no']))
+            $hasMaterialPayload = $request->has('materials') || !empty($importedMaterialRows);
+            $shouldProcessMaterials = $updateSection === '' || $updateSection === 'material';
+            $shouldProcessUnpricedOnly = $updateSection === 'unpriced_parts';
+
+            if ($shouldProcessMaterials) {
+                MaterialBreakdown::where('costing_data_id', $costingData->id)->delete();
+            }
+
+            $materialsInput = $importFromPartlist
+                ? $importedMaterialRows
+                : $request->input('materials', []);
+
+            if ($shouldProcessMaterials && is_array($materialsInput)) {
+                foreach ($materialsInput as $rowIndex => $matData) {
+                    $rowPartNo = trim((string) ($matData['part_no'] ?? ''));
+                    $rowIdCode = trim((string) ($matData['id_code'] ?? ''));
+                    $normalizedRowPartNo = ($rowPartNo === '-' ? '' : $rowPartNo);
+                    $normalizedRowIdCode = ($rowIdCode === '-' ? '' : $rowIdCode);
+                    $partNumber = $normalizedRowPartNo !== '' ? $normalizedRowPartNo : $normalizedRowIdCode;
+
+                    if ($partNumber === '')
                         continue;
 
-                    $partNumber = trim((string) ($matData['part_no'] ?? ''));
+                    $isPlaceholderPart = $partNumber === '-';
+
+                    $masterMaterial = $this->findMasterMaterial($rowPartNo, $rowIdCode);
+                    $materialCode = '__ROW_' . $costingData->id . '_' . $rowIndex;
+
                     $partKey = strtolower($partNumber);
                     $partName = trim((string) ($matData['part_name'] ?? ''));
                     $qtyReq = floatval($matData['qty_req'] ?? 0);
+                    $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
+                    $unitPriceBasisNumeric = $this->toFloatValue($unitPriceBasisRaw);
                     $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
 
-                    // Find or create Material
-                    $material = Material::firstOrCreate(
-                        ['material_code' => $partNumber],
-                        [
-                            'material_description' => $partName ?: null,
-                            'base_uom' => $matData['unit'] ?? 'PCS',
-                            'maker' => $matData['supplier'] ?? null,
-                            'currency' => $matData['currency'] ?? 'IDR',
-                            'price' => 0,
-                        ]
-                    );
+                    $resolvedUnit = $this->normalizeUnitValue($matData['unit'] ?? ($masterMaterial?->base_uom ?? 'PCS'));
 
-                    if ($manualPrice > 0) {
-                        $material->price = $manualPrice;
-                        $material->price_update = now()->toDateString();
-                        $material->save();
+                    $resolvedCurrency = strtoupper(trim((string) ($matData['currency'] ?? '')));
+                    if ($resolvedCurrency === '' && $masterMaterial?->currency) {
+                        $resolvedCurrency = strtoupper(trim((string) $masterMaterial->currency));
+                    }
+                    if (!in_array($resolvedCurrency, ['IDR', 'USD', 'JPY'], true)) {
+                        $resolvedCurrency = 'IDR';
+                    }
+
+                    $resolvedSupplier = trim((string) ($matData['supplier'] ?? ''));
+                    if ($resolvedSupplier === '' && $masterMaterial?->maker) {
+                        $resolvedSupplier = trim((string) $masterMaterial->maker);
+                    }
+
+                    $qtyMoqRaw = trim((string) ($matData['qty_moq'] ?? ''));
+                    $moq = floatval($matData['qty_moq'] ?? 0);
+                    if ($qtyMoqRaw === '' && $masterMaterial?->moq !== null) {
+                        $moq = floatval($masterMaterial->moq);
+                    }
+
+                    $cnType = strtoupper(trim((string) ($matData['cn_type'] ?? '')));
+                    if (!in_array($cnType, ['C', 'N'], true)) {
+                        $cnType = strtoupper(trim((string) ($masterMaterial?->cn ?? 'N')));
+                        if (!in_array($cnType, ['C', 'N'], true)) {
+                            $cnType = 'N';
+                        }
+                    }
+
+                    $importTaxRaw = trim((string) ($matData['import_tax'] ?? ''));
+                    $importTax = floatval($matData['import_tax'] ?? 0);
+                    if ($importTaxRaw === '' && $masterMaterial?->add_cost_import_tax !== null) {
+                        $importTax = floatval($masterMaterial->add_cost_import_tax);
+                    }
+
+                    $priceBaseInput = $this->toFloatValue($matData['amount1'] ?? 0);
+                    $masterPrice = floatval($masterMaterial?->price ?? 0);
+                    $priceBase = $priceBaseInput > 0 ? $priceBaseInput : $masterPrice;
+
+                    $material = $masterMaterial;
+                    if (!$material) {
+                        $material = Material::firstOrCreate(
+                            ['material_code' => $materialCode],
+                            [
+                                'material_description' => $partName !== '' ? $partName : null,
+                                'base_uom' => $resolvedUnit,
+                                'maker' => $resolvedSupplier !== '' ? $resolvedSupplier : null,
+                                'currency' => $resolvedCurrency,
+                                'price' => 0,
+                            ]
+                        );
                     }
 
                     // Re-calculate logic (replicating JS logic for safety)
-                    $unit = strtoupper($matData['unit'] ?? 'PCS');
-                    $moq = floatval($matData['qty_moq'] ?? 0);
+                    $unit = strtoupper($resolvedUnit);
                     $forecast = $request->forecast;
                     $periodYear = $request->project_period;
 
@@ -384,14 +702,10 @@ class CostingController extends Controller
                     $denominator = ($denominator != 0) ? ($denominator / $unitDivisor) : 0;
 
                     $ratio = ($denominator != 0) ? ($moq / $denominator) : 0;
-                    $cnType = $matData['cn_type'] ?? 'N';
 
                     $multiplyFactor = ($cnType === 'C' || $ratio < 1) ? 1 : $ratio;
 
                     // Amount 2 Logic
-                    $priceBase = floatval($matData['amount1'] ?? 0);
-                    $importTax = floatval($matData['import_tax'] ?? 0);
-
                     $extra = $priceBase * ($importTax / 100);
                     $base = $priceBase + $extra;
                     $numerator = $multiplyFactor * $base;
@@ -402,21 +716,34 @@ class CostingController extends Controller
                     MaterialBreakdown::create([
                         'costing_data_id' => $costingData->id,
                         'material_id' => $material->id,
+                        'part_no' => $normalizedRowPartNo !== '' ? $normalizedRowPartNo : null,
+                            'id_code' => $normalizedRowIdCode !== '' ? $normalizedRowIdCode : null,
+                        'pro_code' => trim((string) ($matData['pro_code'] ?? '')),
                         'qty_req' => $qtyReq,
                         'amount1' => $priceBase,
-                        'unit_price_basis' => floatval($matData['unit_price_basis'] ?? 0),
-                        'currency' => $matData['currency'] ?? 'IDR',
+                        'unit_price_basis' => $unitPriceBasisNumeric,
+                        'unit_price_basis_text' => $unitPriceBasisRaw !== '' ? $unitPriceBasisRaw : null,
+                        'currency' => $resolvedCurrency,
                         'qty_moq' => $moq,
                         'cn_type' => $cnType,
                         'import_tax_percent' => $importTax,
                         'amount2' => $amount2,
-                        'currency2' => $matData['currency'] ?? 'IDR',
+                        'currency2' => $resolvedCurrency,
                         'unit_price2' => $amount2, // Saving calculated amount2 as unit_price2 default
                     ]);
 
-                    $rowInputPrice = floatval($matData['unit_price_basis'] ?? 0);
-                    $detectedPrice = floatval($material->price ?? 0);
-                    $isUnpriced = ($detectedPrice <= 0) && ($rowInputPrice <= 0) && ($manualPrice <= 0);
+                    $rowAmount1 = $priceBase;
+                    $rowBasisPrice = $unitPriceBasisNumeric;
+                    $detectedPrice = $masterPrice;
+                    // Rule: jika Amount 1 sudah terisi, part tidak dianggap unpriced.
+                    $isUnpriced = ($detectedPrice <= 0)
+                        && ($rowAmount1 <= 0)
+                        && ($rowBasisPrice <= 0)
+                        && ($manualPrice <= 0);
+
+                    if ($isPlaceholderPart) {
+                        continue;
+                    }
 
                     if (!isset($partAggregation[$partKey])) {
                         $partAggregation[$partKey] = [
@@ -438,51 +765,86 @@ class CostingController extends Controller
                 }
             }
 
-            $trackingRevisionId = $validated['tracking_revision_id'] ?? null;
-            if ($trackingRevisionId) {
-                $trackedPartKeys = collect($partAggregation)->keys();
+            if ($trackingRevisionId && ($shouldProcessMaterials || $shouldProcessUnpricedOnly)) {
+                if ($shouldProcessMaterials) {
+                    $trackedPartKeys = collect($partAggregation)->keys();
 
-                $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
-                    ->whereNull('resolved_at')
-                    ->get()
-                    ->keyBy(fn ($item) => strtolower($item->part_number));
+                    $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
+                        ->whereNull('resolved_at')
+                        ->get()
+                        ->keyBy(fn ($item) => strtolower($item->part_number));
 
-                foreach ($partAggregation as $partKey => $partInfo) {
-                    if ($partInfo['is_unpriced']) {
-                        UnpricedPart::updateOrCreate(
-                            [
-                                'document_revision_id' => $trackingRevisionId,
-                                'part_number' => $partInfo['part_number'],
-                                'resolved_at' => null,
-                            ],
-                            [
+                    foreach ($partAggregation as $partKey => $partInfo) {
+                        if ($partInfo['is_unpriced']) {
+                            UnpricedPart::updateOrCreate(
+                                [
+                                    'document_revision_id' => $trackingRevisionId,
+                                    'part_number' => $partInfo['part_number'],
+                                    'resolved_at' => null,
+                                ],
+                                [
+                                    'costing_data_id' => $costingData->id,
+                                    'part_name' => $partInfo['part_name'] ?: null,
+                                    'qty' => $partInfo['qty'],
+                                    'detected_price' => $partInfo['detected_price'],
+                                    'manual_price' => null,
+                                    'notes' => 'Auto-detected from Form Input validation.',
+                                ]
+                            );
+                        } else {
+                            $existingOpen = $openItems->get($partKey);
+                            if ($existingOpen) {
+                                $existingOpen->update([
+                                    'costing_data_id' => $costingData->id,
+                                    'manual_price' => $partInfo['manual_price'],
+                                    'resolved_at' => now(),
+                                    'resolution_source' => 'manual_or_master_price',
+                                ]);
+                            }
+                        }
+                    }
+
+                    foreach ($openItems as $partKey => $openItem) {
+                        if (!$trackedPartKeys->contains($partKey)) {
+                            $openItem->update([
                                 'costing_data_id' => $costingData->id,
-                                'part_name' => $partInfo['part_name'] ?: null,
-                                'qty' => $partInfo['qty'],
-                                'detected_price' => $partInfo['detected_price'],
-                                'manual_price' => null,
-                                'notes' => 'Auto-detected from Form Input validation.',
-                            ]
-                        );
-                    } else {
-                        $existingOpen = $openItems->get($partKey);
-                        if ($existingOpen) {
-                            $existingOpen->update([
-                                'costing_data_id' => $costingData->id,
-                                'manual_price' => $partInfo['manual_price'],
                                 'resolved_at' => now(),
-                                'resolution_source' => 'manual_or_master_price',
+                                'resolution_source' => 'part_removed_in_current_processing',
                             ]);
                         }
                     }
-                }
+                } else {
+                    $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
+                        ->whereNull('resolved_at')
+                        ->get()
+                        ->keyBy(fn ($item) => strtolower($item->part_number));
 
-                foreach ($openItems as $partKey => $openItem) {
-                    if (!$trackedPartKeys->contains($partKey)) {
-                        $openItem->update([
+                    foreach ($manualUnpricedPrices as $partKey => $manualPrice) {
+                        if ($manualPrice <= 0) {
+                            continue;
+                        }
+
+                        $existingOpen = $openItems->get($partKey);
+                        if (!$existingOpen) {
+                            continue;
+                        }
+
+                        Material::updateOrCreate(
+                            ['material_code' => $existingOpen->part_number],
+                            [
+                                'material_description' => $existingOpen->part_name ?: null,
+                                'base_uom' => 'PCS',
+                                'currency' => 'IDR',
+                                'price' => $manualPrice,
+                                'price_update' => now()->toDateString(),
+                            ]
+                        );
+
+                        $existingOpen->update([
                             'costing_data_id' => $costingData->id,
+                            'manual_price' => $manualPrice,
                             'resolved_at' => now(),
-                            'resolution_source' => 'part_removed_in_current_processing',
+                            'resolution_source' => 'manual_or_master_price',
                         ]);
                     }
                 }
@@ -499,16 +861,866 @@ class CostingController extends Controller
             }
 
             DB::commit();
-            $redirectUrl = route('form',
-                $trackingRevisionId ? ['tracking_revision_id' => $trackingRevisionId] : [],
-                false
-            );
-            session()->flash('success', 'Data costing berhasil disimpan!');
+            $redirectParams = ['id' => $costingData->id];
+            if ($trackingRevisionId) {
+                $redirectParams['tracking_revision_id'] = $trackingRevisionId;
+            }
+
+            $redirectUrl = route('form', $redirectParams, false);
+            $sectionLabels = [
+                'informasi_project' => 'Informasi Project',
+                'rates' => 'Rates',
+                'material' => 'Material',
+                'unpriced_parts' => 'Rekapan Part Tanpa Harga',
+                'cycle_time' => 'Cycle Time',
+                'resume_cogm' => 'Resume COGM',
+            ];
+
+            $successMessage = $updateSection !== ''
+                ? (($sectionLabels[$updateSection] ?? 'Section') . ' berhasil diupdate!')
+                : 'Data costing berhasil disimpan!';
+
+            if ($importFromPartlist) {
+                $successMessage = 'Partlist berhasil diimport ke Material (' . count($importedMaterialRows) . ' baris).';
+            }
+
+            session()->flash('success', $successMessage);
 
             return response('', 302, ['Location' => $redirectUrl]);
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
+    }
+
+    public function importPartlist(Request $request)
+    {
+        $request->merge([
+            'update_section' => 'material',
+            'import_partlist' => 1,
+        ]);
+
+        return $this->store($request);
+    }
+
+    private function loadPartlistMaterialRows(?int $trackingRevisionId, $uploadedPartlistFile = null): array
+    {
+        $sourcePath = null;
+        $extension = '';
+
+        if ($uploadedPartlistFile) {
+            $sourcePath = $uploadedPartlistFile->getPathname();
+            $extension = strtolower((string) $uploadedPartlistFile->getClientOriginalExtension());
+        } else {
+            if (!$trackingRevisionId) {
+                return ['rows' => [], 'error' => 'Pilih file partlist terlebih dahulu.'];
+            }
+
+            $revision = DocumentRevision::find($trackingRevisionId);
+            if (!$revision || empty($revision->partlist_file_path)) {
+                return ['rows' => [], 'error' => 'File partlist pada revisi ini tidak tersedia.'];
+            }
+
+            if (!Storage::exists($revision->partlist_file_path)) {
+                return ['rows' => [], 'error' => 'File partlist tidak ditemukan di storage.'];
+            }
+
+            $sourcePath = Storage::path($revision->partlist_file_path);
+            $extension = strtolower((string) pathinfo($revision->partlist_file_path, PATHINFO_EXTENSION));
+        }
+
+        if ($extension === 'xls') {
+            return ['rows' => [], 'error' => 'Import `.xls` belum didukung. Gunakan file `.xlsx` pada partlist.'];
+        }
+
+        if ($extension !== 'xlsx') {
+            return ['rows' => [], 'error' => 'Format partlist tidak didukung untuk import otomatis.'];
+        }
+
+        if (!$sourcePath || !is_readable($sourcePath)) {
+            return ['rows' => [], 'error' => 'File partlist tidak dapat diakses oleh server.'];
+        }
+
+        $fileSize = @filesize($sourcePath);
+        if ($fileSize === false || $fileSize <= 0) {
+            return ['rows' => [], 'error' => 'File partlist kosong atau rusak.'];
+        }
+
+        try {
+            $rows = $this->parsePartlistXlsx((string) $sourcePath);
+            if (count($rows) === 0) {
+                $diag = $this->diagnosePartlistFile((string) $sourcePath);
+                return [
+                    'rows' => [],
+                    'error' => 'Data partlist tidak terdeteksi dari file. ' . $diag,
+                ];
+            }
+            return ['rows' => $rows, 'error' => null];
+        } catch (\Throwable $e) {
+            return ['rows' => [], 'error' => 'Gagal membaca file partlist: ' . $e->getMessage()];
+        }
+    }
+
+    private function parsePartlistXlsx(string $filePath): array
+    {
+        if (class_exists(IOFactory::class)) {
+            $rows = $this->parsePartlistWithPhpSpreadsheet($filePath);
+            if (count($rows) > 0) {
+                return $rows;
+            }
+        }
+
+        if (!class_exists(ZipArchive::class)) {
+            throw new \RuntimeException('Ekstensi PHP zip belum aktif. Aktifkan ext-zip untuk import partlist XLSX.');
+        }
+
+        $zip = new ZipArchive();
+        $tempCopyPath = null;
+        $zipOpenResult = $zip->open($filePath);
+        if ($zipOpenResult !== true) {
+            $tempCopyPath = tempnam(sys_get_temp_dir(), 'partlist_');
+            if ($tempCopyPath && @copy($filePath, $tempCopyPath)) {
+                $retryZip = new ZipArchive();
+                $retryResult = $retryZip->open($tempCopyPath);
+                if ($retryResult === true) {
+                    $zip = $retryZip;
+                } else {
+                    @unlink($tempCopyPath);
+                    throw new \RuntimeException('File Excel tidak dapat dibuka (' . $this->zipOpenErrorToMessage((int) $retryResult) . ').');
+                }
+            } else {
+                throw new \RuntimeException('File Excel tidak dapat dibuka (' . $this->zipOpenErrorToMessage((int) $zipOpenResult) . ').');
+            }
+        }
+
+        $workbookXml = $zip->getFromName('xl/workbook.xml');
+        $workbookRelsXml = $zip->getFromName('xl/_rels/workbook.xml.rels');
+        if ($workbookXml === false || $workbookRelsXml === false) {
+            $zip->close();
+            throw new \RuntimeException('Struktur workbook tidak valid.');
+        }
+
+        $workbook = @simplexml_load_string($workbookXml);
+        $rels = @simplexml_load_string($workbookRelsXml);
+        if (!$workbook || !$rels) {
+            $zip->close();
+            throw new \RuntimeException('Workbook tidak dapat diparse.');
+        }
+
+        $relNs = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+        $relationshipTargets = [];
+        foreach ($rels->Relationship as $relationship) {
+            $relationshipTargets[(string) ($relationship['Id'] ?? '')] = (string) ($relationship['Target'] ?? '');
+        }
+
+        $sheetTargets = [];
+        if (isset($workbook->sheets->sheet)) {
+            foreach ($workbook->sheets->sheet as $sheetNode) {
+                $sheetAttrs = $sheetNode->attributes($relNs);
+                $sheetRid = (string) ($sheetAttrs['id'] ?? '');
+                if ($sheetRid === '' || empty($relationshipTargets[$sheetRid])) {
+                    continue;
+                }
+
+                $sheetTargets[] = (string) $relationshipTargets[$sheetRid];
+            }
+        }
+
+        if (count($sheetTargets) === 0) {
+            $zip->close();
+            throw new \RuntimeException('Sheet partlist tidak ditemukan.');
+        }
+
+        $sharedStrings = [];
+        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($sharedStringsXml !== false) {
+            $sharedStringsDoc = @simplexml_load_string($sharedStringsXml);
+            if ($sharedStringsDoc && isset($sharedStringsDoc->si)) {
+                foreach ($sharedStringsDoc->si as $si) {
+                    if (isset($si->t)) {
+                        $sharedStrings[] = trim((string) $si->t);
+                        continue;
+                    }
+
+                    $text = '';
+                    foreach ($si->r as $run) {
+                        $text .= (string) ($run->t ?? '');
+                    }
+                    $sharedStrings[] = trim($text);
+                }
+            }
+        }
+
+        $bestRows = [];
+        $bestCount = 0;
+
+        foreach ($sheetTargets as $sheetTarget) {
+            $sheetPath = 'xl/' . ltrim((string) $sheetTarget, '/');
+            $sheetXml = $zip->getFromName($sheetPath);
+            if ($sheetXml === false) {
+                continue;
+            }
+
+            $sheet = @simplexml_load_string($sheetXml);
+            if (!$sheet || !isset($sheet->sheetData->row)) {
+                continue;
+            }
+
+            $rawRows = [];
+            foreach ($sheet->sheetData->row as $row) {
+                $rowNumber = (int) ($row['r'] ?? 0);
+                $rowValues = [];
+                foreach ($row->c as $cell) {
+                    $cellRef = (string) ($cell['r'] ?? '');
+                    $columnRef = preg_replace('/\d+/', '', $cellRef);
+                    if ($columnRef === '') {
+                        continue;
+                    }
+
+                    $columnIndex = $this->excelColumnToIndex($columnRef);
+                    $value = $this->extractXlsxCellValue($cell, $sharedStrings);
+
+                    $rowValues[$columnIndex] = $value;
+                }
+
+                if (!empty($rowValues)) {
+                    $rowValues['__row'] = $rowNumber;
+                    $rawRows[] = $rowValues;
+                }
+            }
+
+            if (count($rawRows) === 0) {
+                continue;
+            }
+
+            $mappedRows = $this->mapPartlistRowsToMaterials($rawRows);
+            if (count($mappedRows) > $bestCount) {
+                $bestRows = $mappedRows;
+                $bestCount = count($mappedRows);
+            }
+        }
+
+        $zip->close();
+        if ($tempCopyPath) {
+            @unlink($tempCopyPath);
+        }
+
+        if ($bestCount === 0) {
+            return [];
+        }
+
+        return $bestRows;
+    }
+
+    private function parsePartlistWithPhpSpreadsheet(string $filePath): array
+    {
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        $bestMaterials = [];
+        foreach ($spreadsheet->getAllSheets() as $sheet) {
+            if (!$sheet instanceof Worksheet) {
+                continue;
+            }
+
+            $materials = $this->extractMaterialsFromFixedTemplateSheet($sheet);
+            if (count($materials) > count($bestMaterials)) {
+                $bestMaterials = $materials;
+            }
+        }
+
+        return $bestMaterials;
+    }
+
+    private function extractMaterialsFromFixedTemplateSheet(Worksheet $sheet): array
+    {
+        $highestRow = (int) $sheet->getHighestDataRow();
+        if ($highestRow < 12) {
+            return [];
+        }
+
+        // Find header row (expect row 11) and map column indices dynamically
+        $headerRowIndex = 11;
+        $headerMap = [];
+        
+        $headerLabels = [
+            'supplier_part_no' => ['SUPPLIER PART NO', 'PART NO', 'PARTLIST NO'],
+            'id_code' => ['ID CODE', 'ID', 'KODE ID'],
+            'part_name' => ['PART NAME', 'NAMA PART', 'DESKRIPSI'],
+            'qty_req' => ['Q', 'QTY', 'QUANTITY', 'Q/ASSY'],
+            'unit' => ['UNIT', 'UOM', 'SATUAN'],
+            'pro_code' => ['PRO CODE', 'PROSES', 'PROCESS CODE'],
+        ];
+
+        // Scan row 11 to find headers
+        for ($col = 1; $col <= 20; $col++) {
+            $cellValue = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($col) . $headerRowIndex)->getFormattedValue());
+            $cellValueUpper = strtoupper($cellValue);
+            
+            foreach ($headerLabels as $key => $aliases) {
+                if (in_array($cellValueUpper, $aliases, true)) {
+                    $headerMap[$key] = $col;
+                    break;
+                }
+            }
+        }
+
+        // If we couldn't find headers, fallback to default columns (E-J)
+        if (empty($headerMap)) {
+            $headerMap = [
+                'supplier_part_no' => 5,  // E
+                'id_code' => 6,            // F
+                'part_name' => 7,          // G
+                'qty_req' => 8,            // H
+                'unit' => 9,               // I
+                'pro_code' => 10,          // J
+            ];
+        }
+
+        $skipPartNos = [
+            'NO ASSY',
+            'ASSY NAME',
+            'CUSTOMER',
+            'MODEL',
+            'TANGGAL',
+            'PIC ENGINEERING',
+            'PIC MARKETING',
+            'PART NO',
+            'SUPPLIER PART NO',
+            'ID CODE',
+            'PART NAME',
+            'QTY',
+            'UNIT',
+            'PRO CODE',
+        ];
+
+        $materials = [];
+        for ($row = 12; $row <= $highestRow; $row++) {
+            $partNo = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['supplier_part_no'] ?? 5) . $row)->getFormattedValue());
+            
+            // Only read ID CODE if header was explicitly found, otherwise keep empty
+            $idCode = '';
+            if (isset($headerMap['id_code'])) {
+                $idCode = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['id_code']) . $row)->getFormattedValue());
+            }
+            
+            $partName = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['part_name'] ?? 7) . $row)->getFormattedValue());
+            $qtyRaw = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['qty_req'] ?? 8) . $row)->getFormattedValue());
+            $unit = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['unit'] ?? 9) . $row)->getFormattedValue());
+            $proCode = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['pro_code'] ?? 10) . $row)->getFormattedValue());
+
+            if ($partNo === '' || $partNo === '-') {
+                $partNo = $idCode;
+            }
+
+            $qtyReq = $this->toFloatValue($qtyRaw);
+
+            $isRowEmpty = ($partNo === '' || $partNo === '-')
+                && ($idCode === '' || $idCode === '-')
+                && $partName === ''
+                && $qtyReq <= 0
+                && $proCode === '';
+
+            if ($isRowEmpty) {
+                continue;
+            }
+
+            $partNoUpper = strtoupper($partNo);
+            $idCodeUpper = strtoupper($idCode);
+            $partNameUpper = strtoupper($partName);
+            if (in_array($partNoUpper, $skipPartNos, true)
+                || in_array($idCodeUpper, $skipPartNos, true)
+                || in_array($partNameUpper, $skipPartNos, true)) {
+                continue;
+            }
+
+            $materials[] = [
+                'part_no' => $partNo,
+                'id_code' => $idCode !== '' && $idCode !== '-' ? $idCode : null,
+                'part_name' => $partName,
+                'qty_req' => $qtyReq,
+                'unit' => $this->normalizeUnitValue($unit),
+                'pro_code' => $proCode,
+                'amount1' => 0,
+                'unit_price_basis' => 0,
+                'unit_price_basis_text' => null,
+                'currency' => 'IDR',
+                'qty_moq' => 0,
+                'cn_type' => 'N',
+                'supplier' => '',
+                'import_tax' => 0,
+            ];
+        }
+
+        return $materials;
+    }
+
+    private function mapPartlistRowsToMaterials(array $rawRows): array
+    {
+        // Primary rule requested: fixed template columns D:J starting row 12.
+        $fixedTemplateRows = $this->mapPartlistRowsByFixedTemplate($rawRows);
+        if (count($fixedTemplateRows) > 0) {
+            return $fixedTemplateRows;
+        }
+
+        $headerRowIndex = null;
+        $headerMap = [];
+
+        foreach ($rawRows as $rowIndex => $rowValues) {
+            $candidate = [];
+            foreach ($rowValues as $columnIndex => $rawValue) {
+                if (!is_int($columnIndex)) {
+                    continue;
+                }
+
+                $headerKey = $this->mapPartlistHeader((string) $rawValue);
+                if ($headerKey !== null && !isset($candidate[$headerKey])) {
+                    $candidate[$headerKey] = $columnIndex;
+                }
+            }
+
+            if ((isset($candidate['part_no']) || isset($candidate['id_code']))
+                && (isset($candidate['part_name']) || isset($candidate['qty_req']) || isset($candidate['unit']))) {
+                $headerRowIndex = $rowIndex;
+                $headerMap = $candidate;
+                break;
+            }
+        }
+
+        if ($headerRowIndex === null) {
+            return $this->mapPartlistRowsByFixedTemplate($rawRows);
+        }
+
+        $materials = [];
+        foreach (array_slice($rawRows, $headerRowIndex + 1) as $rowValues) {
+            $partNo = trim((string) $this->rowCellValue($rowValues, $headerMap, 'part_no'));
+            $idCode = trim((string) $this->rowCellValue($rowValues, $headerMap, 'id_code'));
+            if ($partNo === '' || $partNo === '-') {
+                $partNo = $idCode;
+            }
+
+            $partName = trim((string) $this->rowCellValue($rowValues, $headerMap, 'part_name'));
+            $qtyReq = $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'qty_req'));
+
+            if (($partNo === '' || $partNo === '-') && ($idCode === '' || $idCode === '-') && $partName === '' && $qtyReq <= 0) {
+                continue;
+            }
+
+            $unit = trim((string) $this->rowCellValue($rowValues, $headerMap, 'unit'));
+            $currency = strtoupper(trim((string) $this->rowCellValue($rowValues, $headerMap, 'currency')));
+            $cnType = strtoupper(trim((string) $this->rowCellValue($rowValues, $headerMap, 'cn_type')));
+
+            $materials[] = [
+                'part_no' => $partNo,
+                'id_code' => ($idCode !== '' && $idCode !== '-') ? $idCode : null,
+                'part_name' => $partName,
+                'qty_req' => $qtyReq,
+                'unit' => $this->normalizeUnitValue($unit),
+                'pro_code' => trim((string) $this->rowCellValue($rowValues, $headerMap, 'pro_code')),
+                'amount1' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'amount1')),
+                'unit_price_basis' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'unit_price_basis')),
+                'unit_price_basis_text' => trim((string) $this->rowCellValue($rowValues, $headerMap, 'unit_price_basis')),
+                'currency' => in_array($currency, ['IDR', 'USD', 'JPY'], true) ? $currency : 'IDR',
+                'qty_moq' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'qty_moq')),
+                'cn_type' => in_array($cnType, ['C', 'N'], true) ? $cnType : 'N',
+                'supplier' => trim((string) $this->rowCellValue($rowValues, $headerMap, 'supplier')),
+                'import_tax' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'import_tax')),
+            ];
+        }
+
+        return $materials;
+    }
+
+    private function mapPartlistRowsByFixedTemplate(array $rawRows): array
+    {
+        $skipPartNos = [
+            'NO ASSY',
+            'ASSY NAME',
+            'CUSTOMER',
+            'MODEL',
+            'TANGGAL',
+            'PIC ENGINEERING',
+            'PIC MARKETING',
+            'PART NO',
+        ];
+
+        // Find header row (row 11) and detect column mapping dynamically
+        $headerRow = null;
+        foreach ($rawRows as $rowValues) {
+            $rowNumber = (int) ($rowValues['__row'] ?? 0);
+            if ($rowNumber === 11) {
+                $headerRow = $rowValues;
+                break;
+            }
+        }
+
+        $headerMap = [
+            'supplier_part_no' => 4,  // Default E
+            'id_code' => 5,            // Default F
+            'part_name' => 6,          // Default G
+            'qty_req' => 7,            // Default H
+            'unit' => 8,               // Default I
+            'pro_code' => 9,           // Default J
+        ];
+
+        // If we found header row, try to dynamically map columns
+        if ($headerRow) {
+            $headerLabels = [
+                'supplier_part_no' => ['SUPPLIER PART NO', 'PART NO', 'PARTLIST NO'],
+                'id_code' => ['ID CODE', 'ID', 'KODE ID'],
+                'part_name' => ['PART NAME', 'NAMA PART', 'DESKRIPSI'],
+                'qty_req' => ['Q', 'QTY', 'QUANTITY', 'Q/ASSY'],
+                'unit' => ['UNIT', 'UOM', 'SATUAN'],
+                'pro_code' => ['PRO CODE', 'PROSES', 'PROCESS CODE'],
+            ];
+
+            foreach ($headerRow as $colIndex => $cellValue) {
+                if (!is_int($colIndex)) continue;
+                
+                $headerValueUpper = strtoupper(trim((string) $cellValue));
+                foreach ($headerLabels as $field => $aliases) {
+                    if (in_array($headerValueUpper, $aliases, true)) {
+                        $headerMap[$field] = $colIndex;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Filter to data rows (12+)
+        $rows = array_values(array_filter($rawRows, function ($rowValues) {
+            $rowNumber = (int) ($rowValues['__row'] ?? 0);
+            return $rowNumber >= 12;
+        }));
+
+        $materials = [];
+        foreach ($rows as $rowValues) {
+            $partNo = trim((string) ($rowValues[$headerMap['supplier_part_no']] ?? ''));
+            
+            // Only read ID CODE if header was explicitly found
+            $idCode = '';
+            if (isset($headerMap['id_code'])) {
+                $idCode = trim((string) ($rowValues[$headerMap['id_code']] ?? ''));
+            }
+            
+            if ($partNo === '' || $partNo === '-') {
+                $partNo = $idCode;
+            }
+
+            $partName = trim((string) ($rowValues[$headerMap['part_name']] ?? ''));
+            $partNoUpper = strtoupper($partNo);
+            $idCodeUpper = strtoupper($idCode);
+            $qtyReq = $this->toFloatValue($rowValues[$headerMap['qty_req']] ?? '');
+
+            $isRowEmpty = ($partNo === '' || $partNo === '-')
+                && ($idCode === '' || $idCode === '-')
+                && $partName === ''
+                && $qtyReq <= 0;
+
+            $isHeaderLike = in_array($partNoUpper, $skipPartNos, true)
+                || in_array($idCodeUpper, $skipPartNos, true)
+                || in_array(strtoupper($partName), $skipPartNos, true);
+
+            if ($isRowEmpty || $isHeaderLike) {
+                continue;
+            }
+
+            $materials[] = [
+                'part_no' => $partNo,
+                'id_code' => ($idCode !== '' && $idCode !== '-') ? $idCode : null,
+                'part_name' => $partName,
+                'qty_req' => $qtyReq,
+                'unit' => $this->normalizeUnitValue($rowValues[$headerMap['unit']] ?? ''),
+                'pro_code' => trim((string) ($rowValues[$headerMap['pro_code']] ?? '')),
+                'amount1' => 0,
+                'unit_price_basis' => 0,
+                'unit_price_basis_text' => null,
+                'currency' => 'IDR',
+                'qty_moq' => 0,
+                'cn_type' => 'N',
+                'supplier' => '',
+                'import_tax' => 0,
+            ];
+        }
+
+        return $materials;
+    }
+
+    private function mapPartlistHeader(string $value): ?string
+    {
+        $normalized = preg_replace('/[^a-z0-9]/', '', strtolower(trim($value)));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $headerAliases = [
+            'part_no' => ['partno', 'partnumber', 'materialcode', 'partnumbermaterial', 'pn', 'partnumberno'],
+            'id_code' => ['idcode', 'idmaterial', 'materialid', 'itemcode', 'id', 'kodepart', 'code'],
+            'part_name' => ['partname', 'materialdescription', 'description', 'namapart'],
+            'qty_req' => ['qtyreq', 'qtyrequired', 'qty', 'usageqty', 'qtyperassy', 'quantity', 'qtyneed', 'qtypcs'],
+            'unit' => ['unit', 'uom', 'baseuom'],
+            'pro_code' => ['procode', 'processcode', 'kodeproses', 'proc', 'process'],
+            'amount1' => ['amount1', 'price', 'hargasatuan', 'materialprice'],
+            'unit_price_basis' => ['unitpricebasis', 'basisprice', 'unitprice', 'pricebasis'],
+            'currency' => ['currency', 'curr', 'matauang'],
+            'qty_moq' => ['qtymoq', 'moq', 'minimumorderqty'],
+            'cn_type' => ['cn', 'ctype', 'cntype', 'cndesc'],
+            'supplier' => ['supplier', 'vendor', 'maker'],
+            'import_tax' => ['importtax', 'importtaxpercent', 'taximport'],
+        ];
+
+        foreach ($headerAliases as $field => $aliases) {
+            if (in_array($normalized, $aliases, true)) {
+                return $field;
+            }
+        }
+
+        return null;
+    }
+
+    private function rowCellValue(array $rowValues, array $headerMap, string $field): string
+    {
+        if (!isset($headerMap[$field])) {
+            return '';
+        }
+
+        $columnIndex = $headerMap[$field];
+        return isset($rowValues[$columnIndex]) ? (string) $rowValues[$columnIndex] : '';
+    }
+
+    private function extractXlsxCellValue(\SimpleXMLElement $cell, array $sharedStrings): string
+    {
+        $type = (string) ($cell['t'] ?? '');
+
+        if ($type === 's') {
+            $sharedIndex = (int) ($cell->v ?? 0);
+            return trim((string) ($sharedStrings[$sharedIndex] ?? ''));
+        }
+
+        if ($type === 'inlineStr') {
+            if (isset($cell->is->t)) {
+                return trim((string) $cell->is->t);
+            }
+
+            $richText = '';
+            foreach ($cell->is->r as $run) {
+                $richText .= (string) ($run->t ?? '');
+            }
+
+            return trim($richText);
+        }
+
+        if (isset($cell->v)) {
+            return trim((string) $cell->v);
+        }
+
+        if (isset($cell->is->t)) {
+            return trim((string) $cell->is->t);
+        }
+
+        if (isset($cell->f)) {
+            // Fallback: if formula has no cached value, keep formula text instead of empty.
+            return trim((string) $cell->f);
+        }
+
+        return '';
+    }
+
+    private function excelColumnToIndex(string $columnRef): int
+    {
+        $columnRef = strtoupper($columnRef);
+        $index = 0;
+        $length = strlen($columnRef);
+
+        for ($i = 0; $i < $length; $i++) {
+            $index = ($index * 26) + (ord($columnRef[$i]) - 64);
+        }
+
+        return $index - 1;
+    }
+
+    private function toFloatValue($value): float
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return 0;
+        }
+
+        $normalized = preg_replace('/[^0-9,\.\-]/', '', $raw);
+        if ($normalized === '' || $normalized === '-' || $normalized === '.' || $normalized === ',') {
+            return 0;
+        }
+
+        $hasComma = str_contains($normalized, ',');
+        $hasDot = str_contains($normalized, '.');
+
+        if ($hasComma && $hasDot) {
+            $lastCommaPos = strrpos($normalized, ',');
+            $lastDotPos = strrpos($normalized, '.');
+
+            if ($lastCommaPos !== false && $lastDotPos !== false && $lastCommaPos > $lastDotPos) {
+                $normalized = str_replace('.', '', $normalized);
+                $normalized = str_replace(',', '.', $normalized);
+            } else {
+                $normalized = str_replace(',', '', $normalized);
+            }
+        } elseif ($hasComma && !$hasDot) {
+            $normalized = str_replace(',', '.', $normalized);
+        }
+
+        return is_numeric($normalized) ? (float) $normalized : 0;
+    }
+
+    private function uploadErrorCodeToMessage(int $errorCode): string
+    {
+        return match ($errorCode) {
+            UPLOAD_ERR_INI_SIZE => 'ukuran file melebihi batas upload_max_filesize server',
+            UPLOAD_ERR_FORM_SIZE => 'ukuran file melebihi batas form',
+            UPLOAD_ERR_PARTIAL => 'file hanya terupload sebagian',
+            UPLOAD_ERR_NO_FILE => 'tidak ada file yang dipilih',
+            UPLOAD_ERR_NO_TMP_DIR => 'folder temporary upload tidak tersedia',
+            UPLOAD_ERR_CANT_WRITE => 'server gagal menulis file ke disk',
+            UPLOAD_ERR_EXTENSION => 'upload dibatalkan oleh ekstensi PHP',
+            default => 'error upload tidak diketahui',
+        };
+    }
+
+    private function zipOpenErrorToMessage(int $zipErrorCode): string
+    {
+        return match ($zipErrorCode) {
+            ZipArchive::ER_NOZIP => 'format file bukan ZIP/XLSX yang valid',
+            ZipArchive::ER_INCONS => 'struktur ZIP/XLSX tidak konsisten',
+            ZipArchive::ER_READ => 'gagal membaca file',
+            ZipArchive::ER_OPEN => 'file tidak bisa dibuka',
+            ZipArchive::ER_NOENT => 'file tidak ditemukan',
+            default => 'kode error ZIP: ' . $zipErrorCode,
+        };
+    }
+
+    private function diagnosePartlistFile(string $filePath): string
+    {
+        if (!class_exists(IOFactory::class)) {
+            return 'Parser PhpSpreadsheet tidak tersedia.';
+        }
+
+        try {
+            $spreadsheet = IOFactory::load($filePath);
+        } catch (\Throwable $e) {
+            return 'File terbaca tetapi gagal didiagnosa: ' . $e->getMessage();
+        }
+
+        $summary = [];
+        foreach ($spreadsheet->getAllSheets() as $sheet) {
+            if (!$sheet instanceof Worksheet) {
+                continue;
+            }
+
+            $highestRow = (int) $sheet->getHighestDataRow();
+            $candidates = 0;
+            for ($r = 12; $r <= $highestRow; $r++) {
+                $partNo = trim((string) $sheet->getCell('E' . $r)->getFormattedValue());
+                $idCode = trim((string) $sheet->getCell('F' . $r)->getFormattedValue());
+                $partName = trim((string) $sheet->getCell('G' . $r)->getFormattedValue());
+                $qtyRaw = trim((string) $sheet->getCell('H' . $r)->getFormattedValue());
+                $proCode = trim((string) $sheet->getCell('J' . $r)->getFormattedValue());
+                $qtyReq = $this->toFloatValue($qtyRaw);
+
+                $hasData = ($partNo !== '' && $partNo !== '-')
+                    || ($idCode !== '' && $idCode !== '-')
+                    || $partName !== ''
+                    || $qtyReq > 0
+                    || ($proCode !== '' && $proCode !== '-');
+
+                if ($hasData) {
+                    $candidates++;
+                }
+            }
+
+            $summary[] = $sheet->getTitle() . ': rowData=' . $candidates . ', highestRow=' . $highestRow;
+        }
+
+        if (count($summary) === 0) {
+            return 'Workbook tidak memiliki sheet yang dapat dibaca.';
+        }
+
+        return 'Diagnosa sheet -> ' . implode(' | ', $summary);
+    }
+
+    private function normalizeUnitValue($value): string
+    {
+        $unit = strtoupper(trim((string) $value));
+
+        if ($unit === '') {
+            return 'PCS';
+        }
+
+        return $unit;
+    }
+
+    private function validMasterMaterialsQuery()
+    {
+        $skipCodes = $this->materialMetaSkipCodes();
+
+        return Material::query()
+            ->whereNotNull('material_code')
+            ->where('material_code', '!=', '')
+            ->where('material_code', '!=', '-')
+            ->where('material_code', 'not like', '__ROW_%')
+            ->whereRaw('UPPER(material_code) NOT IN (' . implode(',', array_fill(0, count($skipCodes), '?')) . ')', $skipCodes);
+    }
+
+    private function findMasterMaterial(?string $partNo, ?string $idCode): ?Material
+    {
+        $partNo = trim((string) $partNo);
+        $idCode = trim((string) $idCode);
+
+        $candidates = array_values(array_unique(array_filter([$partNo, $idCode], function ($value) {
+            $normalized = trim((string) $value);
+            return $normalized !== '' && $normalized !== '-' && !$this->isMaterialMetaCode($normalized);
+        })));
+
+        if (empty($candidates)) {
+            return null;
+        }
+
+        foreach ($candidates as $code) {
+            $match = $this->validMasterMaterialsQuery()
+                ->whereRaw('LOWER(material_code) = ?', [Str::lower($code)])
+                ->first();
+
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return null;
+    }
+
+    private function materialMetaSkipCodes(): array
+    {
+        return [
+            'NO ASSY',
+            'ASSY NAME',
+            'CUSTOMER',
+            'MODEL',
+            'TANGGAL',
+            'PIC ENGINEERING',
+            'PIC MARKETING',
+            'SUPPLIER PART NO',
+            'PART NO',
+            'ID CODE',
+            'PART NAME',
+            'QTY',
+            'UNIT',
+            'PRO CODE',
+        ];
+    }
+
+    private function isMaterialMetaCode(string $code): bool
+    {
+        return in_array(strtoupper(trim($code)), $this->materialMetaSkipCodes(), true);
     }
 }

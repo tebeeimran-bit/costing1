@@ -671,6 +671,53 @@ class TrackingDocumentController extends Controller
         ]);
     }
 
+    public function deleteUnpricedPart(Request $request, DocumentRevision $revision)
+    {
+        $validated = $request->validate([
+            'part_number' => 'required|string|max:255',
+        ]);
+
+        $partKey = strtolower(trim((string) $validated['part_number']));
+
+        DB::transaction(function () use ($revision, $partKey) {
+            UnpricedPart::where('document_revision_id', $revision->id)
+                ->whereNull('resolved_at')
+                ->whereRaw('lower(part_number) = ?', [$partKey])
+                ->update([
+                    'resolved_at' => now(),
+                    'resolution_source' => 'manual_delete',
+                ]);
+
+            $hasOpenUnpriced = UnpricedPart::where('document_revision_id', $revision->id)
+                ->whereNull('resolved_at')
+                ->exists();
+
+            if ($hasOpenUnpriced) {
+                if ($revision->status !== DocumentRevision::STATUS_SUBMITTED_TO_MARKETING) {
+                    $revision->update([
+                        'status' => DocumentRevision::STATUS_PENDING_PRICING,
+                    ]);
+                }
+            } elseif ($revision->status === DocumentRevision::STATUS_PENDING_PRICING) {
+                $revision->update([
+                    'status' => DocumentRevision::STATUS_COGM_GENERATED,
+                    'cogm_generated_at' => now(),
+                ]);
+            }
+        });
+
+        $openCount = UnpricedPart::where('document_revision_id', $revision->id)
+            ->whereNull('resolved_at')
+            ->count();
+
+        return response()->json([
+            'ok' => true,
+            'open_unpriced_count' => $openCount,
+            'status' => $revision->fresh()->status,
+            'status_label' => $revision->fresh()->status_label,
+        ]);
+    }
+
     public function download(DocumentRevision $revision, string $type)
     {
         if (!in_array($type, ['partlist', 'umh', 'a00', 'a04', 'a05'], true)) {

@@ -11,6 +11,13 @@ use App\Models\BusinessCategory;
 use App\Models\CostingData;
 use App\Models\CycleTimeTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class DatabaseController extends Controller
 {
@@ -25,9 +32,36 @@ class DatabaseController extends Controller
         return view('database.products', compact('products'));
     }
 
-    public function parts()
+    public function parts(Request $request)
     {
-        $materials = Material::orderBy('material_code', 'asc')->get();
+        $keyword = trim((string) $request->input('q', ''));
+
+        $perPage = (int) $request->input('per_page', 100);
+        if ($perPage <= 0) {
+            $perPage = 100;
+        }
+        if ($perPage > 500) {
+            $perPage = 500;
+        }
+
+        $materialsQuery = Material::query();
+
+        if ($keyword !== '') {
+            $materialsQuery->where(function ($query) use ($keyword) {
+                $like = '%' . $keyword . '%';
+                $query->where('material_code', 'like', $like)
+                    ->orWhere('material_description', 'like', $like)
+                    ->orWhere('material_type', 'like', $like)
+                    ->orWhere('material_group', 'like', $like)
+                    ->orWhere('maker', 'like', $like);
+            });
+        }
+
+        $materials = $materialsQuery
+            ->orderBy('material_code', 'asc')
+            ->paginate($perPage)
+            ->withQueryString();
+
         return view('database.parts', compact('materials'));
     }
 
@@ -308,6 +342,248 @@ class DatabaseController extends Controller
         return response('', 302, ['Location' => $target]);
     }
 
+    public function downloadPartsTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Parts');
+
+        $headers = [
+            'plant',
+            'material_code',
+            'material_description',
+            'material_type',
+            'material_group',
+            'base_uom',
+            'price',
+            'purchase_unit',
+            'currency',
+            'moq',
+            'cn',
+            'maker',
+            'add_cost_import_tax',
+            'price_update',
+            'price_before',
+        ];
+
+        foreach ($headers as $index => $header) {
+            $column = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValue($column . '1', $header);
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $example = [
+            '1501',
+            'ABC-123',
+            'CONNECTOR SAMPLE',
+            'RAW',
+            'ELECTRICAL',
+            'PCS',
+            '12345',
+            'PCS',
+            'IDR',
+            '1000',
+            'N',
+            'SUPPLIER A',
+            '0',
+            now()->format('Y-m-d'),
+            '12000',
+        ];
+
+        foreach ($example as $index => $value) {
+            $column = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValue($column . '2', $value);
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'parts_template_');
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, 'database-parts-template.xlsx')->deleteFileAfterSend(true);
+    }
+
+    public function importPartsExcel(Request $request)
+    {
+        $validated = $request->validateWithBag('importParts', [
+            'import_file' => 'required|file|mimes:xlsx|max:20480',
+        ], [
+            'import_file.required' => 'File Excel wajib dipilih.',
+            'import_file.mimes' => 'Format file harus .xlsx.',
+            'import_file.max' => 'Ukuran file maksimal 20MB.',
+        ]);
+
+        try {
+            $spreadsheet = IOFactory::load($validated['import_file']->getPathname());
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
+        }
+
+        $sheet = $spreadsheet->getActiveSheet();
+        $highestRow = (int) $sheet->getHighestDataRow();
+        $highestColIndex = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+
+        if ($highestRow < 2) {
+            return back()->with('warning', 'File template kosong. Isi minimal satu baris data.');
+        }
+
+        // Expected template columns in order
+        $expectedHeaders = [
+            'plant',
+            'material_code',
+            'material_description',
+            'material_type',
+            'material_group',
+            'base_uom',
+            'price',
+            'purchase_unit',
+            'currency',
+            'moq',
+            'cn',
+            'maker',
+            'add_cost_import_tax',
+            'price_update',
+            'price_before',
+        ];
+
+        // Create headerMap from expected columns
+        $headerMap = [];
+        for ($col = 1; $col <= min($highestColIndex, count($expectedHeaders)); $col++) {
+            $field = $expectedHeaders[$col - 1];
+            $headerMap[$field] = $col;
+        }
+
+        $created = 0;
+        $totalRows = $highestRow - 1;
+
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $payload = [
+                'created_at' => now(),
+                'updated_at' => now(),
+                'price' => 0,            // NOT NULL default
+                'currency' => 'IDR',     // NOT NULL default
+            ];
+
+            // Read all expected fields from their column positions
+            foreach ($expectedHeaders as $colIndex => $field) {
+                $col = $colIndex + 1;
+                if ($col > $highestColIndex) {
+                    $payload[$field] = $field === 'base_uom' ? '' : null;
+                    continue;
+                }
+
+                $cellRef = Coordinate::stringFromColumnIndex($col) . $row;
+                $rawValue = trim((string) $sheet->getCell($cellRef)->getFormattedValue());
+
+                // Process based on field type
+                if (in_array($field, ['price', 'moq', 'add_cost_import_tax', 'price_before'])) {
+                    // Numeric fields
+                    if ($rawValue !== '') {
+                        $numVal = $this->toNullableFloat($rawValue);
+                        $payload[$field] = $numVal;
+                    } else {
+                        // For price field (NOT NULL), use default 0 if empty
+                        $payload[$field] = ($field === 'price') ? 0 : null;
+                    }
+                } elseif ($field === 'price_update') {
+                    // Date field
+                    if ($rawValue !== '') {
+                        try {
+                            $dateVal = \Carbon\Carbon::parse($rawValue)->format('Y-m-d');
+                            $payload[$field] = $dateVal;
+                        } catch (\Exception $e) {
+                            $payload[$field] = null;
+                        }
+                    } else {
+                        $payload[$field] = null;
+                    }
+                } else {
+                    // String/text fields
+                    // For NOT NULL fields with defaults, don't override with null if empty
+                    if ($rawValue === '') {
+                        if ($field === 'base_uom') {
+                            $payload[$field] = '';
+                        } elseif (!in_array($field, ['currency'])) {
+                            $payload[$field] = null;
+                        }
+                    } else {
+                        $payload[$field] = $rawValue;
+                    }
+                }
+            }
+
+            // Raw insert to bypass all Model validation
+            try {
+                DB::table('materials')->insert($payload);
+                $created++;
+            } catch (\Throwable $e) {
+                \Log::warning('Row ' . $row . ' insert failed: ' . $e->getMessage());
+            }
+        }
+
+        $summary = "Import selesai. Total baris Excel: {$totalRows}, berhasil ditambahkan: {$created}.";
+        return back()->with('success', $summary);
+    }
+
+    private function normalizePartsImportHeader(string $value): ?string
+    {
+        $normalized = strtolower(trim($value));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $normalized = str_replace(['-', ' ', '_'], '', $normalized);
+
+        $aliases = [
+            'plant' => ['plant'],
+            'material_code' => ['materialcode', 'material_id_code', 'materialidcode', 'idcode', 'material', 'code'],
+            'material_description' => ['materialdescription', 'description', 'materialdesc', 'desc'],
+            'material_type' => ['materialtype', 'type'],
+            'material_group' => ['materialgroup', 'group'],
+            'base_uom' => ['baseuom', 'uom', 'unit', 'baseunit'],
+            'price' => ['price', 'harga'],
+            'purchase_unit' => ['purchaseunit', 'unitpurchase', 'unit'],
+            'currency' => ['currency', 'curr'],
+            'moq' => ['moq'],
+            'cn' => ['cn', 'c_n'],
+            'maker' => ['maker', 'supplier'],
+            'add_cost_import_tax' => ['addcostimporttax', 'importtax', 'addcost', 'addcostpercent'],
+            'price_update' => ['priceupdate', 'priceupdatedate', 'updatedate'],
+            'price_before' => ['pricebefore', 'previousprice'],
+        ];
+
+        foreach ($aliases as $target => $candidateHeaders) {
+            if (in_array($normalized, $candidateHeaders, true)) {
+                return $target;
+            }
+        }
+
+        return null;
+    }
+
+    public function destroyPartsBulk(Request $request)
+    {
+        $validated = $request->validate([
+            'material_ids' => 'required|array|min:1',
+            'material_ids.*' => 'integer|exists:materials,id',
+        ], [
+            'material_ids.required' => 'Pilih minimal satu material untuk dihapus.',
+            'material_ids.array' => 'Format data hapus massal tidak valid.',
+            'material_ids.min' => 'Pilih minimal satu material untuk dihapus.',
+        ]);
+
+        $ids = collect($validated['material_ids'])->map(fn ($id) => (int) $id)->unique()->values();
+        $deleted = Material::whereIn('id', $ids)->delete();
+
+        return back()->with('success', 'Hapus massal berhasil. Jumlah data terhapus: ' . $deleted . '.');
+    }
+
+    public function destroyPartsAll(Request $request)
+    {
+        $deleted = Material::query()->delete();
+
+        return back()->with('success', 'Semua data material berhasil dihapus. Jumlah data terhapus: ' . $deleted . '.');
+    }
+
     public function editPart($id)
     {
         $material = Material::findOrFail($id);
@@ -353,5 +629,88 @@ class DatabaseController extends Controller
         session()->flash('success', 'Material berhasil dihapus!');
 
         return response('', 302, ['Location' => $target]);
+    }
+
+    private function readImportCell($sheet, array $headerMap, string $field, int $row)
+    {
+        if (!isset($headerMap[$field])) {
+            return '';
+        }
+
+        $cellRef = Coordinate::stringFromColumnIndex((int) $headerMap[$field]) . $row;
+        return $sheet->getCell($cellRef)->getFormattedValue();
+    }
+
+    private function hasImportField(array $headerMap, string $field): bool
+    {
+        return isset($headerMap[$field]);
+    }
+
+    private function nullableTrim($value): ?string
+    {
+        $trimmed = trim((string) $value);
+        return $trimmed === '' ? null : $trimmed;
+    }
+
+    private function toNullableFloat($value): ?float
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        $normalized = preg_replace('/[^0-9,\.\-]/', '', $raw);
+        if ($normalized === '' || $normalized === '-' || $normalized === ',' || $normalized === '.') {
+            return null;
+        }
+
+        $hasComma = str_contains($normalized, ',');
+        $hasDot = str_contains($normalized, '.');
+
+        if ($hasComma && $hasDot) {
+            $lastComma = strrpos($normalized, ',');
+            $lastDot = strrpos($normalized, '.');
+            if ($lastComma !== false && $lastDot !== false && $lastComma > $lastDot) {
+                $normalized = str_replace('.', '', $normalized);
+                $normalized = str_replace(',', '.', $normalized);
+            } else {
+                $normalized = str_replace(',', '', $normalized);
+            }
+        } elseif ($hasComma) {
+            $normalized = str_replace(',', '.', $normalized);
+        }
+
+        return is_numeric($normalized) ? (float) $normalized : null;
+    }
+
+    private function parseExcelDateValue($sheet, array $headerMap, string $field, int $row): ?string
+    {
+        if (!isset($headerMap[$field])) {
+            return null;
+        }
+
+        $col = (int) $headerMap[$field];
+        $cellRef = Coordinate::stringFromColumnIndex($col) . $row;
+        $cell = $sheet->getCell($cellRef);
+        $raw = $cell->getValue();
+
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        if (is_numeric($raw)) {
+            try {
+                return ExcelDate::excelToDateTimeObject((float) $raw)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+
+        $parsed = strtotime((string) $raw);
+        if ($parsed === false) {
+            return null;
+        }
+
+        return date('Y-m-d', $parsed);
     }
 }

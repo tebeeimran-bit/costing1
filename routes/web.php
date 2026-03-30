@@ -10,6 +10,10 @@ Route::get('/', [CostingController::class, 'dashboard'])->name('dashboard');
 Route::get('/database', [DatabaseController::class, 'index'])->name('database');
 Route::get('/database/products', [DatabaseController::class, 'products'])->name('database.products');
 Route::get('/database/parts', [DatabaseController::class, 'parts'])->name('database.parts');
+Route::get('/database/parts/template', [DatabaseController::class, 'downloadPartsTemplate'])->name('database.parts.template');
+Route::post('/database/parts/import', [DatabaseController::class, 'importPartsExcel'])->name('database.parts.import');
+Route::delete('/database/parts/bulk-delete', [DatabaseController::class, 'destroyPartsBulk'])->name('database.parts.destroy-bulk');
+Route::delete('/database/parts/destroy-all', [DatabaseController::class, 'destroyPartsAll'])->name('database.parts.destroy-all');
 Route::get('/database/parts/create', [DatabaseController::class, 'createPart'])->name('database.parts.create');
 Route::post('/database/parts', [DatabaseController::class, 'storePart'])->name('database.parts.store');
 Route::get('/database/parts/{id}/edit', [DatabaseController::class, 'editPart'])->name('database.parts.edit');
@@ -38,6 +42,7 @@ Route::put('/database/pics/{id}', [DatabaseController::class, 'updatePic'])->nam
 Route::delete('/database/pics/{id}', [DatabaseController::class, 'destroyPic'])->name('database.pics.destroy');
 Route::get('/form', [CostingController::class, 'form'])->name('form');
 Route::post('/costing/store', [CostingController::class, 'store'])->name('costing.store');
+Route::post('/costing/import-partlist', [CostingController::class, 'importPartlist'])->name('costing.import-partlist');
 Route::get('/document-receipts', [DocumentReceiptController::class, 'index'])->name('document-receipts.index');
 Route::post('/document-receipts', [DocumentReceiptController::class, 'store'])->name('document-receipts.store');
 Route::get('/document-receipts/{documentReceipt}/{type}', [DocumentReceiptController::class, 'download'])
@@ -54,6 +59,7 @@ Route::post('/tracking-documents/{revision}/update-files', [TrackingDocumentCont
 Route::post('/tracking-documents/{project}/update-project-info', [TrackingDocumentController::class, 'updateProjectInfo'])->name('tracking-documents.update-project-info');
 Route::delete('/tracking-documents/{project}', [TrackingDocumentController::class, 'destroyProject'])->name('tracking-documents.destroy-project');
 Route::post('/tracking-documents/{revision}/unpriced-price', [TrackingDocumentController::class, 'updateUnpricedPartPrice'])->name('tracking-documents.update-unpriced-price');
+Route::post('/tracking-documents/{revision}/unpriced-delete', [TrackingDocumentController::class, 'deleteUnpricedPart'])->name('tracking-documents.delete-unpriced-part');
 Route::get('/tracking-documents/{revision}/{type}', [TrackingDocumentController::class, 'download'])
 	->where('type', 'partlist|umh|a00|a04|a05')
 	->name('tracking-documents.download');
