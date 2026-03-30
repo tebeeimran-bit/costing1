@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
         ];
         
         foreach ($products as $product) {
-            Product::create($product);
+            Product::firstOrCreate(['code' => $product['code']], $product);
         }
 
         // Seed Customers
@@ -38,23 +38,23 @@ class DatabaseSeeder extends Seeder
         ];
         
         foreach ($customers as $customer) {
-            Customer::create($customer);
+            Customer::firstOrCreate(['code' => $customer['code']], $customer);
         }
 
         // Seed Materials
         $materials = [
-            ['part_no' => 'MAT-001', 'id_code' => 'CU-001', 'part_name' => 'Copper Wire', 'unit' => 'KG', 'pro_code' => 'PRO-A', 'supplier_name' => 'PT Tembaga Jaya'],
-            ['part_no' => 'MAT-002', 'id_code' => 'ST-001', 'part_name' => 'Steel Plate', 'unit' => 'KG', 'pro_code' => 'PRO-A', 'supplier_name' => 'PT Baja Utama'],
-            ['part_no' => 'MAT-003', 'id_code' => 'IC-001', 'part_name' => 'IC Chips', 'unit' => 'PCS', 'pro_code' => 'PRO-B', 'supplier_name' => 'Samsung Elec'],
-            ['part_no' => 'MAT-004', 'id_code' => 'EV-001', 'part_name' => 'EVC Cable', 'unit' => 'MM', 'pro_code' => 'PRO-C', 'supplier_name' => 'PT Kabel Indo'],
-            ['part_no' => 'MAT-005', 'id_code' => 'PL-001', 'part_name' => 'Plastic Case', 'unit' => 'PCS', 'pro_code' => 'PRO-D', 'supplier_name' => 'PT Plastik Maju'],
-            ['part_no' => 'MAT-006', 'id_code' => 'RS-001', 'part_name' => 'Resistor 10K', 'unit' => 'PCS', 'pro_code' => 'PRO-E', 'supplier_name' => 'Yageo Corp'],
-            ['part_no' => 'MAT-007', 'id_code' => 'CP-001', 'part_name' => 'Capacitor 100uF', 'unit' => 'PCS', 'pro_code' => 'PRO-E', 'supplier_name' => 'Murata Mfg'],
-            ['part_no' => 'MAT-008', 'id_code' => 'SP-001', 'part_name' => 'Spring Steel', 'unit' => 'KG', 'pro_code' => 'PRO-A', 'supplier_name' => 'PT Spring Indo'],
+            ['material_code' => 'MAT-001', 'material_description' => 'Copper Wire', 'base_uom' => 'KG', 'price' => 25000, 'purchase_unit' => 'KG', 'currency' => 'IDR', 'maker' => 'PT Tembaga Jaya'],
+            ['material_code' => 'MAT-002', 'material_description' => 'Steel Plate', 'base_uom' => 'KG', 'price' => 15000, 'purchase_unit' => 'KG', 'currency' => 'IDR', 'maker' => 'PT Baja Utama'],
+            ['material_code' => 'MAT-003', 'material_description' => 'IC Chips', 'base_uom' => 'PCS', 'price' => 5000, 'purchase_unit' => 'PCS', 'currency' => 'IDR', 'maker' => 'Samsung Elec'],
+            ['material_code' => 'MAT-004', 'material_description' => 'EVC Cable', 'base_uom' => 'MM', 'price' => 1000, 'purchase_unit' => 'MM', 'currency' => 'IDR', 'maker' => 'PT Kabel Indo'],
+            ['material_code' => 'MAT-005', 'material_description' => 'Plastic Case', 'base_uom' => 'PCS', 'price' => 2000, 'purchase_unit' => 'PCS', 'currency' => 'IDR', 'maker' => 'PT Plastik Maju'],
+            ['material_code' => 'MAT-006', 'material_description' => 'Resistor 10K', 'base_uom' => 'PCS', 'price' => 500, 'purchase_unit' => 'PCS', 'currency' => 'IDR', 'maker' => 'Yageo Corp'],
+            ['material_code' => 'MAT-007', 'material_description' => 'Capacitor 100uF', 'base_uom' => 'PCS', 'price' => 1500, 'purchase_unit' => 'PCS', 'currency' => 'IDR', 'maker' => 'Murata Mfg'],
+            ['material_code' => 'MAT-008', 'material_description' => 'Spring Steel', 'base_uom' => 'KG', 'price' => 18000, 'purchase_unit' => 'KG', 'currency' => 'IDR', 'maker' => 'PT Spring Indo'],
         ];
         
         foreach ($materials as $material) {
-            Material::create($material);
+            Material::firstOrCreate(['material_code' => $material['material_code']], $material);
         }
 
         // Seed Costing Data

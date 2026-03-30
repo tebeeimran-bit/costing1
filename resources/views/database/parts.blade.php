@@ -280,14 +280,19 @@
                     $lastPage = $materials->lastPage();
                     $startPage = max(1, $currentPage - 2);
                     $endPage = min($lastPage, $currentPage + 2);
+                    $paginationQuery = request()->query();
+                    $buildPageUrl = function (int $page) use ($paginationQuery) {
+                        $query = array_merge($paginationQuery, ['page' => $page]);
+                        return '/' . ltrim(request()->path(), '/') . '?' . http_build_query($query);
+                    };
                 @endphp
 
                 @if($currentPage > 1)
-                    <a class="parts-page-link" href="{{ $materials->url($currentPage - 1) }}">&laquo; Prev</a>
+                    <a class="parts-page-link" href="{{ $buildPageUrl($currentPage - 1) }}">&laquo; Prev</a>
                 @endif
 
                 @if($startPage > 1)
-                    <a class="parts-page-link" href="{{ $materials->url(1) }}">1</a>
+                    <a class="parts-page-link" href="{{ $buildPageUrl(1) }}">1</a>
                     @if($startPage > 2)
                         <span class="parts-page-dots">...</span>
                     @endif
@@ -297,7 +302,7 @@
                     @if($page === $currentPage)
                         <span class="parts-page-link is-active">{{ $page }}</span>
                     @else
-                        <a class="parts-page-link" href="{{ $materials->url($page) }}">{{ $page }}</a>
+                        <a class="parts-page-link" href="{{ $buildPageUrl($page) }}">{{ $page }}</a>
                     @endif
                 @endfor
 
@@ -305,11 +310,11 @@
                     @if($endPage < $lastPage - 1)
                         <span class="parts-page-dots">...</span>
                     @endif
-                    <a class="parts-page-link" href="{{ $materials->url($lastPage) }}">{{ $lastPage }}</a>
+                    <a class="parts-page-link" href="{{ $buildPageUrl($lastPage) }}">{{ $lastPage }}</a>
                 @endif
 
                 @if($currentPage < $lastPage)
-                    <a class="parts-page-link" href="{{ $materials->url($currentPage + 1) }}">Next &raquo;</a>
+                    <a class="parts-page-link" href="{{ $buildPageUrl($currentPage + 1) }}">Next &raquo;</a>
                 @endif
             </div>
         </div>

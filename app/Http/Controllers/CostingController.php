@@ -14,6 +14,7 @@ use App\Models\Plant;
 use App\Models\BusinessCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -23,6 +24,8 @@ use ZipArchive;
 
 class CostingController extends Controller
 {
+    private ?array $materialNormalizedIndex = null;
+
     public function dashboard(Request $request)
     {
         $period = $request->get('period', '2025-01');
@@ -170,7 +173,69 @@ class CostingController extends Controller
                 $openUnpricedParts = UnpricedPart::where('document_revision_id', $trackingRevision->id)
                     ->whereNull('resolved_at')
                     ->orderBy('part_number')
-                    ->get();
+                    ->get()
+                    ->map(function (UnpricedPart $item) {
+                        $masterMaterial = $this->findMasterMaterial($item->part_number, null, $item->part_name);
+                        if (!$masterMaterial) {
+                            return $item;
+                        }
+
+                        $matchedMaterials = collect();
+                        $masterDescriptionKey = trim((string) ($masterMaterial->material_description ?? ''));
+                        if ($masterDescriptionKey !== '') {
+                            $matchedMaterials = Material::query()
+                                ->whereRaw('LOWER(TRIM(material_description)) = ?', [Str::lower($masterDescriptionKey)])
+                                ->orderByDesc('price_update')
+                                ->orderByDesc('id')
+                                ->get();
+                        }
+
+                        if ($matchedMaterials->isEmpty()) {
+                            $matchedMaterials = collect([$masterMaterial]);
+                        }
+
+                        $primaryMaterial = $matchedMaterials->first();
+
+                        $updates = [];
+
+                        if (floatval($item->detected_price) <= 0 && floatval($primaryMaterial->price) > 0) {
+                            $updates['detected_price'] = floatval($primaryMaterial->price);
+                            $item->detected_price = floatval($primaryMaterial->price);
+                        }
+
+                        $partName = trim((string) ($item->part_name ?? ''));
+                        $masterDescription = trim((string) ($primaryMaterial->material_description ?? ''));
+
+                        if (($partName === '' || $partName === '-') && $masterDescription !== '') {
+                            $updates['part_name'] = $masterDescription;
+                            $item->part_name = $masterDescription;
+                        }
+
+                        if (!empty($updates)) {
+                            // Use direct query update so only explicit columns are persisted.
+                            UnpricedPart::query()->whereKey($item->id)->update($updates);
+                        }
+
+                        if ($masterDescription !== '') {
+                            // Keep display-only values in loaded relations to prevent accidental DB persistence.
+                            $item->setRelation('matched_material_description', $masterDescription);
+                        }
+
+                        $item->setRelation('matched_materials', $matchedMaterials);
+
+                        // Display-only pricing detail columns (follow master part table structure).
+                        $item->setRelation('matched_price', $primaryMaterial->price);
+                        $item->setRelation('matched_purchase_unit', $primaryMaterial->purchase_unit);
+                        $item->setRelation('matched_currency', $primaryMaterial->currency);
+                        $item->setRelation('matched_moq', $primaryMaterial->moq);
+                        $item->setRelation('matched_cn', $primaryMaterial->cn);
+                        $item->setRelation('matched_maker', $primaryMaterial->maker);
+                        $item->setRelation('matched_add_cost_import_tax', $primaryMaterial->add_cost_import_tax);
+                        $item->setRelation('matched_price_update', $primaryMaterial->price_update);
+                        $item->setRelation('matched_price_before', $primaryMaterial->price_before);
+
+                        return $item;
+                    });
 
                 $project = $trackingRevision->project;
                 if ($project) {
@@ -619,6 +684,7 @@ class CostingController extends Controller
                 foreach ($materialsInput as $rowIndex => $matData) {
                     $rowPartNo = trim((string) ($matData['part_no'] ?? ''));
                     $rowIdCode = trim((string) ($matData['id_code'] ?? ''));
+                    $partName = trim((string) ($matData['part_name'] ?? ''));
                     $normalizedRowPartNo = ($rowPartNo === '-' ? '' : $rowPartNo);
                     $normalizedRowIdCode = ($rowIdCode === '-' ? '' : $rowIdCode);
                     $partNumber = $normalizedRowPartNo !== '' ? $normalizedRowPartNo : $normalizedRowIdCode;
@@ -628,11 +694,10 @@ class CostingController extends Controller
 
                     $isPlaceholderPart = $partNumber === '-';
 
-                    $masterMaterial = $this->findMasterMaterial($rowPartNo, $rowIdCode);
+                    $masterMaterial = $this->findMasterMaterial($rowPartNo, $rowIdCode, $partName);
                     $materialCode = '__ROW_' . $costingData->id . '_' . $rowIndex;
 
                     $partKey = strtolower($partNumber);
-                    $partName = trim((string) ($matData['part_name'] ?? ''));
                     $qtyReq = floatval($matData['qty_req'] ?? 0);
                     $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
                     $unitPriceBasisNumeric = $this->toFloatValue($unitPriceBasisRaw);
@@ -895,12 +960,24 @@ class CostingController extends Controller
 
     public function importPartlist(Request $request)
     {
-        $request->merge([
-            'update_section' => 'material',
-            'import_partlist' => 1,
-        ]);
+        try {
+            $request->merge([
+                'update_section' => 'material',
+                'import_partlist' => 1,
+            ]);
 
-        return $this->store($request);
+            return $this->store($request);
+        } catch (\Throwable $e) {
+            Log::error('Partlist import failed', [
+                'message' => $e->getMessage(),
+                'exception' => get_class($e),
+                'trace' => Str::limit($e->getTraceAsString(), 4000),
+            ]);
+
+            return redirect()
+                ->route('form')
+                ->with('error', 'Import partlist gagal: ' . $e->getMessage());
+        }
     }
 
     private function loadPartlistMaterialRows(?int $trackingRevisionId, $uploadedPartlistFile = null): array
@@ -1142,30 +1219,44 @@ class CostingController extends Controller
             return [];
         }
 
-        // Find header row (expect row 11) and map column indices dynamically
+        // Find the best header row around the template area.
         $headerRowIndex = 11;
         $headerMap = [];
-        
-        $headerLabels = [
-            'supplier_part_no' => ['SUPPLIER PART NO', 'PART NO', 'PARTLIST NO'],
-            'id_code' => ['ID CODE', 'ID', 'KODE ID'],
-            'part_name' => ['PART NAME', 'NAMA PART', 'DESKRIPSI'],
-            'qty_req' => ['Q', 'QTY', 'QUANTITY', 'Q/ASSY'],
-            'unit' => ['UNIT', 'UOM', 'SATUAN'],
-            'pro_code' => ['PRO CODE', 'PROSES', 'PROCESS CODE'],
-        ];
+        $scanStartRow = max(1, $headerRowIndex - 4);
+        $scanEndRow = min($highestRow, $headerRowIndex + 4);
+        $bestScore = -1;
+        $bestHeaderMap = [];
+        $bestHeaderRow = $headerRowIndex;
 
-        // Scan row 11 to find headers
-        for ($col = 1; $col <= 20; $col++) {
-            $cellValue = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($col) . $headerRowIndex)->getFormattedValue());
-            $cellValueUpper = strtoupper($cellValue);
-            
-            foreach ($headerLabels as $key => $aliases) {
-                if (in_array($cellValueUpper, $aliases, true)) {
-                    $headerMap[$key] = $col;
-                    break;
+        for ($row = $scanStartRow; $row <= $scanEndRow; $row++) {
+            $candidateMap = [];
+            for ($col = 1; $col <= 30; $col++) {
+                $cellValue = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($col) . $row)->getFormattedValue());
+                if ($cellValue === '') {
+                    continue;
+                }
+
+                $field = $this->resolveFixedTemplateHeaderField($cellValue);
+                if ($field !== null && !isset($candidateMap[$field])) {
+                    $candidateMap[$field] = $col;
                 }
             }
+
+            $score = count($candidateMap);
+            if (!isset($candidateMap['supplier_part_no'])) {
+                $score -= 2;
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestHeaderMap = $candidateMap;
+                $bestHeaderRow = $row;
+            }
+        }
+
+        if ($bestScore >= 2) {
+            $headerMap = $bestHeaderMap;
+            $headerRowIndex = $bestHeaderRow;
         }
 
         // If we couldn't find headers, fallback to default columns (E-J)
@@ -1198,7 +1289,7 @@ class CostingController extends Controller
         ];
 
         $materials = [];
-        for ($row = 12; $row <= $highestRow; $row++) {
+        for ($row = $headerRowIndex + 1; $row <= $highestRow; $row++) {
             $partNo = trim((string) $sheet->getCell(Coordinate::stringFromColumnIndex($headerMap['supplier_part_no'] ?? 5) . $row)->getFormattedValue());
             
             // Only read ID CODE if header was explicitly found, otherwise keep empty
@@ -1347,13 +1438,40 @@ class CostingController extends Controller
             'PART NO',
         ];
 
-        // Find header row (row 11) and detect column mapping dynamically
+        // Find best header row around the expected template area.
+        $headerRowNumber = 11;
         $headerRow = null;
+        $bestScore = -1;
+        $bestMap = [];
+
         foreach ($rawRows as $rowValues) {
             $rowNumber = (int) ($rowValues['__row'] ?? 0);
-            if ($rowNumber === 11) {
+            if ($rowNumber < 7 || $rowNumber > 15) {
+                continue;
+            }
+
+            $candidateMap = [];
+            foreach ($rowValues as $colIndex => $cellValue) {
+                if (!is_int($colIndex)) {
+                    continue;
+                }
+
+                $field = $this->resolveFixedTemplateHeaderField((string) $cellValue);
+                if ($field !== null && !isset($candidateMap[$field])) {
+                    $candidateMap[$field] = $colIndex;
+                }
+            }
+
+            $score = count($candidateMap);
+            if (!isset($candidateMap['supplier_part_no'])) {
+                $score -= 2;
+            }
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $bestMap = $candidateMap;
+                $headerRowNumber = $rowNumber;
                 $headerRow = $rowValues;
-                break;
             }
         }
 
@@ -1366,34 +1484,17 @@ class CostingController extends Controller
             'pro_code' => 9,           // Default J
         ];
 
-        // If we found header row, try to dynamically map columns
-        if ($headerRow) {
-            $headerLabels = [
-                'supplier_part_no' => ['SUPPLIER PART NO', 'PART NO', 'PARTLIST NO'],
-                'id_code' => ['ID CODE', 'ID', 'KODE ID'],
-                'part_name' => ['PART NAME', 'NAMA PART', 'DESKRIPSI'],
-                'qty_req' => ['Q', 'QTY', 'QUANTITY', 'Q/ASSY'],
-                'unit' => ['UNIT', 'UOM', 'SATUAN'],
-                'pro_code' => ['PRO CODE', 'PROSES', 'PROCESS CODE'],
-            ];
-
-            foreach ($headerRow as $colIndex => $cellValue) {
-                if (!is_int($colIndex)) continue;
-                
-                $headerValueUpper = strtoupper(trim((string) $cellValue));
-                foreach ($headerLabels as $field => $aliases) {
-                    if (in_array($headerValueUpper, $aliases, true)) {
-                        $headerMap[$field] = $colIndex;
-                        break;
-                    }
-                }
+        // If we found header candidates, override defaults.
+        if ($headerRow && $bestScore >= 2 && !empty($bestMap)) {
+            foreach ($bestMap as $field => $colIndex) {
+                $headerMap[$field] = $colIndex;
             }
         }
 
         // Filter to data rows (12+)
-        $rows = array_values(array_filter($rawRows, function ($rowValues) {
+        $rows = array_values(array_filter($rawRows, function ($rowValues) use ($headerRowNumber) {
             $rowNumber = (int) ($rowValues['__row'] ?? 0);
-            return $rowNumber >= 12;
+            return $rowNumber >= ($headerRowNumber + 1);
         }));
 
         $materials = [];
@@ -1447,6 +1548,44 @@ class CostingController extends Controller
         }
 
         return $materials;
+    }
+
+    private function resolveFixedTemplateHeaderField(string $value): ?string
+    {
+        $normalized = preg_replace('/[^a-z0-9]/', '', strtolower(trim($value)));
+        if ($normalized === '') {
+            return null;
+        }
+
+        if (str_contains($normalized, 'supplierpart')) {
+            return 'supplier_part_no';
+        }
+
+        if (in_array($normalized, ['supplierpn', 'supplierpno'], true)) {
+            return 'supplier_part_no';
+        }
+
+        if (str_contains($normalized, 'idcode') || in_array($normalized, ['id', 'kodeid'], true)) {
+            return 'id_code';
+        }
+
+        if (str_contains($normalized, 'partname') || in_array($normalized, ['namapart', 'deskripsi'], true)) {
+            return 'part_name';
+        }
+
+        if (in_array($normalized, ['q', 'qty', 'quantity', 'qassy', 'qtyassy'], true)) {
+            return 'qty_req';
+        }
+
+        if (in_array($normalized, ['unit', 'uom', 'satuan'], true)) {
+            return 'unit';
+        }
+
+        if (str_contains($normalized, 'procode') || in_array($normalized, ['processcode', 'proses'], true)) {
+            return 'pro_code';
+        }
+
+        return null;
     }
 
     private function mapPartlistHeader(string $value): ?string
@@ -1672,12 +1811,13 @@ class CostingController extends Controller
             ->whereRaw('UPPER(material_code) NOT IN (' . implode(',', array_fill(0, count($skipCodes), '?')) . ')', $skipCodes);
     }
 
-    private function findMasterMaterial(?string $partNo, ?string $idCode): ?Material
+    private function findMasterMaterial(?string $partNo, ?string $idCode, ?string $partName = null): ?Material
     {
         $partNo = trim((string) $partNo);
         $idCode = trim((string) $idCode);
+        $partName = trim((string) $partName);
 
-        $candidates = array_values(array_unique(array_filter([$partNo, $idCode], function ($value) {
+        $candidates = array_values(array_unique(array_filter([$partNo, $idCode, $partName], function ($value) {
             $normalized = trim((string) $value);
             return $normalized !== '' && $normalized !== '-' && !$this->isMaterialMetaCode($normalized);
         })));
@@ -1696,7 +1836,101 @@ class CostingController extends Controller
             }
         }
 
+        foreach ($candidates as $description) {
+            $skipCodes = $this->materialMetaSkipCodes();
+
+            $match = Material::query()
+                ->whereNotNull('material_description')
+                ->where('material_description', '!=', '')
+                ->whereRaw('UPPER(material_description) NOT IN (' . implode(',', array_fill(0, count($skipCodes), '?')) . ')', $skipCodes)
+                ->whereRaw('LOWER(TRIM(material_description)) = ?', [Str::lower(trim($description))])
+                ->orderByDesc('price_update')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($match) {
+                return $match;
+            }
+        }
+
+        // Last fallback: normalize values (remove non-alphanumeric chars) for resilient matching.
+        foreach ($candidates as $candidate) {
+            $normalized = preg_replace('/[^a-z0-9]/', '', Str::lower(trim((string) $candidate)));
+            if ($normalized === '') {
+                continue;
+            }
+
+            $match = Material::query()
+                ->where(function ($query) use ($normalized) {
+                    $query
+                        ->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(material_code, '')), ' ', ''), '-', ''), '_', ''), '/', '') = ?", [$normalized])
+                        ->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(LOWER(COALESCE(material_description, '')), ' ', ''), '-', ''), '_', ''), '/', '') = ?", [$normalized]);
+                })
+                ->orderByDesc('price_update')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($match) {
+                return $match;
+            }
+
+            $index = $this->materialNormalizedIndex();
+            if (isset($index[$normalized])) {
+                return $index[$normalized];
+            }
+        }
+
         return null;
+    }
+
+    private function materialNormalizedIndex(): array
+    {
+        if ($this->materialNormalizedIndex !== null) {
+            return $this->materialNormalizedIndex;
+        }
+
+        $index = [];
+
+        $materials = Material::query()
+            ->select([
+                'id',
+                'material_code',
+                'material_description',
+                'price',
+                'purchase_unit',
+                'currency',
+                'moq',
+                'cn',
+                'maker',
+                'add_cost_import_tax',
+                'price_update',
+                'price_before',
+            ])
+            ->orderByDesc('price_update')
+            ->orderByDesc('id')
+            ->get();
+
+        foreach ($materials as $material) {
+            $codeKey = $this->normalizeLookupCandidate($material->material_code);
+            $descKey = $this->normalizeLookupCandidate($material->material_description);
+
+            if ($codeKey !== '' && !isset($index[$codeKey])) {
+                $index[$codeKey] = $material;
+            }
+
+            if ($descKey !== '' && !isset($index[$descKey])) {
+                $index[$descKey] = $material;
+            }
+        }
+
+        $this->materialNormalizedIndex = $index;
+
+        return $this->materialNormalizedIndex;
+    }
+
+    private function normalizeLookupCandidate($value): string
+    {
+        return preg_replace('/[^a-z0-9]/', '', Str::lower((string) $value));
     }
 
     private function materialMetaSkipCodes(): array

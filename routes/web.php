@@ -7,6 +7,26 @@ use App\Http\Controllers\TrackingDocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CostingController::class, 'dashboard'])->name('dashboard');
+
+// Test endpoint for debugging Codespaces access
+Route::get('/test', function () {
+    return response()->json([
+        'status' => 'ok',
+        'time' => now(),
+        'url' => request()->fullUrl(),
+        'host' => request()->host(),
+        'ip' => request()->ip(),
+        'method' => request()->method(),
+        'path' => request()->path(),
+        'headers' => [
+            'user-agent' => request()->header('user-agent'),
+            'x-forwarded-for' => request()->header('x-forwarded-for'),
+            'x-forwarded-host' => request()->header('x-forwarded-host'),
+            'x-forwarded-proto' => request()->header('x-forwarded-proto'),
+        ]
+    ]);
+});
+
 Route::get('/database', [DatabaseController::class, 'index'])->name('database');
 Route::get('/database/products', [DatabaseController::class, 'products'])->name('database.products');
 Route::get('/database/parts', [DatabaseController::class, 'parts'])->name('database.parts');
@@ -42,6 +62,7 @@ Route::put('/database/pics/{id}', [DatabaseController::class, 'updatePic'])->nam
 Route::delete('/database/pics/{id}', [DatabaseController::class, 'destroyPic'])->name('database.pics.destroy');
 Route::get('/form', [CostingController::class, 'form'])->name('form');
 Route::post('/costing/store', [CostingController::class, 'store'])->name('costing.store');
+Route::get('/costing/import-partlist', fn () => redirect()->route('form'))->name('costing.import-partlist.get');
 Route::post('/costing/import-partlist', [CostingController::class, 'importPartlist'])->name('costing.import-partlist');
 Route::get('/document-receipts', [DocumentReceiptController::class, 'index'])->name('document-receipts.index');
 Route::post('/document-receipts', [DocumentReceiptController::class, 'store'])->name('document-receipts.store');

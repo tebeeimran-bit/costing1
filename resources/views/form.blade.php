@@ -1168,22 +1168,146 @@
                 <table class="material-table">
                     <thead>
                         <tr>
-                            <th>Part Number</th>
-                            <th>Part Name</th>
-                            <th>Qty</th>
-                            <th>Detected Price</th>
-                            <th>Input Harga (Manual)</th>
-                            <th>Aksi</th>
+                            <th rowspan="2">Part No</th>
+                            <th rowspan="2">ID Code</th>
+                            <th rowspan="2">Part Name</th>
+                            <th rowspan="2">Qty</th>
+                            <th colspan="9">Price</th>
+                            <th rowspan="2">Input Harga (Manual)</th>
+                            <th rowspan="2">Aksi</th>
+                        </tr>
+                        <tr>
+                            <th>Price</th>
+                            <th>Purchase Unit</th>
+                            <th>Currency</th>
+                            <th>MOQ</th>
+                            <th>C/N</th>
+                            <th>Maker</th>
+                            <th>Add Cost (%)</th>
+                            <th>Price Update</th>
+                            <th>Price Before</th>
                         </tr>
                     </thead>
                     <tbody id="unpricedRecapBody">
                         @if(isset($openUnpricedParts) && $openUnpricedParts->count() > 0)
                             @foreach($openUnpricedParts as $item)
+                                @php
+                                    $matchedMaterials = collect($item->matched_materials ?? []);
+                                @endphp
                                 <tr>
-                                    <td>{{ $item->part_number }}</td>
+                                    <td>
+                                        <div>{{ $item->part_number }}</div>
+                                        @if(!empty($item->matched_material_description))
+                                            <div style="font-size: 0.8rem; color: var(--slate-500); margin-top: 0.25rem;">
+                                                {{ $item->matched_material_description }}
+                                            </div>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->material_code ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            -
+                                        @endif
+                                    </td>
                                     <td>{{ $item->part_name ?: '-' }}</td>
                                     <td>{{ $item->qty }}</td>
-                                    <td>{{ $item->detected_price ?? 0 }}</td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                @php
+                                                    $matchedPrice = (float) ($matched->price ?? 0);
+                                                    $selectedDetectedPrice = (float) ($item->detected_price ?? 0);
+                                                    $isMatchedChecked = $selectedDetectedPrice > 0 && abs($matchedPrice - $selectedDetectedPrice) < 0.0001;
+                                                @endphp
+                                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                                    <input type="checkbox"
+                                                        class="matched-price-select"
+                                                        data-part-number="{{ $item->part_number }}"
+                                                        data-price="{{ $matchedPrice }}"
+                                                        data-currency="{{ $matched->currency ?? '' }}"
+                                                        {{ $isMatchedChecked ? 'checked' : '' }}>
+                                                    <span>{{ number_format($matchedPrice, 4) }}</span>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4) : number_format((float) ($item->detected_price ?? 0), 4) }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->purchase_unit ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_purchase_unit ?: '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->currency ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_currency ?: '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? number_format((float) $matched->moq, 2) : '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? number_format((float) $item->matched_moq, 2) : '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->cn ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_cn ?: '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->maker ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_maker ?: '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? number_format((float) $matched->add_cost_import_tax, 2) : '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? number_format((float) $item->matched_add_cost_import_tax, 2) : '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ !empty($matched->price_update) ? \Illuminate\Support\Carbon::parse($matched->price_update)->format('Y-m-d') : '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ !empty($item->matched_price_update) ? \Illuminate\Support\Carbon::parse($item->matched_price_update)->format('Y-m-d') : '-' }}
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? number_format((float) $matched->price_before, 2) : '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? number_format((float) $item->matched_price_before, 2) : '-' }}
+                                        @endif
+                                    </td>
                                     <td>
                                         <input type="number" step="0.0001" class="form-input unpriced-manual-price"
                                             name="manual_unpriced_prices[{{ $item->part_number }}]"
@@ -1191,6 +1315,9 @@
                                             value="{{ $item->manual_price ?? '' }}" placeholder="Isi harga jika sudah ada">
                                     </td>
                                     <td>
+                                        <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="{{ $item->part_number }}">
+                                            Tambah
+                                        </button>
                                         <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="{{ $item->part_number }}">
                                             Hapus
                                         </button>
@@ -1199,7 +1326,7 @@
                             @endforeach
                         @else
                             <tr>
-                                <td colspan="6" style="text-align: center; color: var(--slate-500);">
+                                <td colspan="15" style="text-align: center; color: var(--slate-500);">
                                     Belum ada part tanpa harga untuk versi dokumen ini.
                                 </td>
                             </tr>
@@ -1835,6 +1962,26 @@
             const tbody = document.getElementById('unpricedRecapBody');
             if (!tbody) return;
 
+            // Keep persisted server-side recap rows intact.
+            if (hasServerUnpricedData) {
+                const visibleRows = tbody.querySelectorAll('tr').length;
+                const banner = document.getElementById('unpricedTopBanner');
+                const bannerText = document.getElementById('unpricedTopBannerText');
+
+                if (banner) {
+                    banner.style.display = visibleRows > 0 ? 'flex' : 'none';
+                }
+                if (bannerText && visibleRows > 0) {
+                    bannerText.textContent = `Terdapat ${visibleRows} part yang belum memiliki harga pada versi dokumen ini.`;
+                }
+
+                bindUnpricedManualPriceInputs();
+                bindUnpricedDeleteButtons();
+                bindMatchedPriceSelectors();
+                bindUnpricedAddPriceButtons();
+                return;
+            }
+
             const partMap = new Map();
             const rows = document.querySelectorAll('#materialTableBody tr');
 
@@ -1863,21 +2010,29 @@
                 partMap.get(key).qty += qty;
             });
 
-            if (partMap.size === 0 && hasServerUnpricedData) {
-                return;
-            }
-
             if (partMap.size === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
             } else {
                 tbody.innerHTML = Array.from(partMap.values()).map((item) => `
                     <tr>
                         <td>${item.partNo}</td>
+                        <td>-</td>
                         <td>${item.partName || '-'}</td>
                         <td>${item.qty.toFixed(4)}</td>
                         <td>0</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
                         <td><input type="number" step="0.0001" class="form-input unpriced-manual-price" data-part-number="${item.partNo}" name="manual_unpriced_prices[${item.partNo}]" placeholder="Isi harga jika sudah ada"></td>
-                        <td><button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="${item.partNo}">Hapus</button></td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="${item.partNo}">Tambah</button>
+                            <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="${item.partNo}">Hapus</button>
+                        </td>
                     </tr>
                 `).join('');
             }
@@ -1893,6 +2048,132 @@
 
             bindUnpricedManualPriceInputs();
             bindUnpricedDeleteButtons();
+            bindMatchedPriceSelectors();
+            bindUnpricedAddPriceButtons();
+        }
+
+        function bindMatchedPriceSelectors() {
+            const selectors = document.querySelectorAll('.matched-price-select');
+            selectors.forEach((selector) => {
+                if (!(selector instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                if (selector.dataset.boundMatchedPrice === '1') {
+                    return;
+                }
+
+                selector.dataset.boundMatchedPrice = '1';
+
+                selector.addEventListener('change', function () {
+                    const partNumber = this.dataset.partNumber || '';
+                    if (!partNumber) {
+                        return;
+                    }
+
+                    const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+                        ? CSS.escape(partNumber)
+                        : partNumber.replace(/([\\[\\]\\.\\:\\#\"'])/g, '\\\\$1');
+
+                    const siblingSelectors = document.querySelectorAll(`.matched-price-select[data-part-number="${escapedPart}"]`);
+
+                    if (this.checked) {
+                        siblingSelectors.forEach((sibling) => {
+                            if (sibling !== this && sibling instanceof HTMLInputElement) {
+                                sibling.checked = false;
+                            }
+                        });
+                    }
+                });
+            });
+        }
+
+        function bindUnpricedAddPriceButtons() {
+            const buttons = document.querySelectorAll('.unpriced-add-price-btn');
+            buttons.forEach((button) => {
+                if (!(button instanceof HTMLButtonElement)) {
+                    return;
+                }
+
+                if (button.dataset.boundAddPrice === '1') {
+                    return;
+                }
+
+                button.dataset.boundAddPrice = '1';
+
+                button.addEventListener('click', function () {
+                    const partNumber = this.dataset.partNumber || '';
+                    if (!partNumber) {
+                        return;
+                    }
+
+                    const row = this.closest('tr');
+                    if (!(row instanceof HTMLTableRowElement)) {
+                        return;
+                    }
+
+                    const selectedOption = row.querySelector('.matched-price-select:checked');
+                    if (!(selectedOption instanceof HTMLInputElement)) {
+                        window.alert('Pilih salah satu harga terlebih dahulu.');
+                        return;
+                    }
+
+                    const selectedPrice = parseFloat(selectedOption.dataset.price || '0') || 0;
+                    const selectedCurrency = selectedOption.dataset.currency || '';
+                    applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency);
+                });
+            });
+        }
+
+        function normalizePartKey(value) {
+            return String(value || '').trim().toLowerCase();
+        }
+
+        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency) {
+            const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+                ? CSS.escape(partNumber)
+                : partNumber.replace(/([\\[\\]\\.\\:\\#\"'])/g, '\\\\$1');
+
+            const manualInput = document.querySelector(`#unpricedRecapBody .unpriced-manual-price[data-part-number="${escapedPart}"]`);
+            if (manualInput instanceof HTMLInputElement) {
+                manualInput.value = selectedPrice > 0 ? String(selectedPrice) : '';
+            }
+
+            const targetKey = normalizePartKey(partNumber);
+            let updatedRows = 0;
+
+            document.querySelectorAll('#materialTableBody tr').forEach((row) => {
+                const partInput = row.querySelector('.part-no');
+                const amountInput = row.querySelector('.amount1');
+                const currencySelect = row.querySelector('.currency');
+
+                if (!(partInput instanceof HTMLInputElement) || !(amountInput instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                if (normalizePartKey(partInput.value) !== targetKey) {
+                    return;
+                }
+
+                amountInput.value = selectedPrice > 0 ? String(selectedPrice) : '0';
+
+                if (currencySelect instanceof HTMLSelectElement && selectedCurrency) {
+                    const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === selectedCurrency);
+                    if (hasOption) {
+                        currencySelect.value = selectedCurrency;
+                    }
+                }
+
+                calculateRow(amountInput);
+                updatedRows += 1;
+            });
+
+            calculateTableTotal();
+            syncManualPriceToServer(partNumber, selectedPrice);
+
+            if (updatedRows > 0) {
+                submitMaterialSection();
+            }
         }
 
         function bindUnpricedManualPriceInputs() {
@@ -2015,7 +2296,7 @@
 
                     const tbody = document.getElementById('unpricedRecapBody');
                     if (tbody && tbody.children.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
                     }
 
                     const banner = document.getElementById('unpricedTopBanner');
@@ -2380,6 +2661,8 @@
             refreshUnpricedRecap();
             bindUnpricedManualPriceInputs();
             bindUnpricedDeleteButtons();
+            bindMatchedPriceSelectors();
+            bindUnpricedAddPriceButtons();
             applyMaterialFilters();
         }
 
@@ -3328,6 +3611,7 @@
             refreshUnpricedRecap();
             bindUnpricedManualPriceInputs();
             bindUnpricedDeleteButtons();
+            bindUnpricedAddPriceButtons();
 
             const cycleRows = document.querySelectorAll('#cycleTimeTableBody tr');
             cycleRows.forEach(row => {
