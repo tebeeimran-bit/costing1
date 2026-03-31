@@ -609,62 +609,100 @@
                 justify-content: center;
             }
         }
+
+        .toast-stack {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+            width: min(92vw, 420px);
+            z-index: 4000;
+            pointer-events: none;
+        }
+
+        .toast-notification {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+            padding: 0.85rem 0.95rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--slate-200);
+            background: #ffffff;
+            color: var(--slate-800);
+            box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
+            pointer-events: auto;
+            opacity: 0;
+            transform: translateY(-8px);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+
+        .toast-notification.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast-notification.hide {
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        .toast-notification.success {
+            border-color: #86efac;
+            background: #ecfdf3;
+            color: #166534;
+        }
+
+        .toast-notification.warning {
+            border-color: #fde68a;
+            background: #fff8e6;
+            color: #92400e;
+        }
+
+        .toast-notification.error {
+            border-color: #fecaca;
+            background: #fef2f2;
+            color: #991b1b;
+        }
+
+        .toast-notification .toast-close {
+            margin-left: auto;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            opacity: 0.7;
+        }
+
+        .toast-notification .toast-close:hover {
+            opacity: 1;
+        }
     </style>
 
-    @if(session('success'))
-        <div class="alert alert-success">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            {{ session('success') }}
-        </div>
-    @endif
+    @php
+        $toastNotifications = [];
+        if (session('success')) {
+            $toastNotifications[] = ['type' => 'success', 'message' => session('success')];
+        }
+        if (session('warning')) {
+            $toastNotifications[] = ['type' => 'warning', 'message' => session('warning')];
+        }
+        if (session('error')) {
+            $toastNotifications[] = ['type' => 'error', 'message' => session('error')];
+        }
+        if ($errors->any()) {
+            $toastNotifications[] = ['type' => 'error', 'message' => $errors->first()];
+        }
+        $openUnpricedCount = isset($openUnpricedParts) ? $openUnpricedParts->count() : 0;
+        if ($openUnpricedCount > 0) {
+            $toastNotifications[] = ['type' => 'warning', 'message' => 'Terdapat ' . $openUnpricedCount . ' part yang belum memiliki harga pada versi dokumen ini.'];
+        }
+    @endphp
 
-    @if(session('warning'))
-        <div class="alert alert-warning">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            {{ session('warning') }}
-        </div>
-    @endif
-
-    @if(session('error'))
-        <div class="alert alert-danger">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="15" y1="9" x2="9" y2="15" />
-                <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-            {{ session('error') }}
-        </div>
-    @endif
-
-    @if($errors->any())
-        <div class="alert alert-danger">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="15" y1="9" x2="9" y2="15" />
-                <line x1="9" y1="9" x2="15" y2="15" />
-            </svg>
-            <span>{{ $errors->first() }}</span>
-        </div>
-    @endif
-
-    <div class="alert alert-warning" id="unpricedTopBanner"
-        style="{{ (isset($trackingRevision) && $trackingRevision && isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? '' : 'display:none;' }}">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-            </svg>
-            <span id="unpricedTopBannerText">
-                Terdapat {{ isset($openUnpricedParts) ? $openUnpricedParts->count() : 0 }} part yang belum memiliki harga pada versi dokumen ini.
-            </span>
-    </div>
+    <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
 
     <div class="form-page">
     <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm" enctype="multipart/form-data">
@@ -1668,7 +1706,48 @@
         });
         const cycleProcessOptions = @json(($cycleTimeTemplates ?? collect())->pluck('process')->values());
         const hasServerUnpricedData = {{ (isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? 'true' : 'false' }};
+        const initialToastNotifications = @json($toastNotifications);
         const unpricedSyncTimers = {};
+
+        function showPopupNotification(message, type = 'success', timeout = 4500) {
+            const stack = document.getElementById('toastStack');
+            if (!stack || !message) return;
+
+            const safeType = ['success', 'warning', 'error'].includes(type) ? type : 'success';
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${safeType}`;
+            const messageNode = document.createElement('span');
+            messageNode.textContent = String(message);
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.className = 'toast-close';
+            closeButton.setAttribute('aria-label', 'Tutup');
+            closeButton.textContent = 'x';
+
+            toast.appendChild(messageNode);
+            toast.appendChild(closeButton);
+
+            const removeToast = () => {
+                toast.classList.add('hide');
+                window.setTimeout(() => {
+                    if (toast.parentNode) {
+                        toast.parentNode.removeChild(toast);
+                    }
+                }, 220);
+            };
+
+            closeButton.addEventListener('click', removeToast);
+            stack.appendChild(toast);
+
+            window.requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            if (timeout > 0) {
+                window.setTimeout(removeToast, timeout);
+            }
+        }
 
         // Format number as Rupiah
         function formatRupiah(number) {
@@ -1981,70 +2060,12 @@
                 bindUnpricedAddPriceButtons();
                 return;
             }
-
-            const partMap = new Map();
-            const rows = document.querySelectorAll('#materialTableBody tr');
-
-            rows.forEach((row) => {
-                const partNo = (row.querySelector('.part-no')?.value || '').trim();
-                if (!partNo) return;
-
-                const partName = (row.querySelector('.part-name')?.value || '').trim();
-                const qty = parseFloat(row.querySelector('.qty-req')?.value) || 0;
-                const amount1Price = parseInputNumber(row.querySelector('.amount1')?.value || 0);
-
-                // Rule: jika Amount 1 terisi, part dianggap sudah punya harga.
-                if (amount1Price > 0) {
-                    return;
-                }
-
-                const key = partNo.toLowerCase();
-                if (!partMap.has(key)) {
-                    partMap.set(key, {
-                        partNo,
-                        partName,
-                        qty: 0,
-                    });
-                }
-
-                partMap.get(key).qty += qty;
-            });
-
-            if (partMap.size === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
-            } else {
-                tbody.innerHTML = Array.from(partMap.values()).map((item) => `
-                    <tr>
-                        <td>${item.partNo}</td>
-                        <td>-</td>
-                        <td>${item.partName || '-'}</td>
-                        <td>${item.qty.toFixed(4)}</td>
-                        <td>0</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td><input type="number" step="0.0001" class="form-input unpriced-manual-price" data-part-number="${item.partNo}" name="manual_unpriced_prices[${item.partNo}]" placeholder="Isi harga jika sudah ada"></td>
-                        <td>
-                            <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="${item.partNo}">Tambah</button>
-                            <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="${item.partNo}">Hapus</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-
             const banner = document.getElementById('unpricedTopBanner');
-            const bannerText = document.getElementById('unpricedTopBannerText');
             if (banner) {
-                banner.style.display = partMap.size > 0 ? 'flex' : 'none';
+                banner.style.display = 'none';
             }
-            if (bannerText) {
-                bannerText.textContent = `Terdapat ${partMap.size} part yang belum memiliki harga pada versi dokumen ini.`;
-            }
+
+            tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Rekapan part tanpa harga akan muncul setelah tombol Update diklik.</td></tr>';
 
             bindUnpricedManualPriceInputs();
             bindUnpricedDeleteButtons();
@@ -3589,6 +3610,15 @@
 
         // Initialize calculations on page load
         document.addEventListener('DOMContentLoaded', function () {
+            if (Array.isArray(initialToastNotifications)) {
+                initialToastNotifications.forEach((item, index) => {
+                    const delay = 120 * index;
+                    window.setTimeout(() => {
+                        showPopupNotification(item?.message || '', item?.type || 'success');
+                    }, delay);
+                });
+            }
+
             initSectionToggles();
             bindMaterialTableBehaviors();
             initMaterialFilterPopup();
