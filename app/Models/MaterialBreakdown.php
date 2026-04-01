@@ -12,8 +12,10 @@ class MaterialBreakdown extends Model
     protected $fillable = [
         'costing_data_id',
         'material_id',
+        'row_no',
         'part_no',
         'id_code',
+        'part_name',
         'pro_code',
         'qty_req',
         'amount1',

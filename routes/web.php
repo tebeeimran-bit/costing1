@@ -81,6 +81,7 @@ Route::post('/tracking-documents/{project}/update-project-info', [TrackingDocume
 Route::delete('/tracking-documents/{project}', [TrackingDocumentController::class, 'destroyProject'])->name('tracking-documents.destroy-project');
 Route::post('/tracking-documents/{revision}/unpriced-price', [TrackingDocumentController::class, 'updateUnpricedPartPrice'])->name('tracking-documents.update-unpriced-price');
 Route::post('/tracking-documents/{revision}/unpriced-delete', [TrackingDocumentController::class, 'deleteUnpricedPart'])->name('tracking-documents.delete-unpriced-part');
+Route::post('/tracking-documents/{revision}/unpriced-restore', [TrackingDocumentController::class, 'restoreUnpricedPart'])->name('tracking-documents.restore-unpriced-part');
 Route::get('/tracking-documents/{revision}/{type}', [TrackingDocumentController::class, 'download'])
 	->where('type', 'partlist|umh|a00|a04|a05')
 	->name('tracking-documents.download');

@@ -171,9 +171,57 @@ class CostingController extends Controller
                     ->whereNull('resolved_at')
                     ->whereNotNull('part_name')
                     ->where('part_name', '!=', '')
-                    ->where('part_name', '!=', '-')
                     ->orderBy('part_number')
-                    ->get();
+                    ->get()
+                    ->map(function ($item) {
+                        $partNumber = trim((string) ($item->part_number ?? ''));
+                        $partName = trim((string) ($item->part_name ?? ''));
+
+                        $matchedMaterials = collect();
+                        if ($partNumber !== '' && $partNumber !== '-') {
+                            $matchedMaterials = Material::query()
+                                ->where(function ($query) {
+                                    $query->whereNull('material_code')
+                                        ->orWhere('material_code', 'not like', '__ROW_%');
+                                })
+                                ->whereNotNull('material_description')
+                                ->where('material_description', '!=', '')
+                                ->whereRaw('LOWER(material_description) = ?', [Str::lower($partNumber)])
+                                ->orderBy('material_code')
+                                ->get();
+                        }
+
+                        if ($matchedMaterials->isEmpty() && $partName !== '' && $partName !== '-') {
+                            $matchedMaterials = Material::query()
+                                ->where(function ($query) {
+                                    $query->whereNull('material_code')
+                                        ->orWhere('material_code', 'not like', '__ROW_%');
+                                })
+                                ->whereNotNull('material_description')
+                                ->where('material_description', '!=', '')
+                                ->whereRaw('LOWER(material_description) = ?', [Str::lower($partName)])
+                                ->orderBy('material_code')
+                                ->get();
+                        }
+
+                        $item->matched_materials = $matchedMaterials;
+
+                        $firstMatched = $matchedMaterials->first();
+                        if ($firstMatched) {
+                            $item->matched_material_description = $firstMatched->material_description;
+                            $item->matched_price = $firstMatched->price;
+                            $item->matched_purchase_unit = $firstMatched->purchase_unit;
+                            $item->matched_currency = $firstMatched->currency;
+                            $item->matched_moq = $firstMatched->moq;
+                            $item->matched_cn = $firstMatched->cn;
+                            $item->matched_maker = $firstMatched->maker;
+                            $item->matched_add_cost_import_tax = $firstMatched->add_cost_import_tax;
+                            $item->matched_price_update = $firstMatched->price_update;
+                            $item->matched_price_before = $firstMatched->price_before;
+                        }
+
+                        return $item;
+                    });
 
                 $project = $trackingRevision->project;
                 if ($project) {
@@ -465,18 +513,7 @@ class CostingController extends Controller
                 return back()->with('error', $importResult['error'])->withInput();
             }
 
-            $importedMaterialRows = $importResult['rows'];
-            $importedMaterialRows = array_map(function ($row) {
-                $partNo = trim((string) ($row['part_no'] ?? ''));
-                $idCode = trim((string) ($row['id_code'] ?? ''));
-
-                if (($partNo === '' || $partNo === '-') && $idCode !== '' && $idCode !== '-') {
-                    $row['part_no'] = $idCode;
-                }
-
-                return $row;
-            }, $importedMaterialRows);
-            $importedMaterialRows = array_values($importedMaterialRows);
+            $importedMaterialRows = array_values($importResult['rows']);
 
             if (count($importedMaterialRows) === 0) {
                 return back()->with('warning', 'Data partlist tidak ditemukan. Pastikan data diisi mulai kolom D-J dari baris 12 ke bawah (sesuai template).')->withInput();
@@ -622,27 +659,19 @@ class CostingController extends Controller
 
             if ($shouldSyncMaterialBreakdowns && is_array($materialsInput)) {
                 foreach ($materialsInput as $rowIndex => $matData) {
+                    $rowNo = trim((string) ($matData['row_no'] ?? ''));
                     $rowPartNo = trim((string) ($matData['part_no'] ?? ''));
                     $rowIdCode = trim((string) ($matData['id_code'] ?? ''));
                     $normalizedRowPartNo = ($rowPartNo === '-' ? '' : $rowPartNo);
-                    $rowNo = trim((string) ($matData['row_no'] ?? ''));
-                    $hasImportRowNo = $importFromPartlist && $this->hasPartlistRowNumber($rowNo);
                     $normalizedRowIdCode = ($rowIdCode === '-' ? '' : $rowIdCode);
-                    $partNumber = $normalizedRowPartNo !== '' ? $normalizedRowPartNo : $normalizedRowIdCode;
-
-                    if ($partNumber === '' && !$hasImportRowNo)
-                        continue;
-
-                    if ($partNumber === '' && $hasImportRowNo) {
-                        $partNumber = '__ROWNO_' . $rowNo;
-                    }
-
-                    $isPlaceholderPart = $partNumber === '-';
+                    $partNumber = $normalizedRowPartNo;
 
                     $masterMaterial = $this->findMasterMaterial($rowPartNo, $rowIdCode);
                     $materialCode = '__ROW_' . $costingData->id . '_' . $rowIndex;
 
-                    $partKey = strtolower($partNumber);
+                    $partKey = $partNumber !== ''
+                        ? strtolower($partNumber)
+                        : ('__row_' . strtolower($rowNo !== '' ? $rowNo : (string) $rowIndex));
                     $partNameInput = trim((string) ($matData['part_name'] ?? ''));
                     $qtyReq = floatval($matData['qty_req'] ?? 0);
                     $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
@@ -686,7 +715,9 @@ class CostingController extends Controller
 
                     $priceBaseInput = $this->toFloatValue($matData['amount1'] ?? 0);
                     $masterPrice = floatval($masterMaterial?->price ?? 0);
-                    $priceBase = $priceBaseInput > 0 ? $priceBaseInput : $masterPrice;
+                    $priceBase = $priceBaseInput > 0
+                        ? $priceBaseInput
+                        : ($importFromPartlist ? 0 : $masterPrice);
 
                     $material = $masterMaterial;
                     if (!$material) {
@@ -703,14 +734,6 @@ class CostingController extends Controller
                     }
 
                     $resolvedPartNameForRecap = $partNameInput;
-                    if ($resolvedPartNameForRecap === '' || $resolvedPartNameForRecap === '-') {
-                        $resolvedPartNameForRecap = trim((string) ($masterMaterial?->material_description ?? ''));
-                    }
-                    if (($resolvedPartNameForRecap === '' || $resolvedPartNameForRecap === '-')
-                        && !str_starts_with($partNumber, '__ROWNO_')) {
-                        $resolvedPartNameForRecap = $partNumber;
-                    }
-                    $hasValidPartNameForRecap = $resolvedPartNameForRecap !== '' && $resolvedPartNameForRecap !== '-';
 
                     // Re-calculate logic (replicating JS logic for safety)
                     $unit = strtoupper($resolvedUnit);
@@ -737,8 +760,10 @@ class CostingController extends Controller
                     MaterialBreakdown::create([
                         'costing_data_id' => $costingData->id,
                         'material_id' => $material->id,
+                        'row_no' => $rowNo !== '' ? $rowNo : null,
                         'part_no' => $normalizedRowPartNo !== '' ? $normalizedRowPartNo : null,
-                            'id_code' => $normalizedRowIdCode !== '' ? $normalizedRowIdCode : null,
+                        'id_code' => $normalizedRowIdCode !== '' ? $normalizedRowIdCode : null,
+                        'part_name' => $partNameInput !== '' ? $partNameInput : null,
                         'pro_code' => trim((string) ($matData['pro_code'] ?? '')),
                         'qty_req' => $qtyReq,
                         'amount1' => $priceBase,
@@ -755,18 +780,14 @@ class CostingController extends Controller
 
                     $rowAmount1 = $priceBase;
                     $rowBasisPrice = $unitPriceBasisNumeric;
-                    $detectedPrice = $masterPrice;
+                    $detectedPrice = $importFromPartlist ? 0 : $masterPrice;
                     // Rule: jika Amount 1 sudah terisi, part tidak dianggap unpriced.
-                    $isUnpriced = ($detectedPrice <= 0)
-                        && ($rowAmount1 <= 0)
+                    $isUnpriced = ($rowAmount1 <= 0)
                         && ($rowBasisPrice <= 0)
                         && ($manualPrice <= 0);
 
-                    if ($isPlaceholderPart) {
-                        continue;
-                    }
-
-                    if (!$hasValidPartNameForRecap) {
+                    // Unpriced recap source: only valid Part No from material section.
+                    if ($partNumber === '' || $partNumber === '-') {
                         continue;
                     }
 
@@ -774,14 +795,12 @@ class CostingController extends Controller
                         $partAggregation[$partKey] = [
                             'part_number' => $partNumber,
                             'part_name' => $resolvedPartNameForRecap,
-                            'qty' => 0,
                             'detected_price' => $detectedPrice,
                             'manual_price' => $manualPrice > 0 ? $manualPrice : null,
                             'is_unpriced' => false,
                         ];
                     }
 
-                    $partAggregation[$partKey]['qty'] += $qtyReq;
                     $partAggregation[$partKey]['is_unpriced'] = $partAggregation[$partKey]['is_unpriced'] || $isUnpriced;
 
                     if ($manualPrice > 0) {
@@ -820,7 +839,6 @@ class CostingController extends Controller
                                 [
                                     'costing_data_id' => $costingData->id,
                                     'part_name' => $partInfo['part_name'] ?: null,
-                                    'qty' => $partInfo['qty'],
                                     'detected_price' => $partInfo['detected_price'],
                                     'manual_price' => null,
                                     'notes' => 'Auto-detected from Form Input validation.',
@@ -850,7 +868,13 @@ class CostingController extends Controller
                     }
                 } else {
                     if ($costingData) {
-                        $partAggregation = $this->buildUnpricedAggregationFromBreakdowns((int) $costingData->id, $manualUnpricedPrices);
+                        // For recap-only update, do not apply manual input as resolved pricing yet.
+                        // Manual apply must happen explicitly via the "Tambah" action in recap.
+                        if (is_array($materialsInput) && count($materialsInput) > 0) {
+                            $partAggregation = $this->buildUnpricedAggregationFromMaterialsInput($materialsInput, collect());
+                        } else {
+                            $partAggregation = $this->buildUnpricedAggregationFromBreakdowns((int) $costingData->id, collect());
+                        }
 
                         $trackedPartKeys = collect($partAggregation)->keys();
                         $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
@@ -869,7 +893,6 @@ class CostingController extends Controller
                                     [
                                         'costing_data_id' => $costingData->id,
                                         'part_name' => $partInfo['part_name'] ?: null,
-                                        'qty' => $partInfo['qty'],
                                         'detected_price' => $partInfo['detected_price'],
                                         'manual_price' => null,
                                         'notes' => 'Auto-detected from Material Breakdown sync.',
@@ -880,7 +903,7 @@ class CostingController extends Controller
                                 if ($existingOpen) {
                                     $existingOpen->update([
                                         'costing_data_id' => $costingData->id,
-                                        'manual_price' => $partInfo['manual_price'],
+                                        'manual_price' => null,
                                         'resolved_at' => now(),
                                         'resolution_source' => 'manual_or_master_price',
                                     ]);
@@ -897,40 +920,6 @@ class CostingController extends Controller
                                 ]);
                             }
                         }
-                    }
-
-                    $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
-                        ->whereNull('resolved_at')
-                        ->get()
-                        ->keyBy(fn ($item) => strtolower($item->part_number));
-
-                    foreach ($manualUnpricedPrices as $partKey => $manualPrice) {
-                        if ($manualPrice <= 0) {
-                            continue;
-                        }
-
-                        $existingOpen = $openItems->get($partKey);
-                        if (!$existingOpen) {
-                            continue;
-                        }
-
-                        Material::updateOrCreate(
-                            ['material_code' => $existingOpen->part_number],
-                            [
-                                'material_description' => $existingOpen->part_name ?: null,
-                                'base_uom' => 'PCS',
-                                'currency' => 'IDR',
-                                'price' => $manualPrice,
-                                'price_update' => now()->toDateString(),
-                            ]
-                        );
-
-                        $existingOpen->update([
-                            'costing_data_id' => $costingData->id,
-                            'manual_price' => $manualPrice,
-                            'resolved_at' => now(),
-                            'resolution_source' => 'manual_or_master_price',
-                        ]);
                     }
                 }
 
@@ -1051,29 +1040,19 @@ class CostingController extends Controller
         $aggregation = [];
 
         foreach ($rows as $row) {
-            $partNumber = trim((string) ($row->part_no ?: $row->id_code ?: ($row->material->material_code ?? '')));
+            $partNumber = trim((string) ($row->part_no ?? ''));
             if ($partNumber === '' || $partNumber === '-') {
                 continue;
             }
-            if (str_starts_with($partNumber, '__ROWNO_') || str_starts_with($partNumber, '__ROW_')) {
-                continue;
-            }
 
-            $partName = trim((string) ($row->material->material_description ?? ''));
-            if ($partName === '' || $partName === '-') {
-                $partName = $partNumber;
-            }
-            if ($partName === '' || $partName === '-') {
-                continue;
-            }
+            $partName = trim((string) ($row->part_name ?? ''));
 
             $partKey = strtolower($partNumber);
             $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
             $detectedPrice = floatval($row->material->price ?? 0);
             $rowAmount1 = floatval($row->amount1 ?? 0);
             $rowBasisPrice = floatval($row->unit_price_basis ?? 0);
-            $isUnpriced = ($detectedPrice <= 0)
-                && ($rowAmount1 <= 0)
+            $isUnpriced = ($rowAmount1 <= 0)
                 && ($rowBasisPrice <= 0)
                 && ($manualPrice <= 0);
 
@@ -1081,14 +1060,60 @@ class CostingController extends Controller
                 $aggregation[$partKey] = [
                     'part_number' => $partNumber,
                     'part_name' => $partName,
-                    'qty' => 0,
                     'detected_price' => $detectedPrice,
                     'manual_price' => $manualPrice > 0 ? $manualPrice : null,
                     'is_unpriced' => false,
                 ];
             }
 
-            $aggregation[$partKey]['qty'] += floatval($row->qty_req ?? 0);
+            $aggregation[$partKey]['is_unpriced'] = $aggregation[$partKey]['is_unpriced'] || $isUnpriced;
+
+            if ($manualPrice > 0) {
+                $aggregation[$partKey]['manual_price'] = $manualPrice;
+            }
+        }
+
+        return $aggregation;
+    }
+
+    private function buildUnpricedAggregationFromMaterialsInput(array $materialsInput, $manualUnpricedPrices): array
+    {
+        $aggregation = [];
+
+        foreach ($materialsInput as $matData) {
+            $partNo = trim((string) ($matData['part_no'] ?? ''));
+            if ($partNo === '' || $partNo === '-') {
+                continue;
+            }
+
+            $partKey = strtolower($partNo);
+            $partName = trim((string) ($matData['part_name'] ?? ''));
+
+            $qtyReq = floatval($matData['qty_req'] ?? 0);
+            $amount1 = $this->toFloatValue($matData['amount1'] ?? 0);
+            $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
+            $unitPriceBasis = $this->toFloatValue($unitPriceBasisRaw);
+            $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
+
+            $rowPartNo = trim((string) ($matData['part_no'] ?? ''));
+            $rowIdCode = trim((string) ($matData['id_code'] ?? ''));
+            $masterMaterial = $this->findMasterMaterial($rowPartNo, $rowIdCode);
+            $detectedPrice = floatval($masterMaterial?->price ?? 0);
+
+            $isUnpriced = ($amount1 <= 0)
+                && ($unitPriceBasis <= 0)
+                && ($manualPrice <= 0);
+
+            if (!isset($aggregation[$partKey])) {
+                $aggregation[$partKey] = [
+                    'part_number' => $partNo,
+                    'part_name' => $partName,
+                    'detected_price' => $detectedPrice,
+                    'manual_price' => $manualPrice > 0 ? $manualPrice : null,
+                    'is_unpriced' => false,
+                ];
+            }
+
             $aggregation[$partKey]['is_unpriced'] = $aggregation[$partKey]['is_unpriced'] || $isUnpriced;
 
             if ($manualPrice > 0) {
@@ -1557,6 +1582,7 @@ class CostingController extends Controller
 
         $materials = [];
         foreach (array_slice($rawRows, $headerRowIndex + 1) as $rowValues) {
+            $rowNo = trim((string) $this->rowCellValue($rowValues, $headerMap, 'row_no'));
             $partNo = trim((string) $this->rowCellValue($rowValues, $headerMap, 'part_no'));
             $idCode = trim((string) $this->rowCellValue($rowValues, $headerMap, 'id_code'));
             if ($partNo === '' || $partNo === '-') {
@@ -1575,15 +1601,17 @@ class CostingController extends Controller
             $cnType = strtoupper(trim((string) $this->rowCellValue($rowValues, $headerMap, 'cn_type')));
 
             $materials[] = [
+                'row_no' => $rowNo,
                 'part_no' => $partNo,
                 'id_code' => ($idCode !== '' && $idCode !== '-') ? $idCode : null,
                 'part_name' => $partName,
                 'qty_req' => $qtyReq,
                 'unit' => $this->normalizeUnitValue($unit),
                 'pro_code' => trim((string) $this->rowCellValue($rowValues, $headerMap, 'pro_code')),
-                'amount1' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'amount1')),
-                'unit_price_basis' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'unit_price_basis')),
-                'unit_price_basis_text' => trim((string) $this->rowCellValue($rowValues, $headerMap, 'unit_price_basis')),
+                // Keep price fields empty for partlist import; users fill via manual input or unpriced recap action.
+                'amount1' => 0,
+                'unit_price_basis' => 0,
+                'unit_price_basis_text' => null,
                 'currency' => in_array($currency, ['IDR', 'USD', 'JPY'], true) ? $currency : 'IDR',
                 'qty_moq' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'qty_moq')),
                 'cn_type' => in_array($cnType, ['C', 'N'], true) ? $cnType : 'N',
@@ -1733,6 +1761,7 @@ class CostingController extends Controller
         }
 
         $headerAliases = [
+            'row_no' => ['no', 'nomor', 'rownumber', 'rowno', 'itemno', 'nomorurut', 'urut'],
             'part_no' => ['partno', 'partnumber', 'materialcode', 'partnumbermaterial', 'pn', 'partnumberno'],
             'id_code' => ['idcode', 'idmaterial', 'materialid', 'itemcode', 'id', 'kodepart', 'code'],
             'part_name' => ['partname', 'materialdescription', 'description', 'namapart'],

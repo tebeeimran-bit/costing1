@@ -90,7 +90,7 @@
                     <div class="form-group">
                         <label for="price">Price</label>
                         <input type="number" id="price" name="price" value="{{ old('price', $material->price ?? 0) }}"
-                            placeholder="0" step="0.01" min="0">
+                            placeholder="0" step="0.00001" min="0">
                     </div>
                     <div class="form-group">
                         <label for="purchase_unit">Purchase Unit</label>
@@ -138,7 +138,7 @@
                     <div class="form-group">
                         <label for="price_before">Price Before</label>
                         <input type="number" id="price_before" name="price_before"
-                            value="{{ old('price_before', $material->price_before ?? '') }}" placeholder="0" step="0.01"
+                            value="{{ old('price_before', $material->price_before ?? '') }}" placeholder="0" step="0.00001"
                             min="0">
                     </div>
                 </div>

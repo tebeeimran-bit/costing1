@@ -1446,6 +1446,13 @@
         </div>
     </div>
 
+    <div id="app-loading-overlay" class="app-loading-overlay is-hidden" role="status" aria-live="polite" aria-label="Memuat data">
+        <div class="app-loading-card">
+            <div class="app-loading-spinner" aria-hidden="true"></div>
+            <p id="app-loading-text" class="app-loading-text">Sedang memproses...</p>
+        </div>
+    </div>
+
     <style>
         .app-confirm-modal {
             position: fixed;
@@ -1539,6 +1546,71 @@
             background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         }
 
+        .app-loading-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 2300;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: rgba(15, 23, 42, 0.32);
+            backdrop-filter: blur(1.5px);
+        }
+
+        .app-loading-overlay.is-hidden {
+            display: none;
+        }
+
+        .app-loading-card {
+            min-width: 210px;
+            max-width: min(88vw, 320px);
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid #dbe4f2;
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+            padding: 1rem 1.1rem;
+            text-align: center;
+            animation: appLoadingPopIn 0.2s ease;
+        }
+
+        .app-loading-spinner {
+            width: 42px;
+            height: 42px;
+            margin: 0 auto 0.65rem;
+            border-radius: 999px;
+            border: 3px solid #dbeafe;
+            border-top-color: #2563eb;
+            border-right-color: #60a5fa;
+            animation: appLoadingSpin 0.8s linear infinite;
+        }
+
+        .app-loading-text {
+            margin: 0;
+            color: #1e293b;
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 0.01em;
+        }
+
+        @keyframes appLoadingSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes appLoadingPopIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px) scale(0.98);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
         @keyframes appConfirmPopIn {
             from {
                 opacity: 0;
@@ -1554,6 +1626,37 @@
 
     <script>
         let appConfirmCurrentOnConfirm = null;
+        let appLoadingVisible = false;
+
+        function showAppLoading(message) {
+            const overlay = document.getElementById('app-loading-overlay');
+            const textNode = document.getElementById('app-loading-text');
+
+            if (!overlay) {
+                return;
+            }
+
+            if (textNode && message) {
+                textNode.textContent = message;
+            }
+
+            if (appLoadingVisible) {
+                return;
+            }
+
+            appLoadingVisible = true;
+            overlay.classList.remove('is-hidden');
+        }
+
+        function hideAppLoading() {
+            const overlay = document.getElementById('app-loading-overlay');
+            if (!overlay) {
+                return;
+            }
+
+            appLoadingVisible = false;
+            overlay.classList.add('is-hidden');
+        }
 
         function openAppConfirm(message, onConfirm) {
             const modal = document.getElementById('app-confirm-modal');
@@ -1577,6 +1680,52 @@
         function closeAppConfirmOnOverlay(event) {
             if (event.target && event.target.id === 'app-confirm-modal') {
                 closeAppConfirm();
+            }
+        }
+
+        function shouldShowLoadingForLink(link, event) {
+            if (!(link instanceof HTMLAnchorElement)) {
+                return false;
+            }
+
+            if (link.dataset.skipLoadingOverlay === 'true' || event.defaultPrevented) {
+                return false;
+            }
+
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return false;
+            }
+
+            if (link.target && link.target !== '_self') {
+                return false;
+            }
+
+            if (link.hasAttribute('download')) {
+                return false;
+            }
+
+            const hrefValue = link.getAttribute('href') || '';
+            const lowerHref = hrefValue.trim().toLowerCase();
+            if (!lowerHref || lowerHref === '#' || lowerHref.startsWith('javascript:') || lowerHref.startsWith('mailto:') || lowerHref.startsWith('tel:')) {
+                return false;
+            }
+
+            try {
+                const destination = new URL(link.href, window.location.href);
+                if (destination.origin !== window.location.origin) {
+                    return false;
+                }
+
+                const isSamePageAnchor = destination.pathname === window.location.pathname
+                    && destination.search === window.location.search
+                    && destination.hash;
+                if (isSamePageAnchor) {
+                    return false;
+                }
+
+                return true;
+            } catch (_) {
+                return false;
             }
         }
 
@@ -1608,8 +1757,43 @@
                 const message = form.dataset.confirmMessage || 'Apakah Anda yakin ingin melanjutkan?';
                 openAppConfirm(message, function () {
                     form.dataset.confirmed = 'true';
+                    showAppLoading();
                     form.submit();
                 });
+            });
+
+            document.addEventListener('submit', function (event) {
+                const form = event.target;
+                if (!(form instanceof HTMLFormElement)) {
+                    return;
+                }
+
+                if (event.defaultPrevented) {
+                    return;
+                }
+
+                if (form.dataset.skipLoadingOverlay === 'true') {
+                    return;
+                }
+
+                showAppLoading();
+            });
+
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('a');
+                if (!shouldShowLoadingForLink(link, event)) {
+                    return;
+                }
+
+                showAppLoading('Memuat halaman...');
+            }, true);
+
+            window.addEventListener('beforeunload', function () {
+                showAppLoading('Memuat halaman...');
+            });
+
+            window.addEventListener('pageshow', function () {
+                hideAppLoading();
             });
 
             document.addEventListener('keydown', function (event) {

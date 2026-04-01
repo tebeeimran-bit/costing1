@@ -563,12 +563,11 @@ class TrackingDocumentController extends Controller
             $filename = 'unpriced-parts-' . $revision->id . '-v' . $revision->version_number . '.csv';
 
             $csv = collect([
-                ['Part Number', 'Part Name', 'Qty', 'Detected Price'],
+                ['Part Number', 'Part Name', 'Detected Price'],
             ])->concat($rows->map(function ($item) {
                 return [
                     $item->part_number,
                     $item->part_name,
-                    (string) $item->qty,
                     (string) ($item->detected_price ?? 0),
                 ];
             }))->map(function ($line) {
@@ -597,40 +596,68 @@ class TrackingDocumentController extends Controller
         $validated = $request->validate([
             'part_number' => 'required|string|max:255',
             'manual_price' => 'nullable|numeric|min:0',
+            'use_database_lookup' => 'nullable|boolean',
         ]);
 
         $partNumber = trim((string) $validated['part_number']);
         $partKey = strtolower($partNumber);
         $manualPrice = floatval($validated['manual_price'] ?? 0);
+        $useDatabaseLookup = (bool) ($validated['use_database_lookup'] ?? false);
+        $appliedPrice = $manualPrice;
+        $appliedCurrency = '';
+        $appliedPurchaseUnit = '';
+        $appliedMoq = null;
+        $appliedCn = '';
+        $appliedMaker = '';
+        $appliedAddCostImportTax = null;
+        $resolutionSource = 'realtime_manual_input';
 
-        DB::transaction(function () use ($revision, $partKey, $partNumber, $manualPrice) {
+        DB::transaction(function () use ($revision, $partKey, $partNumber, $manualPrice, $useDatabaseLookup, &$appliedPrice, &$appliedCurrency, &$appliedPurchaseUnit, &$appliedMoq, &$appliedCn, &$appliedMaker, &$appliedAddCostImportTax, &$resolutionSource) {
             $openRows = UnpricedPart::where('document_revision_id', $revision->id)
                 ->whereNull('resolved_at')
                 ->whereRaw('lower(part_number) = ?', [$partKey])
                 ->get();
 
-            if ($manualPrice > 0) {
-                $partName = $openRows->first()?->part_name;
+            $partName = trim((string) ($openRows->first()?->part_name ?? ''));
+
+            if ($appliedPrice <= 0 && $useDatabaseLookup) {
+                $matchedMaterial = $this->findMaterialForUnpricedPart($partNumber, $partName);
+                if ($matchedMaterial) {
+                    $appliedPrice = floatval($matchedMaterial->price ?? 0);
+                    $appliedCurrency = trim((string) ($matchedMaterial->currency ?? ''));
+                    $appliedPurchaseUnit = trim((string) ($matchedMaterial->purchase_unit ?? ''));
+                    $appliedMoq = $matchedMaterial->moq;
+                    $appliedCn = trim((string) ($matchedMaterial->cn ?? ''));
+                    $appliedMaker = trim((string) ($matchedMaterial->maker ?? ''));
+                    $appliedAddCostImportTax = $matchedMaterial->add_cost_import_tax;
+                    $resolutionSource = 'realtime_db_lookup';
+                }
+            }
+
+            if ($appliedPrice > 0) {
 
                 $material = Material::firstOrCreate(
                     ['material_code' => $partNumber],
                     [
                         'material_description' => $partName ?: null,
                         'base_uom' => 'PCS',
-                        'currency' => 'IDR',
+                        'currency' => $appliedCurrency !== '' ? $appliedCurrency : 'IDR',
                         'price' => 0,
                     ]
                 );
 
-                $material->price = $manualPrice;
+                $material->price = $appliedPrice;
+                if ($appliedCurrency !== '') {
+                    $material->currency = $appliedCurrency;
+                }
                 $material->price_update = now()->toDateString();
                 $material->save();
 
                 foreach ($openRows as $row) {
                     $row->update([
-                        'manual_price' => $manualPrice,
+                        'manual_price' => $appliedPrice,
                         'resolved_at' => now(),
-                        'resolution_source' => 'realtime_manual_input',
+                        'resolution_source' => $resolutionSource,
                     ]);
                 }
             } else {
@@ -668,6 +695,14 @@ class TrackingDocumentController extends Controller
             'open_unpriced_count' => $openCount,
             'status' => $revision->fresh()->status,
             'status_label' => $revision->fresh()->status_label,
+            'applied_price' => $appliedPrice,
+            'applied_currency' => $appliedCurrency,
+            'applied_purchase_unit' => $appliedPurchaseUnit,
+            'applied_moq' => $appliedMoq,
+            'applied_cn' => $appliedCn,
+            'applied_maker' => $appliedMaker,
+            'applied_add_cost_import_tax' => $appliedAddCostImportTax,
+            'resolution_source' => $resolutionSource,
         ]);
     }
 
@@ -718,6 +753,63 @@ class TrackingDocumentController extends Controller
         ]);
     }
 
+    public function restoreUnpricedPart(Request $request, DocumentRevision $revision)
+    {
+        $validated = $request->validate([
+            'part_number' => 'required|string|max:255',
+        ]);
+
+        $partKey = strtolower(trim((string) $validated['part_number']));
+        $restored = false;
+
+        DB::transaction(function () use ($revision, $partKey, &$restored) {
+            $target = UnpricedPart::where('document_revision_id', $revision->id)
+                ->whereNotNull('resolved_at')
+                ->whereRaw('lower(part_number) = ?', [$partKey])
+                ->orderByDesc('resolved_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($target) {
+                $target->update([
+                    'manual_price' => null,
+                    'resolved_at' => null,
+                    'resolution_source' => 'undo_tambah',
+                ]);
+                $restored = true;
+            }
+
+            $hasOpenUnpriced = UnpricedPart::where('document_revision_id', $revision->id)
+                ->whereNull('resolved_at')
+                ->exists();
+
+            if ($hasOpenUnpriced) {
+                if ($revision->status !== DocumentRevision::STATUS_SUBMITTED_TO_MARKETING) {
+                    $revision->update([
+                        'status' => DocumentRevision::STATUS_PENDING_PRICING,
+                    ]);
+                }
+            } elseif ($revision->status === DocumentRevision::STATUS_PENDING_PRICING) {
+                $revision->update([
+                    'status' => DocumentRevision::STATUS_COGM_GENERATED,
+                    'cogm_generated_at' => now(),
+                ]);
+            }
+        });
+
+        $openCount = UnpricedPart::where('document_revision_id', $revision->id)
+            ->whereNull('resolved_at')
+            ->count();
+
+        return response()->json([
+            'ok' => true,
+            'restored' => $restored,
+            'open_unpriced_count' => $openCount,
+            'status' => $revision->fresh()->status,
+            'status_label' => $revision->fresh()->status_label,
+        ]);
+    }
+
     public function download(DocumentRevision $revision, string $type)
     {
         if (!in_array($type, ['partlist', 'umh', 'a00', 'a04', 'a05'], true)) {
@@ -743,6 +835,136 @@ class TrackingDocumentController extends Controller
         }
 
         return Storage::download($path, $name);
+    }
+
+    private function findMaterialForUnpricedPart(string $partNumber, string $partName = ''): ?Material
+    {
+        $normalizedPartNumber = trim($partNumber);
+        $normalizedPartName = trim($partName);
+
+        if ($normalizedPartNumber !== '') {
+            $directByCode = Material::query()
+                ->whereRaw('lower(material_code) = ?', [Str::lower($normalizedPartNumber)])
+                ->where('price', '>', 0)
+                ->orderByRaw('CASE WHEN price_update IS NULL THEN 1 ELSE 0 END')
+                ->orderByDesc('price_update')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($directByCode) {
+                return $directByCode;
+            }
+
+            $escapedPartNumber = $this->escapeLikeKeyword($normalizedPartNumber);
+
+            $byDescriptionFromPartNumber = Material::query()
+                ->where('price', '>', 0)
+                ->where(function ($query) use ($normalizedPartNumber, $escapedPartNumber) {
+                    $query->whereRaw('lower(material_description) = ?', [Str::lower($normalizedPartNumber)])
+                        ->orWhereRaw('lower(material_description) like ?', ['%' . Str::lower($escapedPartNumber) . '%']);
+                })
+                ->orderByRaw('CASE WHEN price_update IS NULL THEN 1 ELSE 0 END')
+                ->orderByDesc('price_update')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($byDescriptionFromPartNumber) {
+                return $byDescriptionFromPartNumber;
+            }
+        }
+
+        if ($normalizedPartName !== '') {
+            $escapedPartName = $this->escapeLikeKeyword($normalizedPartName);
+
+            $byDescriptionFromPartName = Material::query()
+                ->where('price', '>', 0)
+                ->where(function ($query) use ($normalizedPartName, $escapedPartName) {
+                    $query->whereRaw('lower(material_description) = ?', [Str::lower($normalizedPartName)])
+                        ->orWhereRaw('lower(material_description) like ?', ['%' . Str::lower($escapedPartName) . '%']);
+                })
+                ->orderByRaw('CASE WHEN price_update IS NULL THEN 1 ELSE 0 END')
+                ->orderByDesc('price_update')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($byDescriptionFromPartName) {
+                return $byDescriptionFromPartName;
+            }
+        }
+
+        $normalizedPartNumberKey = $this->normalizeLookupKey($normalizedPartNumber);
+        $normalizedPartNameKey = $this->normalizeLookupKey($normalizedPartName);
+
+        if ($normalizedPartNumberKey === '' && $normalizedPartNameKey === '') {
+            return null;
+        }
+
+        $searchSource = trim($normalizedPartNumber . ' ' . $normalizedPartName);
+        $tokenCandidates = collect(preg_split('/[^a-z0-9]+/i', Str::lower($searchSource)) ?: [])
+            ->map(fn ($token) => trim((string) $token))
+            ->filter(fn ($token) => strlen($token) >= 3)
+            ->unique()
+            ->values();
+
+        $candidateQuery = Material::query()
+            ->where('price', '>', 0)
+            ->where(function ($query) {
+                $query->whereNotNull('material_code')
+                    ->orWhereNotNull('material_description');
+            });
+
+        if ($tokenCandidates->isNotEmpty()) {
+            $candidateQuery->where(function ($query) use ($tokenCandidates) {
+                foreach ($tokenCandidates as $token) {
+                    $escapedToken = $this->escapeLikeKeyword((string) $token);
+                    $query->orWhereRaw('lower(material_code) like ?', ['%' . $escapedToken . '%'])
+                        ->orWhereRaw('lower(material_description) like ?', ['%' . $escapedToken . '%']);
+                }
+            });
+        }
+
+        $candidates = $candidateQuery
+            ->orderByRaw('CASE WHEN price_update IS NULL THEN 1 ELSE 0 END')
+            ->orderByDesc('price_update')
+            ->orderByDesc('id')
+            ->limit(3000)
+            ->get();
+
+        foreach ($candidates as $candidate) {
+            $candidateCodeKey = $this->normalizeLookupKey((string) ($candidate->material_code ?? ''));
+            $candidateDescriptionKey = $this->normalizeLookupKey((string) ($candidate->material_description ?? ''));
+
+            if ($this->isNormalizedLookupMatch($normalizedPartNumberKey, $candidateCodeKey)
+                || $this->isNormalizedLookupMatch($normalizedPartNumberKey, $candidateDescriptionKey)
+                || $this->isNormalizedLookupMatch($normalizedPartNameKey, $candidateDescriptionKey)) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    private function escapeLikeKeyword(string $keyword): string
+    {
+        return addcslashes($keyword, '\\%_');
+    }
+
+    private function normalizeLookupKey(string $value): string
+    {
+        return preg_replace('/[^a-z0-9]/', '', Str::lower(trim($value))) ?? '';
+    }
+
+    private function isNormalizedLookupMatch(string $sourceKey, string $targetKey): bool
+    {
+        if ($sourceKey === '' || $targetKey === '') {
+            return false;
+        }
+
+        if ($sourceKey === $targetKey) {
+            return true;
+        }
+
+        return str_contains($sourceKey, $targetKey) || str_contains($targetKey, $sourceKey);
     }
 
     private function makeProjectKey(string $customer, string $model, string $partNumber, string $partName): string

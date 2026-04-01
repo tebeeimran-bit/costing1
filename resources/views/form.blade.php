@@ -719,6 +719,8 @@
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.update-unpriced-price', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
         <input type="hidden" id="deleteUnpricedPartUrl"
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.delete-unpriced-part', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
+        <input type="hidden" id="restoreUnpricedPartUrl"
+            value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.restore-unpriced-part', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
 
         <!-- Section A: Filter & Header -->
         <div class="card form-section">
@@ -969,8 +971,9 @@
                                 <td>
                                     <span class="material-row-no-cell">
                                         <input type="checkbox" class="material-row-select" title="Pilih baris">
-                                        <span class="material-row-number">{{ $index + 1 }}</span>
+                                        <span class="material-row-number">{{ $row['row_no'] ?? ($index + 1) }}</span>
                                     </span>
+                                    <input type="hidden" name="materials[{{ $index }}][row_no]" value="{{ $row['row_no'] ?? '' }}">
                                 </td>
                                 <td><input type="text" class="form-input part-no" name="materials[{{ $index }}][part_no]"
                                     value="{{ $row['part_no'] ?? '' }}" placeholder="Part No"></td>
@@ -1010,8 +1013,8 @@
                                     value="{{ $row['supplier'] ?? '' }}" placeholder="Supplier"></td>
                                 <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
                                     value="{{ $row['import_tax'] ?? 0 }}" step="0.01" onchange="calculateRow(this)"></td>
-                                <td class="calculated multiply-factor">1.0000</td>
-                                <td class="calculated amount2">0.0000</td>
+                                <td class="calculated multiply-factor">1</td>
+                                <td class="calculated amount2">0</td>
                                 <td class="calculated currency2">{{ $rowCurrency }}</td>
                                 <td class="calculated unit-price2">{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}</td>
                                 <td class="calculated total-price">Rp 0</td>
@@ -1043,15 +1046,16 @@
                                     <td>
                                         <span class="material-row-no-cell">
                                             <input type="checkbox" class="material-row-select" title="Pilih baris">
-                                            <span class="material-row-number">{{ $index + 1 }}</span>
+                                            <span class="material-row-number">{{ $breakdown->row_no ?? ($index + 1) }}</span>
                                         </span>
+                                        <input type="hidden" name="materials[{{ $index }}][row_no]" value="{{ $breakdown->row_no ?? '' }}">
                                     </td>
                                     <td><input type="text" class="form-input part-no" name="materials[{{ $index }}][part_no]"
                                     value="{{ $partNoDisplay }}" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[{{ $index }}][id_code]"
                                     value="{{ $breakdown->id_code ?? '' }}" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
-                                    value="{{ $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
+                                    value="{{ $breakdown->part_name ?? $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
                                     <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]"
                                             value="{{ $breakdown->qty_req }}" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
@@ -1084,8 +1088,8 @@
                                     <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
                                             value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
                                     </td>
-                                    <td class="calculated multiply-factor">1.0000</td>
-                                    <td class="calculated amount2">{{ number_format($breakdown->amount2 ?? 0, 4) }}</td>
+                                    <td class="calculated multiply-factor">1</td>
+                                    <td class="calculated amount2">{{ rtrim(rtrim(number_format((float) ($breakdown->amount2 ?? 0), 4, '.', ''), '0'), '.') }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
                                         <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -1111,6 +1115,7 @@
                                             <input type="checkbox" class="material-row-select" title="Pilih baris">
                                             <span class="material-row-number">{{ $i + 1 }}</span>
                                         </span>
+                                        <input type="hidden" name="materials[{{ $i }}][row_no]" value="">
                                     </td>
                                     <td><input type="text" class="form-input part-no" name="materials[{{ $i }}][part_no]" value=""
                                             placeholder="Part No"></td>
@@ -1147,8 +1152,8 @@
                                             placeholder="Supplier"></td>
                                         <td><input type="number" class="form-input import-tax" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
                                             onchange="calculateRow(this)"></td>
-                                    <td class="calculated multiply-factor">1.0000</td>
-                                    <td class="calculated amount2">0.0000</td>
+                                    <td class="calculated multiply-factor">1</td>
+                                    <td class="calculated amount2">0</td>
                                     <td class="calculated currency2">IDR</td>
                                     <td class="calculated unit-price2">PCS</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -1209,7 +1214,6 @@
                             <th rowspan="2">Part No</th>
                             <th rowspan="2">ID Code</th>
                             <th rowspan="2">Part Name</th>
-                            <th rowspan="2">Qty</th>
                             <th colspan="9">Price</th>
                             <th rowspan="2">Input Harga (Manual)</th>
                             <th rowspan="2">Aksi</th>
@@ -1251,7 +1255,6 @@
                                         @endif
                                     </td>
                                     <td>{{ $item->part_name ?: '-' }}</td>
-                                    <td>{{ $item->qty }}</td>
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
@@ -1266,12 +1269,17 @@
                                                         data-part-number="{{ $item->part_number }}"
                                                         data-price="{{ $matchedPrice }}"
                                                         data-currency="{{ $matched->currency ?? '' }}"
+                                                        data-purchase-unit="{{ $matched->purchase_unit ?? '' }}"
+                                                        data-moq="{{ $matched->moq ?? '' }}"
+                                                        data-cn="{{ $matched->cn ?? '' }}"
+                                                        data-maker="{{ $matched->maker ?? '' }}"
+                                                        data-add-cost-import-tax="{{ $matched->add_cost_import_tax ?? '' }}"
                                                         {{ $isMatchedChecked ? 'checked' : '' }}>
-                                                    <span>{{ number_format($matchedPrice, 4) }}</span>
+                                                    <span>{{ rtrim(rtrim(number_format($matchedPrice, 4, '.', ''), '0'), '.') }}</span>
                                                 </div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4) : number_format((float) ($item->detected_price ?? 0), 4) }}
+                                            {{ isset($item->matched_price) && $item->matched_price !== null ? rtrim(rtrim(number_format((float) $item->matched_price, 4, '.', ''), '0'), '.') : rtrim(rtrim(number_format((float) ($item->detected_price ?? 0), 4, '.', ''), '0'), '.') }}
                                         @endif
                                     </td>
                                     <td>
@@ -1295,10 +1303,10 @@
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? number_format((float) $matched->moq, 2) : '-' }}</div>
+                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? rtrim(rtrim(number_format((float) $matched->moq, 4, '.', ''), '0'), '.') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? number_format((float) $item->matched_moq, 2) : '-' }}
+                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? rtrim(rtrim(number_format((float) $item->matched_moq, 4, '.', ''), '0'), '.') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1322,10 +1330,10 @@
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? number_format((float) $matched->add_cost_import_tax, 2) : '-' }}</div>
+                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? rtrim(rtrim(number_format((float) $matched->add_cost_import_tax, 4, '.', ''), '0'), '.') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? number_format((float) $item->matched_add_cost_import_tax, 2) : '-' }}
+                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? rtrim(rtrim(number_format((float) $item->matched_add_cost_import_tax, 4, '.', ''), '0'), '.') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1340,10 +1348,10 @@
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? number_format((float) $matched->price_before, 2) : '-' }}</div>
+                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? rtrim(rtrim(number_format((float) $matched->price_before, 4, '.', ''), '0'), '.') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? number_format((float) $item->matched_price_before, 2) : '-' }}
+                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? rtrim(rtrim(number_format((float) $item->matched_price_before, 4, '.', ''), '0'), '.') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1855,6 +1863,19 @@
             return parseFloat(str) || 0;
         }
 
+        function formatCompactNumber(value, decimals = 4) {
+            const numeric = Number(value || 0);
+            if (!Number.isFinite(numeric)) {
+                return '0';
+            }
+
+            return numeric.toLocaleString('en-US', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: decimals,
+                useGrouping: false,
+            });
+        }
+
         function findMaterialMasterForRow(row) {
             if (!row) return null;
 
@@ -1881,15 +1902,10 @@
             const partNameInput = row.querySelector('.part-name');
             const unitInput = row.querySelector('.unit');
             const supplierInput = row.querySelector('.supplier');
-            const amount1Input = row.querySelector('.amount1');
             const qtyMoqInput = row.querySelector('.qty-moq');
             const importTaxInput = row.querySelector('.import-tax');
             const currencySelect = row.querySelector('.currency');
             const cnTypeSelect = row.querySelector('.cn-type');
-
-            if (partNameInput && String(partNameInput.value || '').trim() === '') {
-                partNameInput.value = String(master.material_description || '').toUpperCase();
-            }
 
             if (unitInput && String(unitInput.value || '').trim() === '') {
                 unitInput.value = String(master.base_uom || 'PCS').toUpperCase();
@@ -1926,14 +1942,6 @@
                 importTaxInput.value = String(master.add_cost_import_tax || 0);
             }
 
-            if (amount1Input) {
-                const currentAmount1 = parseInputNumber(amount1Input.value || 0);
-                const masterPrice = Number(master.price || 0);
-                if (currentAmount1 <= 0 && masterPrice > 0) {
-                    amount1Input.value = String(masterPrice);
-                }
-            }
-
             return true;
         }
 
@@ -1946,7 +1954,7 @@
 
             // 1. Calculate and set Multiply Factor (S4)
             const multiplyFactor = calculateMultiplyFactor(row);
-            row.querySelector('.multiply-factor').textContent = multiplyFactor.toFixed(4);
+            row.querySelector('.multiply-factor').textContent = formatCompactNumber(multiplyFactor, 4);
 
             // GET INPUTS dengan Mapping Baru:
             // Amount 1 = Harga (Price Base)
@@ -1986,7 +1994,7 @@
 
             // Set Amount 2 value to text
             const amount2Element = row.querySelector('.amount2');
-            amount2Element.textContent = amount2.toFixed(4);
+            amount2Element.textContent = formatCompactNumber(amount2, 4);
 
             // 3. Calculate Total Price
             // Total = Qty * Amount 2 * Exchange Rate
@@ -2134,14 +2142,24 @@
                     }
 
                     const selectedOption = row.querySelector('.matched-price-select:checked');
-                    if (!(selectedOption instanceof HTMLInputElement)) {
-                        window.alert('Pilih salah satu harga terlebih dahulu.');
+                    if (selectedOption instanceof HTMLInputElement) {
+                        const selectedPrice = parseFloat(selectedOption.dataset.price || '0') || 0;
+                        const selectedCurrency = selectedOption.dataset.currency || '';
+                        const selectedMeta = {
+                            purchaseUnit: selectedOption.dataset.purchaseUnit || '',
+                            currency: selectedOption.dataset.currency || '',
+                            moq: selectedOption.dataset.moq || '',
+                            cn: selectedOption.dataset.cn || '',
+                            maker: selectedOption.dataset.maker || '',
+                            addCostImportTax: selectedOption.dataset.addCostImportTax || '',
+                        };
+                        applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, {
+                            selectedMeta,
+                        });
                         return;
                     }
 
-                    const selectedPrice = parseFloat(selectedOption.dataset.price || '0') || 0;
-                    const selectedCurrency = selectedOption.dataset.currency || '';
-                    applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency);
+                    resolveUnpricedPriceFromDatabase(partNumber, this);
                 });
             });
         }
@@ -2150,7 +2168,75 @@
             return String(value || '').trim().toLowerCase();
         }
 
-        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency) {
+        function recordUnpricedApplyHistory(partNumber, affectedRows, selectedPrice, selectedCurrency) {
+            if (!Array.isArray(affectedRows) || affectedRows.length === 0) {
+                return;
+            }
+
+            pushMaterialHistoryAction({
+                type: 'unpriced_apply',
+                partNumber,
+                selectedPrice,
+                selectedCurrency,
+                affectedRows,
+            });
+        }
+
+        function restoreUnpricedPartOnServer(partNumber) {
+            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
+            const url = document.getElementById('restoreUnpricedPartUrl')?.value || '';
+
+            if (!trackingRevisionId || !url) {
+                return Promise.resolve(null);
+            }
+
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    part_number: partNumber
+                })
+            })
+                .then((response) => response.json())
+                .catch(() => null);
+        }
+
+        function removeUnpricedRecapRow(partNumber, openCount = null) {
+            const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+                ? CSS.escape(partNumber)
+                : partNumber.replace(/([\[\]\.\:\#"'])/g, '\\$1');
+
+            const row = document.querySelector(`#unpricedRecapBody .unpriced-add-price-btn[data-part-number="${escapedPart}"]`)?.closest('tr');
+            if (row) {
+                row.remove();
+            }
+
+            const tbody = document.getElementById('unpricedRecapBody');
+            if (tbody && tbody.children.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+            }
+
+            const banner = document.getElementById('unpricedTopBanner');
+            const bannerText = document.getElementById('unpricedTopBannerText');
+            const visibleRows = tbody ? tbody.querySelectorAll('.unpriced-add-price-btn').length : 0;
+            const safeOpenCount = openCount === null ? visibleRows : Number(openCount || 0);
+
+            if (banner) {
+                banner.style.display = safeOpenCount > 0 ? 'flex' : 'none';
+            }
+
+            if (bannerText) {
+                bannerText.textContent = `Terdapat ${safeOpenCount} part yang belum memiliki harga pada versi dokumen ini.`;
+            }
+        }
+
+        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, options = {}) {
+            const skipServerSync = options && options.skipServerSync === true;
+            const selectedMeta = options && options.selectedMeta ? options.selectedMeta : {};
             const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
                 ? CSS.escape(partNumber)
                 : partNumber.replace(/([\\[\\]\\.\\:\\#\"'])/g, '\\\\$1');
@@ -2162,11 +2248,18 @@
 
             const targetKey = normalizePartKey(partNumber);
             let updatedRows = 0;
+            const affectedRows = [];
 
             document.querySelectorAll('#materialTableBody tr').forEach((row) => {
                 const partInput = row.querySelector('.part-no');
                 const amountInput = row.querySelector('.amount1');
+                const unitPriceBasisInput = row.querySelector('.unit-price-basis');
                 const currencySelect = row.querySelector('.currency');
+                const unitInput = row.querySelector('.unit');
+                const qtyMoqInput = row.querySelector('.qty-moq');
+                const cnTypeSelect = row.querySelector('.cn-type');
+                const supplierInput = row.querySelector('.supplier');
+                const importTaxInput = row.querySelector('.import-tax');
 
                 if (!(partInput instanceof HTMLInputElement) || !(amountInput instanceof HTMLInputElement)) {
                     return;
@@ -2176,7 +2269,86 @@
                     return;
                 }
 
-                amountInput.value = selectedPrice > 0 ? String(selectedPrice) : '0';
+                const newAmountValue = selectedPrice > 0 ? String(selectedPrice) : '0';
+                const currentAmountValue = amountInput.value ?? '';
+                const currentCurrencyValue = currencySelect instanceof HTMLSelectElement ? (currencySelect.value ?? '') : '';
+                let newCurrencyValue = currentCurrencyValue;
+                const currentBasisValue = unitPriceBasisInput instanceof HTMLInputElement ? (unitPriceBasisInput.value ?? '') : '';
+                const currentUnitValue = unitInput instanceof HTMLInputElement ? (unitInput.value ?? '') : '';
+                const currentMoqValue = qtyMoqInput instanceof HTMLInputElement ? (qtyMoqInput.value ?? '') : '';
+                const currentCnValue = cnTypeSelect instanceof HTMLSelectElement ? (cnTypeSelect.value ?? '') : '';
+                const currentSupplierValue = supplierInput instanceof HTMLInputElement ? (supplierInput.value ?? '') : '';
+                const currentImportTaxValue = importTaxInput instanceof HTMLInputElement ? (importTaxInput.value ?? '') : '';
+                let newBasisValue = currentBasisValue;
+                let newUnitValue = currentUnitValue;
+                let newMoqValue = currentMoqValue;
+                let newCnValue = currentCnValue;
+                let newSupplierValue = currentSupplierValue;
+                let newImportTaxValue = currentImportTaxValue;
+
+                if (currencySelect instanceof HTMLSelectElement && selectedCurrency) {
+                    const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === selectedCurrency);
+                    if (hasOption) {
+                        newCurrencyValue = selectedCurrency;
+                    }
+                }
+
+                if (unitInput instanceof HTMLInputElement && selectedMeta.purchaseUnit) {
+                    newUnitValue = String(selectedMeta.purchaseUnit);
+                }
+
+                if (unitPriceBasisInput instanceof HTMLInputElement && selectedMeta.purchaseUnit) {
+                    newBasisValue = String(selectedMeta.purchaseUnit);
+                }
+
+                if (qtyMoqInput instanceof HTMLInputElement && selectedMeta.moq !== '') {
+                    newMoqValue = String(selectedMeta.moq);
+                }
+
+                if (cnTypeSelect instanceof HTMLSelectElement && selectedMeta.cn) {
+                    const targetCn = String(selectedMeta.cn).toUpperCase();
+                    const hasCnOption = Array.from(cnTypeSelect.options).some((opt) => opt.value === targetCn);
+                    if (hasCnOption) {
+                        newCnValue = targetCn;
+                    }
+                }
+
+                if (supplierInput instanceof HTMLInputElement && selectedMeta.maker) {
+                    newSupplierValue = String(selectedMeta.maker);
+                }
+
+                if (importTaxInput instanceof HTMLInputElement && selectedMeta.addCostImportTax !== '') {
+                    newImportTaxValue = String(selectedMeta.addCostImportTax);
+                }
+
+                affectedRows.push({
+                    amountName: amountInput.name,
+                    oldAmount: currentAmountValue,
+                    newAmount: newAmountValue,
+                    currencyName: currencySelect instanceof HTMLSelectElement ? currencySelect.name : '',
+                    oldCurrency: currentCurrencyValue,
+                    newCurrency: newCurrencyValue,
+                    basisName: unitPriceBasisInput instanceof HTMLInputElement ? unitPriceBasisInput.name : '',
+                    oldBasis: currentBasisValue,
+                    newBasis: newBasisValue,
+                    unitName: unitInput instanceof HTMLInputElement ? unitInput.name : '',
+                    oldUnit: currentUnitValue,
+                    newUnit: newUnitValue,
+                    moqName: qtyMoqInput instanceof HTMLInputElement ? qtyMoqInput.name : '',
+                    oldMoq: currentMoqValue,
+                    newMoq: newMoqValue,
+                    cnName: cnTypeSelect instanceof HTMLSelectElement ? cnTypeSelect.name : '',
+                    oldCn: currentCnValue,
+                    newCn: newCnValue,
+                    supplierName: supplierInput instanceof HTMLInputElement ? supplierInput.name : '',
+                    oldSupplier: currentSupplierValue,
+                    newSupplier: newSupplierValue,
+                    importTaxName: importTaxInput instanceof HTMLInputElement ? importTaxInput.name : '',
+                    oldImportTax: currentImportTaxValue,
+                    newImportTax: newImportTaxValue,
+                });
+
+                amountInput.value = newAmountValue;
 
                 if (currencySelect instanceof HTMLSelectElement && selectedCurrency) {
                     const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === selectedCurrency);
@@ -2185,16 +2357,136 @@
                     }
                 }
 
+                if (unitPriceBasisInput instanceof HTMLInputElement && newBasisValue !== currentBasisValue) {
+                    unitPriceBasisInput.value = newBasisValue;
+                }
+
+                if (unitInput instanceof HTMLInputElement && newUnitValue !== currentUnitValue) {
+                    unitInput.value = newUnitValue;
+                }
+
+                if (qtyMoqInput instanceof HTMLInputElement && newMoqValue !== currentMoqValue) {
+                    qtyMoqInput.value = newMoqValue;
+                }
+
+                if (cnTypeSelect instanceof HTMLSelectElement && newCnValue !== currentCnValue) {
+                    cnTypeSelect.value = newCnValue;
+                }
+
+                if (supplierInput instanceof HTMLInputElement && newSupplierValue !== currentSupplierValue) {
+                    supplierInput.value = newSupplierValue;
+                }
+
+                if (importTaxInput instanceof HTMLInputElement && newImportTaxValue !== currentImportTaxValue) {
+                    importTaxInput.value = newImportTaxValue;
+                }
+
                 calculateRow(amountInput);
                 updatedRows += 1;
             });
 
             calculateTableTotal();
-            syncManualPriceToServer(partNumber, selectedPrice);
-
-            if (updatedRows > 0) {
-                submitMaterialSection();
+            if (updatedRows <= 0) {
+                return { updatedRows: 0, affectedRows: [] };
             }
+
+            if (skipServerSync) {
+                return { updatedRows, affectedRows };
+            }
+
+            return syncManualPriceToServer(partNumber, selectedPrice)
+                .then((data) => {
+                    if (!data || data.ok !== true) {
+                        return { updatedRows, affectedRows };
+                    }
+
+                    removeUnpricedRecapRow(partNumber, data.open_unpriced_count);
+                    recordUnpricedApplyHistory(partNumber, affectedRows, selectedPrice, selectedCurrency);
+                    return { updatedRows, affectedRows };
+                })
+                .catch(() => {
+                    // Silent fail: user can still save material section manually.
+                    return { updatedRows, affectedRows };
+                });
+        }
+
+        function resolveUnpricedPriceFromDatabase(partNumber, button) {
+            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
+            const url = document.getElementById('updateUnpricedPriceUrl')?.value || '';
+
+            if (!trackingRevisionId || !url) {
+                return;
+            }
+
+            if (button instanceof HTMLButtonElement) {
+                button.disabled = true;
+            }
+
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    part_number: partNumber,
+                    use_database_lookup: true
+                })
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    if (!data || data.ok !== true) {
+                        window.alert('Harga part tidak ditemukan di database part.');
+                        return;
+                    }
+
+                    const selectedPrice = Number(data.applied_price || 0);
+                    const selectedCurrency = data.applied_currency || '';
+                    const selectedMeta = {
+                        purchaseUnit: data.applied_purchase_unit || '',
+                        currency: data.applied_currency || '',
+                        moq: data.applied_moq ?? '',
+                        cn: data.applied_cn || '',
+                        maker: data.applied_maker || '',
+                        addCostImportTax: data.applied_add_cost_import_tax ?? '',
+                    };
+
+                    if (selectedPrice <= 0) {
+                        window.alert('Harga part tidak ditemukan di database part.');
+                        return;
+                    }
+
+                    const result = applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, {
+                        skipServerSync: true,
+                        selectedMeta,
+                    });
+
+                    removeUnpricedRecapRow(partNumber, data.open_unpriced_count);
+                    if (result && Array.isArray(result.affectedRows) && result.affectedRows.length > 0) {
+                        recordUnpricedApplyHistory(partNumber, result.affectedRows, selectedPrice, selectedCurrency);
+                    }
+
+                    const banner = document.getElementById('unpricedTopBanner');
+                    const bannerText = document.getElementById('unpricedTopBannerText');
+                    const openCount = Number(data.open_unpriced_count || 0);
+
+                    if (banner) {
+                        banner.style.display = openCount > 0 ? 'flex' : 'none';
+                    }
+
+                    if (bannerText) {
+                        bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
+                    }
+                })
+                .catch(() => {
+                    window.alert('Gagal mengambil harga dari database part.');
+                })
+                .finally(() => {
+                    if (button instanceof HTMLButtonElement) {
+                        button.disabled = false;
+                    }
+                });
         }
 
         function bindUnpricedManualPriceInputs() {
@@ -2247,10 +2539,10 @@
             const url = document.getElementById('updateUnpricedPriceUrl')?.value || '';
 
             if (!trackingRevisionId || !url) {
-                return;
+                return Promise.resolve(null);
             }
 
-            fetch(url, {
+            return fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2265,7 +2557,7 @@
                 .then((response) => response.json())
                 .then((data) => {
                     if (!data || data.ok !== true) {
-                        return;
+                        return data;
                     }
 
                     const banner = document.getElementById('unpricedTopBanner');
@@ -2279,9 +2571,12 @@
                     if (bannerText) {
                         bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
                     }
+
+                    return data;
                 })
                 .catch(() => {
                     // Silent fail: user can still save form as fallback.
+                    return null;
                 });
         }
 
@@ -2381,7 +2676,7 @@
             newRow.setAttribute('data-row', rowCounter);
 
             newRow.innerHTML = `
-                                    <td><span class="material-row-no-cell"><input type="checkbox" class="material-row-select" title="Pilih baris"><span class="material-row-number">${rowCounter + 1}</span></span></td>
+                                    <td><span class="material-row-no-cell"><input type="checkbox" class="material-row-select" title="Pilih baris"><span class="material-row-number">${rowCounter + 1}</span></span><input type="hidden" name="materials[${rowCounter}][row_no]" value=""></td>
                                     <td><input type="text" class="form-input part-no" name="materials[${rowCounter}][part_no]" value="" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[${rowCounter}][id_code]" value="" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[${rowCounter}][part_name]" value="" placeholder="Part Name"></td>
@@ -2395,8 +2690,8 @@
                                     <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
                                     <td><input type="text" class="form-input supplier" name="materials[${rowCounter}][supplier]" value="" placeholder="Supplier"></td>
                                     <td><input type="number" class="form-input import-tax" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
-                                    <td class="calculated multiply-factor">1.0000</td>
-                        <td class="calculated amount2">0.0000</td>
+                                    <td class="calculated multiply-factor">1</td>
+                        <td class="calculated amount2">0</td>
                         <td class="calculated currency2">IDR</td>
                         <td class="calculated unit-price2">PCS</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -2442,10 +2737,14 @@
             const rows = document.querySelectorAll('#materialTableBody tr');
             rows.forEach((row, index) => {
                 const numberEl = row.querySelector('.material-row-number');
+                const rowNoInput = row.querySelector('input[type="hidden"][name$="[row_no]"]');
+                const importedRowNo = rowNoInput ? String(rowNoInput.value || '').trim() : '';
+                const displayNumber = importedRowNo !== '' ? importedRowNo : String(index + 1);
+
                 if (numberEl) {
-                    numberEl.textContent = String(index + 1);
+                    numberEl.textContent = displayNumber;
                 } else if (row.cells[0]) {
-                    row.cells[0].textContent = index + 1;
+                    row.cells[0].textContent = displayNumber;
                 }
             });
 
@@ -2654,6 +2953,88 @@
             } else if (action.type === 'snapshot') {
                 const snapshot = direction === 'undo' ? action.before : action.after;
                 restoreMaterialSnapshot(snapshot);
+            } else if (action.type === 'unpriced_apply') {
+                const rows = Array.isArray(action.affectedRows) ? action.affectedRows : [];
+
+                rows.forEach((rowAction) => {
+                    if (!rowAction) {
+                        return;
+                    }
+
+                    if (rowAction.amountName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.amountName,
+                            direction === 'undo' ? rowAction.oldAmount : rowAction.newAmount
+                        );
+                    }
+
+                    if (rowAction.currencyName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.currencyName,
+                            direction === 'undo' ? rowAction.oldCurrency : rowAction.newCurrency
+                        );
+                    }
+
+                    if (rowAction.basisName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.basisName,
+                            direction === 'undo' ? rowAction.oldBasis : rowAction.newBasis
+                        );
+                    }
+
+                    if (rowAction.unitName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.unitName,
+                            direction === 'undo' ? rowAction.oldUnit : rowAction.newUnit
+                        );
+                    }
+
+                    if (rowAction.moqName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.moqName,
+                            direction === 'undo' ? rowAction.oldMoq : rowAction.newMoq
+                        );
+                    }
+
+                    if (rowAction.cnName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.cnName,
+                            direction === 'undo' ? rowAction.oldCn : rowAction.newCn
+                        );
+                    }
+
+                    if (rowAction.supplierName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.supplierName,
+                            direction === 'undo' ? rowAction.oldSupplier : rowAction.newSupplier
+                        );
+                    }
+
+                    if (rowAction.importTaxName) {
+                        applyMaterialFieldValueByName(
+                            rowAction.importTaxName,
+                            direction === 'undo' ? rowAction.oldImportTax : rowAction.newImportTax
+                        );
+                    }
+                });
+
+                if (direction === 'undo') {
+                    restoreUnpricedPartOnServer(action.partNumber).then((data) => {
+                        if (!data || data.ok !== true) {
+                            return;
+                        }
+
+                        window.location.reload();
+                    });
+                } else {
+                    syncManualPriceToServer(action.partNumber, action.selectedPrice).then((data) => {
+                        if (!data || data.ok !== true) {
+                            return;
+                        }
+
+                        removeUnpricedRecapRow(action.partNumber, data.open_unpriced_count);
+                    });
+                }
             }
 
             materialHistoryApplying = false;
@@ -3291,19 +3672,37 @@
                 moveMaterialFocusByArrow(target, event.key);
             });
 
-            const masterSelectAll = document.getElementById('materialSelectAllRows');
-            if (masterSelectAll && masterSelectAll.dataset.boundSelectAll !== '1') {
-                masterSelectAll.dataset.boundSelectAll = '1';
-                masterSelectAll.addEventListener('change', function () {
-                    const checked = !!this.checked;
-                    document.querySelectorAll('#materialTableBody .material-row-select').forEach((cb) => {
-                        if (cb instanceof HTMLInputElement) {
-                            cb.checked = checked;
-                        }
-                    });
-                    updateMaterialSelectAllRowsState();
-                });
+            bindMaterialSelectAllRows();
+        }
+
+        function applyMaterialSelectAllRows(checked) {
+            const rowCheckboxes = Array.from(document.querySelectorAll('#materialTableBody .material-row-select'));
+            rowCheckboxes.forEach((cb) => {
+                if (cb instanceof HTMLInputElement) {
+                    cb.checked = !!checked;
+                }
+            });
+
+            const master = document.getElementById('materialSelectAllRows');
+            if (master instanceof HTMLInputElement) {
+                master.checked = !!checked;
+                master.indeterminate = false;
             }
+
+            updateMaterialSelectAllRowsState();
+        }
+
+        function bindMaterialSelectAllRows() {
+            const masterSelectAll = document.getElementById('materialSelectAllRows');
+            if (!(masterSelectAll instanceof HTMLInputElement) || masterSelectAll.dataset.boundSelectAll === '1') {
+                return;
+            }
+
+            masterSelectAll.dataset.boundSelectAll = '1';
+
+            masterSelectAll.addEventListener('change', function () {
+                applyMaterialSelectAllRows(this.checked);
+            });
         }
 
         function calculateCycleRow(element) {
@@ -3475,7 +3874,7 @@
 
             const sectionPrefixes = {
                 material: ['materials[', 'manual_unpriced_prices['],
-                unpriced_parts: ['manual_unpriced_prices['],
+                unpriced_parts: ['materials[', 'manual_unpriced_prices['],
                 cycle_time: ['cycle_times[']
             };
 

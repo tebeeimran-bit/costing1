@@ -59,7 +59,6 @@
             <tr>
                 <th>Part Number</th>
                 <th>Part Name</th>
-                <th>Qty</th>
                 <th>Detected Price</th>
             </tr>
         </thead>
@@ -68,12 +67,11 @@
                 <tr>
                     <td>{{ $row->part_number }}</td>
                     <td>{{ $row->part_name }}</td>
-                    <td>{{ $row->qty }}</td>
                     <td>{{ $row->detected_price ?? 0 }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" style="text-align: center;">Tidak ada part unpriced untuk revisi ini.</td>
+                    <td colspan="3" style="text-align: center;">Tidak ada part unpriced untuk revisi ini.</td>
                 </tr>
             @endforelse
         </tbody>

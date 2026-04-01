@@ -14,7 +14,6 @@ class UnpricedPart extends Model
         'costing_data_id',
         'part_number',
         'part_name',
-        'qty',
         'detected_price',
         'manual_price',
         'resolved_at',
@@ -23,7 +22,6 @@ class UnpricedPart extends Model
     ];
 
     protected $casts = [
-        'qty' => 'decimal:4',
         'detected_price' => 'decimal:4',
         'manual_price' => 'decimal:4',
         'resolved_at' => 'datetime',
