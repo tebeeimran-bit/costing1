@@ -697,8 +697,9 @@ class CostingController extends Controller
             $hasMaterialPayload = $request->has('materials') || !empty($importedMaterialRows);
             $shouldProcessMaterials = $updateSection === '' || $updateSection === 'material';
             $shouldProcessUnpricedOnly = $updateSection === 'unpriced_parts';
+            // Keep existing material rows when material payload is missing, to avoid accidental data loss.
             $shouldSyncMaterialBreakdowns = $shouldProcessMaterials
-                && ($hasMaterialPayload || $updateSection === 'material');
+                && $hasMaterialPayload;
 
             if ($shouldSyncMaterialBreakdowns) {
                 MaterialBreakdown::where('costing_data_id', $costingData->id)->delete();
@@ -780,6 +781,16 @@ class CostingController extends Controller
                                 'price' => 0,
                             ]
                         );
+                    }
+
+                    // Keep Unit editable per current save flow: if user changes unit in material section,
+                    // persist it so rendered rows stay consistent after update/refresh.
+                    if ($material && $resolvedUnit !== '' && $resolvedUnit !== '-') {
+                        $currentBaseUom = strtoupper(trim((string) ($material->base_uom ?? '')));
+                        if ($currentBaseUom !== $resolvedUnit) {
+                            $material->base_uom = $resolvedUnit;
+                            $material->save();
+                        }
                     }
 
                     $resolvedPartNameForRecap = $partNameInput;

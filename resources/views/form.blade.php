@@ -1068,6 +1068,9 @@
                     Sumber rate: Database Wire
                 @endif
             </div>
+            <div style="margin-top: 0.2rem; font-size: 0.82rem; color: #b45309;">
+                Notes: Jika ingin ganti rate, ganti juga rate di Database Wire.
+            </div>
         </div>
 
         <!-- Section D: Material Breakdown Table -->
@@ -2168,12 +2171,10 @@
             // GET INPUTS dengan Mapping Baru:
             // Amount 1 = Harga (Price Base)
             const priceInput = row.querySelector('.amount1').value;
-            const priceBase = parseInputNumber(priceInput); // Ini L4
+            const priceBase = parseFloat(priceInput) || 0; // Ini L4
 
-            // Unit Price Basis = Satuan/UOM (Unit)
-            // Ambil dari input atau textContent tergantung implementasi (sekarang input text)
-            // Kita ambil value karena ini input text
-            const uom = (row.querySelector('.unit').value || '').trim().toUpperCase(); // Ini M4 (untuk divisor)
+            // Unit Price (Basis) dipakai sebagai acuan divisor Amount 2 (sesuai rumus user)
+            const basisUom = (row.querySelector('.unit-price-basis').value || '').trim().toUpperCase(); // Ini M4 (untuk divisor)
 
             const importTax = parseFloat(row.querySelector('.import-tax').value) || 0; // R4
 
@@ -2189,12 +2190,10 @@
             // Numerator = Multiply Factor * Base
             const numerator = multiplyFactor * base;
 
-            // Unit Divisor: 1000 if UOM is METER/M/MTR/MM (User minta MM divisor 1000 di multiply factor, mungkin di sini juga?)
-            // Mengikuti prompt: "IF(OR(M4="METER", M4="M", M4="MTR"), 1000, 1)"
-            // Kita tambahkan "MM" juga untuk konsistensi dengan multiply factor jika perlu, tapi ikuti prompt asli dulu.
-            // Prompt Amount 2 bilang: "METER", "M", "MTR".
+            // Unit Divisor sesuai rumus Amount 2:
+            // IF(OR(Unit Price (Basis)="METER", "M", "MTR"), 1000, 1)
             let unitDivisor = 1;
-            if (uom === 'METER' || uom === 'M' || uom === 'MTR' || uom === 'MM') {
+            if (basisUom === 'METER' || basisUom === 'M' || basisUom === 'MTR') {
                 unitDivisor = 1000;
             }
 
@@ -2214,10 +2213,8 @@
             // Sync Currency 2 with Currency
             row.querySelector('.currency2').textContent = currency;
 
-            // Sync Unit Price 2 with UOM (Unit Price Basis)
-            // Request terakhir "Unit Price 2 diambil dari unit". 
-            // Sekarang "unit" kita ada di kolom "Unit Price Basis".
-            row.querySelector('.unit-price2').textContent = uom; // Note: classnya mungkin typo di html saya sebelumnya? Cek di replace sebelumnya saya pakai .unit-price2
+            // Sync Unit Price 2 with Unit Price (Basis)
+            row.querySelector('.unit-price2').textContent = basisUom;
 
             // Total 
             const total = qty * amount2 * exchangeRate;
@@ -4180,7 +4177,7 @@
 
             const sectionExactFields = {
                 informasi_project: ['business_category_id', 'customer_id', 'period', 'line', 'model', 'assy_no', 'assy_name', 'forecast', 'project_period'],
-                rates: ['exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate'],
+                rates: ['wire_rate_id', 'exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate'],
                 material: ['forecast', 'project_period', 'material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'import_partlist'],
                 unpriced_parts: ['tracking_revision_id'],
                 cycle_time: ['cycle_times'],
@@ -4441,6 +4438,10 @@
 
                     if (updateSectionInput) {
                         updateSectionInput.value = 'rates';
+                    }
+
+                    if (typeof window.showAppLoading === 'function') {
+                        window.showAppLoading('Memuat rate wire... Notes: Jika ingin ganti rate, ganti juga rate di Database Wire.');
                     }
 
                     if (typeof form.requestSubmit === 'function') {
