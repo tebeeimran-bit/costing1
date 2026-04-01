@@ -1253,6 +1253,18 @@
                                 </svg>
                                 <span>Part</span>
                             </a>
+                            <a href="{{ route('database.wires', absolute: false) }}"
+                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.wires*') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M6 3v6" />
+                                    <path d="M18 3v6" />
+                                    <path d="M6 21v-6" />
+                                    <path d="M18 21v-6" />
+                                    <path d="M8 9h8" />
+                                    <path d="M8 15h8" />
+                                </svg>
+                                <span>Wire</span>
+                            </a>
                             <a href="{{ route('database.costing', absolute: false) }}"
                                 class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.costing') ? 'active' : '' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

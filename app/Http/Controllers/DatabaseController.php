@@ -7,6 +7,8 @@ use App\Models\Plant;
 use App\Models\Pic;
 use App\Models\Customer;
 use App\Models\Material;
+use App\Models\Wire;
+use App\Models\WireRate;
 use App\Models\BusinessCategory;
 use App\Models\CostingData;
 use App\Models\CycleTimeTemplate;
@@ -268,6 +270,192 @@ class DatabaseController extends Controller
         return view('database.pics', compact('pics'));
     }
 
+    public function wires()
+    {
+        $wires = Wire::orderBy('idcode')->get();
+        $wireRates = WireRate::orderBy('period_month', 'asc')->orderBy('id', 'asc')->get();
+        $periodRates = $wireRates->filter(fn ($rate) => !is_null($rate->period_month))->values();
+        
+        // Get active rate by ID from session or default to latest record
+        $selectedRateId = (int) session('wire_selected_rate_id', 0);
+        if ($selectedRateId <= 0 && $wireRates->isNotEmpty()) {
+            $selectedRateId = (int) $wireRates->last()->id;
+        }
+        
+        $activeRate = $wireRates->firstWhere('id', $selectedRateId);
+        if (!$activeRate) {
+            $activeRate = $wireRates->last();
+            $selectedRateId = (int) ($activeRate?->id ?? 0);
+        }
+
+        $wirePriceNotes = [];
+        foreach ($wires as $wire) {
+            $wirePriceNotes[$wire->id] = $this->buildWirePriceNote($wire, $activeRate);
+        }
+        
+        return view('database.wires', compact('wires', 'wireRates', 'periodRates', 'selectedRateId', 'activeRate', 'wirePriceNotes'));
+    }
+
+    public function switchWireRateMonth(Request $request)
+    {
+        $rateId = (int) $request->input('rate_id', 0);
+        $activeRate = WireRate::find($rateId);
+
+        if (!$activeRate) {
+            return back()->with('error', 'Rate aktif yang dipilih tidak ditemukan.');
+        }
+        
+        // Store in session
+        session(['wire_selected_rate_id' => $rateId]);
+        
+        // Recalculate all wire prices with the selected rate
+        $this->recalculateAllWirePrices($rateId);
+        
+        return back()->with('success', 'Rate aktif berhasil diubah. Harga wire telah diperbaharui.');
+    }
+
+    public function storeWireRate(Request $request)
+    {
+        $normalizedPeriod = null;
+        try {
+            $normalizedPeriod = Carbon::createFromFormat('Y-m', (string) $request->input('period_month'))->startOfMonth()->format('Y-m-d');
+        } catch (\Throwable $e) {
+            $normalizedPeriod = null;
+        }
+
+        if ($normalizedPeriod !== null) {
+            $request->merge(['period_month' => $normalizedPeriod]);
+        }
+
+        $validated = $request->validateWithBag('wireRateCreate', [
+            'period_month' => 'nullable|date|required_without:request_name|unique:wire_rates,period_month',
+            'request_name' => 'nullable|string|max:255|required_without:period_month',
+            'jpy_rate' => 'required|numeric|decimal:0,5|min:0',
+            'usd_rate' => 'required|numeric|decimal:0,5|min:0',
+            'lme_active' => 'required|numeric|decimal:0,5|min:0',
+        ]);
+
+        $lmeReference = floor(((float) $validated['lme_active']) / 100) * 100;
+
+        WireRate::create([
+            'period_month' => $validated['period_month'] ?? null,
+            'request_name' => isset($validated['request_name']) ? trim((string) $validated['request_name']) : null,
+            'jpy_rate' => $validated['jpy_rate'],
+            'usd_rate' => $validated['usd_rate'],
+            'lme_active' => $validated['lme_active'],
+            'lme_reference' => $lmeReference,
+        ]);
+
+        $this->recalculateAllWirePrices();
+
+        return back()->with('success', 'Rates wire berhasil ditambahkan.');
+    }
+
+    public function updateWireRate(Request $request, $id)
+    {
+        $wireRate = WireRate::findOrFail($id);
+
+        $normalizedPeriod = null;
+        try {
+            $normalizedPeriod = Carbon::createFromFormat('Y-m', (string) $request->input('period_month'))->startOfMonth()->format('Y-m-d');
+        } catch (\Throwable $e) {
+            $normalizedPeriod = null;
+        }
+
+        if ($normalizedPeriod !== null) {
+            $request->merge(['period_month' => $normalizedPeriod]);
+        }
+
+        $validated = $request->validateWithBag('wireRateEdit', [
+            'period_month' => 'nullable|date|required_without:request_name|unique:wire_rates,period_month,' . $id,
+            'request_name' => 'nullable|string|max:255|required_without:period_month',
+            'jpy_rate' => 'required|numeric|decimal:0,5|min:0',
+            'usd_rate' => 'required|numeric|decimal:0,5|min:0',
+            'lme_active' => 'required|numeric|decimal:0,5|min:0',
+        ]);
+
+        $lmeReference = floor(((float) $validated['lme_active']) / 100) * 100;
+
+        $wireRate->update([
+            'period_month' => $validated['period_month'] ?? null,
+            'request_name' => isset($validated['request_name']) ? trim((string) $validated['request_name']) : null,
+            'jpy_rate' => $validated['jpy_rate'],
+            'usd_rate' => $validated['usd_rate'],
+            'lme_active' => $validated['lme_active'],
+            'lme_reference' => $lmeReference,
+        ]);
+
+        $this->recalculateAllWirePrices();
+
+        return back()->with('success', 'Rates wire berhasil diperbarui.');
+    }
+
+    public function destroyWireRate($id)
+    {
+        $wireRate = WireRate::findOrFail($id);
+        $wireRate->delete();
+
+        $this->recalculateAllWirePrices();
+
+        return back()->with('success', 'Rates wire berhasil dihapus.');
+    }
+
+    public function storeWire(Request $request)
+    {
+        $validated = $request->validateWithBag('wireCreate', [
+            'idcode' => 'required|string|max:255|unique:wires,idcode',
+            'item' => 'required|string|max:255',
+            'machine_maintenance' => 'required|string|max:255',
+                'fix_cost' => 'nullable|numeric|decimal:0,5|min:0',
+                'price' => 'nullable|numeric|decimal:0,5|min:0',
+        ]);
+
+        Wire::create([
+            'idcode' => trim((string) $validated['idcode']),
+            'item' => trim((string) $validated['item']),
+            'machine_maintenance' => trim((string) $validated['machine_maintenance']),
+            'fix_cost' => $validated['fix_cost'] ?? 0,
+            'price' => 0,
+        ]);
+
+        $this->recalculateAllWirePrices();
+
+        return back()->with('success', 'Wire berhasil ditambahkan.');
+    }
+
+    public function updateWire(Request $request, $id)
+    {
+        $wire = Wire::findOrFail($id);
+
+        $validated = $request->validateWithBag('wireEdit', [
+            'idcode' => 'required|string|max:255|unique:wires,idcode,' . $id,
+            'item' => 'required|string|max:255',
+            'machine_maintenance' => 'required|string|max:255',
+            'fix_cost' => 'nullable|numeric|decimal:0,5|min:0',
+            'price' => 'nullable|numeric|decimal:0,5|min:0',
+        ]);
+
+        $wire->update([
+            'idcode' => trim((string) $validated['idcode']),
+            'item' => trim((string) $validated['item']),
+            'machine_maintenance' => trim((string) $validated['machine_maintenance']),
+            'fix_cost' => $validated['fix_cost'] ?? 0,
+            'price' => 0,
+        ]);
+
+        $this->recalculateAllWirePrices();
+
+        return back()->with('success', 'Wire berhasil diperbarui.');
+    }
+
+    public function destroyWire($id)
+    {
+        $wire = Wire::findOrFail($id);
+        $wire->delete();
+
+        return back()->with('success', 'Wire berhasil dihapus.');
+    }
+
     public function storePic(Request $request)
     {
         $validated = $request->validate([
@@ -418,7 +606,6 @@ class DatabaseController extends Controller
             return back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
         }
 
-        $sheet = $spreadsheet->getActiveSheet();
         $highestRow = (int) $sheet->getHighestDataRow();
         $highestColIndex = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
 
@@ -639,6 +826,279 @@ class DatabaseController extends Controller
 
         $cellRef = Coordinate::stringFromColumnIndex((int) $headerMap[$field]) . $row;
         return $sheet->getCell($cellRef)->getFormattedValue();
+    }
+
+    private function parseLocalizedDecimal($value): float
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return 0.0;
+        }
+
+        $normalized = preg_replace('/[^0-9,\.\-]/', '', $raw);
+        if ($normalized === '' || $normalized === '-' || $normalized === ',' || $normalized === '.') {
+            return 0.0;
+        }
+
+        $hasComma = str_contains($normalized, ',');
+        $hasDot = str_contains($normalized, '.');
+
+        if ($hasComma && $hasDot) {
+            $lastComma = strrpos($normalized, ',');
+            $lastDot = strrpos($normalized, '.');
+            if ($lastComma !== false && $lastDot !== false && $lastComma > $lastDot) {
+                $normalized = str_replace('.', '', $normalized);
+                $normalized = str_replace(',', '.', $normalized);
+            } else {
+                $normalized = str_replace(',', '', $normalized);
+            }
+        } elseif ($hasComma) {
+            $normalized = str_replace(',', '.', $normalized);
+        }
+
+        return is_numeric($normalized) ? (float) $normalized : 0.0;
+    }
+
+    private function resolveWireLookupValue(string $idCode, string $item, float $lmeReference): float
+    {
+        $lookupData = $this->loadWireLookupData();
+        if ($lookupData === null) {
+            return 0.0;
+        }
+
+        $idCode = trim($idCode);
+        $item = trim($item);
+        $lmeKey = (int) round($lmeReference);
+
+        $targetColumn = $lookupData['lmeColumnByValue'][$lmeKey] ?? null;
+        if (!$targetColumn) {
+            return 0.0;
+        }
+
+        $row = null;
+        if ($idCode !== '' && isset($lookupData['rowByKey'][$idCode])) {
+            $row = $lookupData['rowByKey'][$idCode];
+        }
+
+        if ($row === null && $item !== '') {
+            $normalizedItem = strtolower(preg_replace('/\s+/', '', $item));
+            $row = $lookupData['rowByItem'][$normalizedItem] ?? null;
+        }
+
+        if ($row === null) {
+            return 0.0;
+        }
+
+        $valueRaw = $lookupData['valueByRowCol'][$row][$targetColumn] ?? null;
+        if ($valueRaw === null) {
+            return 0.0;
+        }
+
+        return $this->parseLocalizedDecimal($valueRaw);
+    }
+
+    private function loadWireLookupData(): ?array
+    {
+        static $cache = null;
+
+        if ($cache !== null) {
+            return $cache;
+        }
+
+        $filePath = public_path('templates/lookup wire.xlsx');
+        if (!is_file($filePath)) {
+            $cache = null;
+            return null;
+        }
+
+        try {
+            $sheet = IOFactory::load($filePath)->getActiveSheet();
+        } catch (\Throwable $e) {
+            $cache = null;
+            return null;
+        }
+
+        $lmeColumnByValue = [];
+        for ($i = Coordinate::columnIndexFromString('E'); $i <= Coordinate::columnIndexFromString('CX'); $i++) {
+            $col = Coordinate::stringFromColumnIndex($i);
+            $headerRaw = trim((string) $sheet->getCell($col . '8')->getFormattedValue());
+            if ($headerRaw === '') {
+                continue;
+            }
+
+            $headerValue = (int) round($this->parseLocalizedDecimal($headerRaw));
+            if ($headerValue > 0) {
+                $lmeColumnByValue[$headerValue] = $col;
+            }
+        }
+
+        $rowByKey = [];
+        $rowByItem = [];
+        $valueByRowCol = [];
+
+        for ($row = 10; $row <= 73; $row++) {
+            $key = trim((string) $sheet->getCell('C' . $row)->getFormattedValue());
+            $item = trim((string) $sheet->getCell('D' . $row)->getFormattedValue());
+
+            if ($key !== '') {
+                $rowByKey[$key] = $row;
+            }
+
+            if ($item !== '') {
+                $normalizedItem = strtolower(preg_replace('/\s+/', '', $item));
+                $rowByItem[$normalizedItem] = $row;
+            }
+
+            foreach ($lmeColumnByValue as $col) {
+                $valueByRowCol[$row][$col] = trim((string) $sheet->getCell($col . $row)->getFormattedValue());
+            }
+        }
+
+        $cache = [
+            'lmeColumnByValue' => $lmeColumnByValue,
+            'rowByKey' => $rowByKey,
+            'rowByItem' => $rowByItem,
+            'valueByRowCol' => $valueByRowCol,
+        ];
+
+        return $cache;
+    }
+
+    private function calculateWirePriceValue(Wire $wire, ?WireRate $rate): float
+    {
+        if (!$rate) {
+            return 0.0;
+        }
+
+        $usdRate = (float) ($rate->usd_rate ?? 0);
+        $lmeActive = (float) ($rate->lme_active ?? 0);
+        $lmeReference = (float) ($rate->lme_reference ?? 0);
+        $item = trim((string) ($wire->item ?? ''));
+
+        if ($usdRate <= 0 || $lmeActive <= 0 || $item === '') {
+            return 0.0;
+        }
+
+        $lookupValue = $this->resolveWireLookupValue((string) ($wire->idcode ?? ''), $item, $lmeReference);
+        if ($lookupValue <= 0) {
+            return 0.0;
+        }
+
+        $machineMaintenance = $this->parseLocalizedDecimal($wire->machine_maintenance ?? 0);
+        $fixCost = $this->parseLocalizedDecimal($wire->fix_cost ?? 0);
+        $markupFactor = $this->wireRateMarkupFactor($rate);
+
+        $baseValue = (($lookupValue + $machineMaintenance) * $usdRate) + $fixCost;
+        $roundedValue = $this->applyWireRateRounding($baseValue, $rate);
+
+        return round($roundedValue * $markupFactor, 2);
+    }
+
+    private function wireRateMarkupFactor(WireRate $rate): float
+    {
+        return 1.03;
+    }
+
+    private function applyWireRateRounding(float $baseValue, WireRate $rate): float
+    {
+        // Period rate uses ROUNDUP, request rate uses ROUNDDOWN.
+        return $rate->period_month ? (float) ceil($baseValue) : (float) floor($baseValue);
+    }
+
+    private function buildWirePriceNote(Wire $wire, ?WireRate $rate): array
+    {
+        if (!$rate) {
+            return [
+                'status' => 'error',
+                'reason' => 'Rate aktif belum tersedia.',
+            ];
+        }
+
+        $usdRate = (float) ($rate->usd_rate ?? 0);
+        $lmeActive = (float) ($rate->lme_active ?? 0);
+        $lmeReference = (float) ($rate->lme_reference ?? 0);
+        $item = trim((string) ($wire->item ?? ''));
+        $machineMaintenance = $this->parseLocalizedDecimal($wire->machine_maintenance ?? 0);
+        $fixCost = $this->parseLocalizedDecimal($wire->fix_cost ?? 0);
+        $markupFactor = $this->wireRateMarkupFactor($rate);
+        $roundingLabel = $rate->period_month ? 'ROUNDUP (ceil)' : 'ROUNDDOWN (floor)';
+
+        $rateLabel = $rate->period_month
+            ? $rate->period_month->format('M-Y')
+            : (trim((string) ($rate->request_name ?? '')) !== '' ? trim((string) $rate->request_name) : 'Request Khusus');
+
+        if ($usdRate <= 0 || $lmeActive <= 0 || $item === '') {
+            return [
+                'status' => 'error',
+                'reason' => 'Syarat perhitungan belum terpenuhi (USD, LME aktif, atau item kosong).',
+                'rate_label' => $rateLabel,
+                'usd_rate' => $usdRate,
+                'lme_active' => $lmeActive,
+                'lme_reference' => $lmeReference,
+            ];
+        }
+
+        $lookupValue = $this->resolveWireLookupValue((string) ($wire->idcode ?? ''), $item, $lmeReference);
+        if ($lookupValue <= 0) {
+            return [
+                'status' => 'error',
+                'reason' => 'Lookup value tidak ditemukan dari tabel referensi.',
+                'rate_label' => $rateLabel,
+                'usd_rate' => $usdRate,
+                'lme_active' => $lmeActive,
+                'lme_reference' => $lmeReference,
+                'machine_maintenance' => $machineMaintenance,
+                'fix_cost' => $fixCost,
+            ];
+        }
+
+        $baseValue = (($lookupValue + $machineMaintenance) * $usdRate) + $fixCost;
+        $roundedValue = $this->applyWireRateRounding($baseValue, $rate);
+        $finalPrice = round($roundedValue * $markupFactor, 2);
+
+        return [
+            'status' => 'ok',
+            'rate_label' => $rateLabel,
+            'usd_rate' => $usdRate,
+            'lme_active' => $lmeActive,
+            'lme_reference' => $lmeReference,
+            'lookup_value' => $lookupValue,
+            'machine_maintenance' => $machineMaintenance,
+            'fix_cost' => $fixCost,
+            'base_value' => $baseValue,
+            'rounded_value' => $roundedValue,
+            'rounding_label' => $roundingLabel,
+            'markup_factor' => $markupFactor,
+            'final_price' => $finalPrice,
+        ];
+    }
+
+    private function recalculateAllWirePrices(?int $rateId = null): void
+    {
+        $activeRate = null;
+
+        if ($rateId && $rateId > 0) {
+            $activeRate = WireRate::find($rateId);
+        }
+
+        if (!$activeRate) {
+            $sessionRateId = (int) session('wire_selected_rate_id', 0);
+            if ($sessionRateId > 0) {
+                $activeRate = WireRate::find($sessionRateId);
+            }
+        }
+
+        if (!$activeRate) {
+            // Fallback to latest rate
+            $activeRate = WireRate::query()->orderByDesc('period_month')->orderByDesc('id')->first();
+        }
+
+        Wire::query()->orderBy('id')->chunkById(100, function ($wires) use ($activeRate) {
+            foreach ($wires as $wire) {
+                $calculatedPrice = $this->calculateWirePriceValue($wire, $activeRate);
+                $wire->update(['price' => $calculatedPrice]);
+            }
+        });
     }
 
     private function hasImportField(array $headerMap, string $field): bool

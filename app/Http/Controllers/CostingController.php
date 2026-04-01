@@ -12,6 +12,8 @@ use App\Models\CycleTimeTemplate;
 use App\Models\MaterialBreakdown;
 use App\Models\Plant;
 use App\Models\BusinessCategory;
+use App\Models\Wire;
+use App\Models\WireRate;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -147,6 +149,18 @@ class CostingController extends Controller
         $cycleTimeTemplates = CycleTimeTemplate::orderBy('id')->get();
         $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
+        $wireRates = WireRate::orderBy('period_month', 'asc')->orderBy('id', 'asc')->get();
+        $selectedWireRateId = (int) session('wire_selected_rate_id', 0);
+
+        if ($selectedWireRateId <= 0 && $wireRates->isNotEmpty()) {
+            $selectedWireRateId = (int) $wireRates->last()->id;
+        }
+
+        $activeWireRate = $wireRates->firstWhere('id', $selectedWireRateId);
+        if (!$activeWireRate) {
+            $activeWireRate = $wireRates->last();
+            $selectedWireRateId = (int) ($activeWireRate?->id ?? 0);
+        }
 
         // Get existing costing data if editing
         $costingDataId = $request->get('id');
@@ -218,6 +232,22 @@ class CostingController extends Controller
                             $item->matched_add_cost_import_tax = $firstMatched->add_cost_import_tax;
                             $item->matched_price_update = $firstMatched->price_update;
                             $item->matched_price_before = $firstMatched->price_before;
+                        }
+
+                        // Lookup wire prices
+                        $item->matched_wires = collect();
+                        if ($partNumber !== '' && $partNumber !== '-') {
+                            $item->matched_wires = Wire::query()
+                                ->whereRaw('LOWER(item) = ?', [Str::lower($partNumber)])
+                                ->orWhereRaw('LOWER(idcode) = ?', [Str::lower($partNumber)])
+                                ->get();
+                        }
+
+                        if ($item->matched_wires->isEmpty() && $partName !== '' && $partName !== '-') {
+                            $item->matched_wires = Wire::query()
+                                ->whereRaw('LOWER(item) = ?', [Str::lower($partName)])
+                                ->orWhereRaw('LOWER(idcode) = ?', [Str::lower($partName)])
+                                ->get();
                         }
 
                         return $item;
@@ -331,6 +361,9 @@ class CostingController extends Controller
             'cycleTimeTemplates',
             'plants',
             'periods',
+            'wireRates',
+            'activeWireRate',
+            'selectedWireRateId',
             'costingData',
             'materialBreakdowns',
             'trackingRevision',
@@ -354,6 +387,7 @@ class CostingController extends Controller
             'tracking_revision_id' => 'nullable|exists:document_revisions,id',
             'update_section' => 'nullable|string',
             'import_partlist' => 'nullable|boolean',
+            'wire_rate_id' => 'nullable|exists:wire_rates,id',
         ];
 
         $fullRules = [
@@ -367,6 +401,7 @@ class CostingController extends Controller
             'exchange_rate_usd' => 'required|numeric',
             'exchange_rate_jpy' => 'required|numeric',
             'lme_rate' => 'nullable|numeric',
+            'wire_rate_id' => 'nullable|exists:wire_rates,id',
             'forecast' => 'required|integer',
             'project_period' => 'required|integer',
             'material_cost' => 'required|numeric',
@@ -409,6 +444,7 @@ class CostingController extends Controller
                 'project_period' => 'required|integer',
             ],
             'rates' => [
+                'wire_rate_id' => 'required|exists:wire_rates,id',
                 'exchange_rate_usd' => 'required|numeric',
                 'exchange_rate_jpy' => 'required|numeric',
                 'lme_rate' => 'nullable|numeric',
@@ -472,6 +508,21 @@ class CostingController extends Controller
         ];
 
         $validated = $request->validate($rules, $messages);
+
+        if ($updateSection === 'rates' && !empty($validated['wire_rate_id'])) {
+            $selectedWireRate = WireRate::find((int) $validated['wire_rate_id']);
+            if ($selectedWireRate) {
+                session(['wire_selected_rate_id' => (int) $selectedWireRate->id]);
+
+                // Force rates to follow selected wire rate from database.
+                $request->merge([
+                    'exchange_rate_usd' => (float) ($selectedWireRate->usd_rate ?? 0),
+                    'exchange_rate_jpy' => (float) ($selectedWireRate->jpy_rate ?? 0),
+                    'lme_rate' => (float) ($selectedWireRate->lme_active ?? 0),
+                ]);
+            }
+        }
+
         $importRequested = $updateSection === 'material' && ($request->boolean('import_partlist') || $importFileUploaded);
         $importFromPartlist = $updateSection === 'material' && $importFileUploaded;
         $importedMaterialRows = [];
@@ -589,7 +640,7 @@ class CostingController extends Controller
             $sectionPayloadMap = [
                 'informasi_project' => ['customer_id', 'tracking_revision_id', 'period', 'line', 'model', 'assy_no', 'assy_name', 'forecast', 'project_period'],
                 'rates' => ['exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate', 'tracking_revision_id'],
-                'material' => ['forecast', 'project_period', 'material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'tracking_revision_id'],
+                'material' => ['forecast', 'project_period', 'tracking_revision_id'],
                 'unpriced_parts' => ['tracking_revision_id'],
                 'cycle_time' => ['cycle_times', 'tracking_revision_id'],
                 'resume_cogm' => ['material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'tracking_revision_id'],
@@ -700,9 +751,9 @@ class CostingController extends Controller
                     }
 
                     $cnType = strtoupper(trim((string) ($matData['cn_type'] ?? '')));
-                    if (!in_array($cnType, ['C', 'N'], true)) {
+                    if (!in_array($cnType, ['C', 'N', 'E'], true)) {
                         $cnType = strtoupper(trim((string) ($masterMaterial?->cn ?? 'N')));
-                        if (!in_array($cnType, ['C', 'N'], true)) {
+                        if (!in_array($cnType, ['C', 'N', 'E'], true)) {
                             $cnType = 'N';
                         }
                     }
@@ -715,9 +766,7 @@ class CostingController extends Controller
 
                     $priceBaseInput = $this->toFloatValue($matData['amount1'] ?? 0);
                     $masterPrice = floatval($masterMaterial?->price ?? 0);
-                    $priceBase = $priceBaseInput > 0
-                        ? $priceBaseInput
-                        : ($importFromPartlist ? 0 : $masterPrice);
+                    $priceBase = $priceBaseInput;
 
                     $material = $masterMaterial;
                     if (!$material) {
@@ -956,6 +1005,12 @@ class CostingController extends Controller
 
             if ($importFromPartlist) {
                 $successMessage = 'Partlist berhasil diimport ke Material (' . count($importedMaterialRows) . ' baris).';
+            }
+
+            if ($updateSection === 'unpriced_parts') {
+                return redirect($redirectUrl)
+                    ->with('success', $successMessage)
+                    ->withInput($request->except(['import_partlist_file']));
             }
 
             session()->flash('success', $successMessage);
@@ -1614,7 +1669,7 @@ class CostingController extends Controller
                 'unit_price_basis_text' => null,
                 'currency' => in_array($currency, ['IDR', 'USD', 'JPY'], true) ? $currency : 'IDR',
                 'qty_moq' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'qty_moq')),
-                'cn_type' => in_array($cnType, ['C', 'N'], true) ? $cnType : 'N',
+                'cn_type' => in_array($cnType, ['C', 'N', 'E'], true) ? $cnType : 'N',
                 'supplier' => trim((string) $this->rowCellValue($rowValues, $headerMap, 'supplier')),
                 'import_tax' => $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'import_tax')),
             ];

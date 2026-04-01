@@ -60,6 +60,14 @@ Route::get('/database/pics', [DatabaseController::class, 'pics'])->name('databas
 Route::post('/database/pics', [DatabaseController::class, 'storePic'])->name('database.pics.store');
 Route::put('/database/pics/{id}', [DatabaseController::class, 'updatePic'])->name('database.pics.update');
 Route::delete('/database/pics/{id}', [DatabaseController::class, 'destroyPic'])->name('database.pics.destroy');
+Route::get('/database/wires', [DatabaseController::class, 'wires'])->name('database.wires');
+Route::post('/database/wires', [DatabaseController::class, 'storeWire'])->name('database.wires.store');
+Route::put('/database/wires/{id}', [DatabaseController::class, 'updateWire'])->name('database.wires.update');
+Route::delete('/database/wires/{id}', [DatabaseController::class, 'destroyWire'])->name('database.wires.destroy');
+Route::post('/database/wires/switch-rate-month', [DatabaseController::class, 'switchWireRateMonth'])->name('database.wires.switch-rate-month');
+Route::post('/database/wires/rates', [DatabaseController::class, 'storeWireRate'])->name('database.wires.rates.store');
+Route::put('/database/wires/rates/{id}', [DatabaseController::class, 'updateWireRate'])->name('database.wires.rates.update');
+Route::delete('/database/wires/rates/{id}', [DatabaseController::class, 'destroyWireRate'])->name('database.wires.rates.destroy');
 Route::get('/form', [CostingController::class, 'form'])->name('form');
 Route::post('/costing/store', [CostingController::class, 'store'])->name('costing.store');
 Route::get('/costing/import-partlist', fn () => redirect()->route('form'))->name('costing.import-partlist.get');

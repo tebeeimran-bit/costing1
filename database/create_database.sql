@@ -148,6 +148,38 @@ CREATE TABLE IF NOT EXISTS `customers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===========================================
+-- Wires Table
+-- ===========================================
+CREATE TABLE IF NOT EXISTS `wires` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `idcode` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `item` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `machine_maintenance` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `fix_cost` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `price` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `wires_idcode_unique` (`idcode`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===========================================
+-- Wire Rates Table
+-- ===========================================
+CREATE TABLE IF NOT EXISTS `wire_rates` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `period_month` date NOT NULL,
+  `jpy_rate` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `usd_rate` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `lme_active` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `lme_reference` decimal(20,5) NOT NULL DEFAULT '0.00000',
+  `created_at` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `wire_rates_period_month_unique` (`period_month`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===========================================
 -- Materials Table
 -- ===========================================
 CREATE TABLE IF NOT EXISTS `materials` (
@@ -237,6 +269,8 @@ INSERT INTO `migrations` (`migration`, `batch`) VALUES
 ('0001_01_01_000002_create_jobs_table', 1),
 ('2026_01_19_000001_create_products_table', 1),
 ('2026_01_19_000002_create_customers_table', 1),
+('2026_04_01_000103_create_wires_table', 1),
+('2026_04_01_000104_create_wire_rates_table', 1),
 ('2026_01_19_000003_create_materials_table', 1),
 ('2026_01_19_000004_create_costing_data_table', 1),
 ('2026_01_19_000005_create_material_breakdowns_table', 1);

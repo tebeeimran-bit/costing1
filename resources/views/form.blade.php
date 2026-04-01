@@ -159,6 +159,159 @@
             min-width: 74px;
         }
 
+        #unpricedRecapBody td {
+            vertical-align: top;
+        }
+
+        .unpriced-price-option {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-height: 1.4rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .unpriced-inline-editor {
+            margin-top: 0.35rem;
+        }
+
+        .unpriced-inline-price,
+        .unpriced-inline-purchase-unit,
+        .unpriced-inline-currency,
+        .unpriced-inline-moq,
+        .unpriced-inline-cn,
+        .unpriced-inline-maker,
+        .unpriced-inline-add-cost {
+            min-height: 30px;
+            font-size: 0.74rem;
+            padding-top: 0.35rem;
+            padding-bottom: 0.35rem;
+        }
+
+        .unpriced-inline-price {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-inline-purchase-unit {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-inline-currency {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-inline-moq {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-inline-cn {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-inline-add-cost {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-inline-maker {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .unpriced-recap-table {
+            min-width: 100%;
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .unpriced-recap-table th {
+            white-space: normal;
+            line-height: 1.2;
+            overflow: visible;
+            text-overflow: clip;
+        }
+
+        .unpriced-recap-table td {
+            white-space: normal;
+            vertical-align: top;
+            overflow: hidden;
+        }
+
+        .unpriced-action-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            align-items: stretch;
+        }
+
+        .unpriced-recap-table th:nth-child(1),
+        .unpriced-recap-table td:nth-child(1) { width: 8%; }
+
+        .unpriced-recap-table th:nth-child(2),
+        .unpriced-recap-table td:nth-child(2) { width: 3%; }
+
+        .unpriced-recap-table th:nth-child(3),
+        .unpriced-recap-table td:nth-child(3) { width: 5%; }
+
+        .unpriced-recap-table th:nth-child(4),
+        .unpriced-recap-table td:nth-child(4) {
+            width: 22%;
+        }
+
+        .unpriced-recap-table th:nth-child(5),
+        .unpriced-recap-table td:nth-child(5) {
+            width: 9%;
+        }
+
+        .unpriced-recap-table th:nth-child(6),
+        .unpriced-recap-table td:nth-child(6) {
+            width: 11%;
+        }
+
+        .unpriced-recap-table th:nth-child(7),
+        .unpriced-recap-table td:nth-child(7) {
+            width: 7%;
+        }
+
+        .unpriced-recap-table th:nth-child(8),
+        .unpriced-recap-table td:nth-child(8) {
+            width: 5%;
+        }
+
+        .unpriced-recap-table th:nth-child(9),
+        .unpriced-recap-table td:nth-child(9) {
+            width: 17%;
+        }
+
+        .unpriced-recap-table th:nth-child(10),
+        .unpriced-recap-table td:nth-child(10) {
+            width: 8%;
+        }
+
+        .unpriced-recap-table th:nth-child(11),
+        .unpriced-recap-table td:nth-child(11) {
+            width: 6%;
+        }
+
+        .unpriced-recap-table th:nth-child(12),
+        .unpriced-recap-table td:nth-child(12) {
+            width: 5%;
+        }
+
+        .unpriced-recap-table th:nth-child(13),
+        .unpriced-recap-table td:nth-child(13) {
+            width: 7%;
+        }
+
+        .unpriced-recap-container {
+            overflow-x: hidden;
+        }
+
         .material-row-no-header,
         .material-row-no-cell {
             display: inline-flex;
@@ -864,15 +1017,38 @@
                 </div>
             </div>
             <div class="form-grid param-grid">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Period/Request Rate Wire</label>
+                    <select name="wire_rate_id" id="wireRateSelector" class="form-select">
+                        @forelse($wireRates as $rate)
+                            @php
+                                $rateLabel = $rate->period_month
+                                    ? $rate->period_month->format('M-y')
+                                    : ($rate->request_name ?: 'Request Khusus');
+                                $selectedWireRateValue = (int) old('wire_rate_id', $selectedWireRateId ?? 0);
+                            @endphp
+                            <option value="{{ $rate->id }}"
+                                data-usd="{{ (float) ($rate->usd_rate ?? 0) }}"
+                                data-jpy="{{ (float) ($rate->jpy_rate ?? 0) }}"
+                                data-lme="{{ (float) ($rate->lme_active ?? 0) }}"
+                                data-label="{{ $rateLabel }}"
+                                {{ $selectedWireRateValue === (int) $rate->id ? 'selected' : '' }}>
+                                {{ $rateLabel }}
+                            </option>
+                        @empty
+                            <option value="">Belum ada rate wire</option>
+                        @endforelse
+                    </select>
+                </div>
                 <div class="form-group">
                     <label class="form-label">USD</label>
                     <input type="number" name="exchange_rate_usd" class="form-input" id="rateUSD"
-                        value="{{ $costingData->exchange_rate_usd ?? 15500 }}" step="0.01">
+                        value="{{ old('exchange_rate_usd', $activeWireRate?->usd_rate ?? ($costingData->exchange_rate_usd ?? 15500)) }}" step="0.01" readonly>
                 </div>
                 <div class="form-group">
                     <label class="form-label">JPY</label>
                     <input type="number" name="exchange_rate_jpy" class="form-input" id="rateJPY"
-                        value="{{ $costingData->exchange_rate_jpy ?? 103 }}" step="0.01">
+                        value="{{ old('exchange_rate_jpy', $activeWireRate?->jpy_rate ?? ($costingData->exchange_rate_jpy ?? 103)) }}" step="0.01" readonly>
                 </div>
                 <div class="form-group">
                     <label class="form-label">IDR</label>
@@ -882,8 +1058,15 @@
                 <div class="form-group">
                     <label class="form-label">LME Rate</label>
                     <input type="number" name="lme_rate" class="form-input" id="lmeRate"
-                        value="{{ $costingData->lme_rate ?? '' }}" step="0.01" placeholder="8500">
+                        value="{{ old('lme_rate', $activeWireRate?->lme_active ?? ($costingData->lme_rate ?? '')) }}" step="0.01" placeholder="8500" readonly>
                 </div>
+            </div>
+            <div id="wireRateSourceHint" style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--slate-500);">
+                @if($activeWireRate)
+                    Sumber rate: Database Wire ({{ $activeWireRate->period_month ? $activeWireRate->period_month->format('M-Y') : ($activeWireRate->request_name ?: 'Request Khusus') }})
+                @else
+                    Sumber rate: Database Wire
+                @endif
             </div>
         </div>
 
@@ -1007,6 +1190,7 @@
                                 <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
                                     <option value="N" {{ $rowCn == 'N' ? 'selected' : '' }}>N</option>
                                     <option value="C" {{ $rowCn == 'C' ? 'selected' : '' }}>C</option>
+                                    <option value="E" {{ $rowCn == 'E' ? 'selected' : '' }}>E</option>
                                 </select>
                                 </td>
                                 <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
@@ -1081,6 +1265,7 @@
                                         <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
                                             <option value="N" {{ $breakdown->cn_type == 'N' ? 'selected' : '' }}>N</option>
                                             <option value="C" {{ $breakdown->cn_type == 'C' ? 'selected' : '' }}>C</option>
+                                            <option value="E" {{ $breakdown->cn_type == 'E' ? 'selected' : '' }}>E</option>
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
@@ -1146,6 +1331,7 @@
                                         <select class="form-select cn-type" name="materials[{{ $i }}][cn_type]" onchange="calculateRow(this)">
                                             <option value="N">N</option>
                                             <option value="C">C</option>
+                                            <option value="E">E</option>
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $i }}][supplier]" value=""
@@ -1207,15 +1393,14 @@
                 </div>
             </div>
 
-            <div class="material-table-container">
-                <table class="material-table">
+            <div class="material-table-container unpriced-recap-container">
+                <table class="material-table unpriced-recap-table">
                     <thead>
                         <tr>
                             <th rowspan="2">Part No</th>
                             <th rowspan="2">ID Code</th>
                             <th rowspan="2">Part Name</th>
                             <th colspan="9">Price</th>
-                            <th rowspan="2">Input Harga (Manual)</th>
                             <th rowspan="2">Aksi</th>
                         </tr>
                         <tr>
@@ -1235,6 +1420,34 @@
                             @foreach($openUnpricedParts as $item)
                                 @php
                                     $matchedMaterials = collect($item->matched_materials ?? []);
+                                    $matchedWires = collect($item->matched_wires ?? []);
+
+                                    $firstMatched = $matchedMaterials->first();
+                                    $firstWire = $matchedWires->first();
+
+                                    $defaultInlinePrice = (float) ($item->manual_price ?? 0);
+                                    if ($defaultInlinePrice <= 0) {
+                                        if ($firstMatched) {
+                                            $defaultInlinePrice = (float) ($firstMatched->price ?? 0);
+                                        } elseif ($firstWire) {
+                                            $defaultInlinePrice = (float) ($firstWire->price ?? 0);
+                                        } else {
+                                            $defaultInlinePrice = (float) ($item->detected_price ?? 0);
+                                        }
+                                    }
+
+                                    $defaultInlinePurchaseUnit = $firstMatched->purchase_unit
+                                        ?? ($firstWire ? 'M' : ($item->matched_purchase_unit ?? ''));
+                                    $defaultInlineCurrency = $firstMatched->currency
+                                        ?? ($firstWire ? 'IDR' : ($item->matched_currency ?? 'IDR'));
+                                    $defaultInlineMoq = $firstMatched->moq
+                                        ?? ($firstWire ? '' : ($item->matched_moq ?? ''));
+                                    $defaultInlineCn = $firstMatched->cn
+                                        ?? ($firstWire ? 'N' : ($item->matched_cn ?? ''));
+                                    $defaultInlineMaker = $firstMatched->maker
+                                        ?? ($firstWire ? 'EWINDO/JJLAP/WILSON/NAGOYA/INDOWIRE' : ($item->matched_maker ?? ''));
+                                    $defaultInlineAddCost = $firstMatched->add_cost_import_tax
+                                        ?? ($firstWire ? 0 : ($item->matched_add_cost_import_tax ?? ''));
                                 @endphp
                                 <tr>
                                     <td>
@@ -1263,7 +1476,7 @@
                                                     $selectedDetectedPrice = (float) ($item->detected_price ?? 0);
                                                     $isMatchedChecked = $selectedDetectedPrice > 0 && abs($matchedPrice - $selectedDetectedPrice) < 0.0001;
                                                 @endphp
-                                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                                <div class="unpriced-price-option">
                                                     <input type="checkbox"
                                                         class="matched-price-select"
                                                         data-part-number="{{ $item->part_number }}"
@@ -1278,63 +1491,63 @@
                                                     <span>{{ rtrim(rtrim(number_format($matchedPrice, 4, '.', ''), '0'), '.') }}</span>
                                                 </div>
                                             @endforeach
+                                        @elseif($matchedWires->isNotEmpty())
+                                            @foreach($matchedWires as $wire)
+                                                @php
+                                                    $wirePrice = (float) ($wire->price ?? 0);
+                                                    $selectedDetectedPrice = (float) ($item->detected_price ?? 0);
+                                                    $isWireChecked = $selectedDetectedPrice > 0 && abs($wirePrice - $selectedDetectedPrice) < 0.0001;
+                                                @endphp
+                                                <div class="unpriced-price-option">
+                                                    <input type="checkbox"
+                                                        class="matched-price-select"
+                                                        data-part-number="{{ $item->part_number }}"
+                                                        data-price="{{ $wirePrice }}"
+                                                        data-currency="IDR"
+                                                        data-purchase-unit="M"
+                                                        data-moq=""
+                                                        data-cn="N"
+                                                        data-maker="EWINDO/JJLAP/WILSON/NAGOYA/INDOWIRE"
+                                                        data-add-cost-import-tax="0"
+                                                        {{ $isWireChecked ? 'checked' : '' }}>
+                                                    <span style="color: #2563eb; font-weight: 500;">{{ rtrim(rtrim(number_format($wirePrice, 4, '.', ''), '0'), '.') }}</span>
+                                                    <span style="font-size: 0.75rem; color: #64748b;">(Wire)</span>
+                                                </div>
+                                            @endforeach
                                         @else
                                             {{ isset($item->matched_price) && $item->matched_price !== null ? rtrim(rtrim(number_format((float) $item->matched_price, 4, '.', ''), '0'), '.') : rtrim(rtrim(number_format((float) ($item->detected_price ?? 0), 4, '.', ''), '0'), '.') }}
                                         @endif
+                                        <div class="unpriced-inline-editor">
+                                            <input type="number" step="0.0001" class="form-input unpriced-inline-price" value="{{ $defaultInlinePrice > 0 ? rtrim(rtrim(number_format((float) $defaultInlinePrice, 4, '.', ''), '0'), '.') : '' }}" placeholder="Price manual">
+                                        </div>
                                     </td>
                                     <td>
-                                        @if($matchedMaterials->isNotEmpty())
-                                            @foreach($matchedMaterials as $matched)
-                                                <div>{{ $matched->purchase_unit ?: '-' }}</div>
-                                            @endforeach
-                                        @else
-                                            {{ $item->matched_purchase_unit ?: '-' }}
-                                        @endif
+                                        <input type="text" class="form-input unpriced-inline-purchase-unit" value="{{ $defaultInlinePurchaseUnit }}" placeholder="Purchase Unit">
                                     </td>
                                     <td>
-                                        @if($matchedMaterials->isNotEmpty())
-                                            @foreach($matchedMaterials as $matched)
-                                                <div>{{ $matched->currency ?: '-' }}</div>
-                                            @endforeach
-                                        @else
-                                            {{ $item->matched_currency ?: '-' }}
-                                        @endif
+                                        <select class="form-select unpriced-inline-currency">
+                                            <option value="IDR" {{ strtoupper((string) $defaultInlineCurrency) === 'IDR' ? 'selected' : '' }}>IDR</option>
+                                            <option value="USD" {{ strtoupper((string) $defaultInlineCurrency) === 'USD' ? 'selected' : '' }}>USD</option>
+                                            <option value="JPY" {{ strtoupper((string) $defaultInlineCurrency) === 'JPY' ? 'selected' : '' }}>JPY</option>
+                                        </select>
                                     </td>
                                     <td>
-                                        @if($matchedMaterials->isNotEmpty())
-                                            @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? rtrim(rtrim(number_format((float) $matched->moq, 4, '.', ''), '0'), '.') : '-' }}</div>
-                                            @endforeach
-                                        @else
-                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? rtrim(rtrim(number_format((float) $item->matched_moq, 4, '.', ''), '0'), '.') : '-' }}
-                                        @endif
+                                        <input type="text" class="form-input unpriced-inline-moq" value="{{ $defaultInlineMoq !== '' ? $defaultInlineMoq : '-' }}" placeholder="MOQ">
                                     </td>
                                     <td>
-                                        @if($matchedMaterials->isNotEmpty())
-                                            @foreach($matchedMaterials as $matched)
-                                                <div>{{ $matched->cn ?: '-' }}</div>
-                                            @endforeach
-                                        @else
-                                            {{ $item->matched_cn ?: '-' }}
-                                        @endif
+                                        <select class="form-select unpriced-inline-cn">
+                                            @php $inlineCn = strtoupper(trim((string) $defaultInlineCn)); @endphp
+                                            <option value="" {{ $inlineCn === '' || $inlineCn === '-' ? 'selected' : '' }}>-</option>
+                                            <option value="N" {{ $inlineCn === 'N' ? 'selected' : '' }}>N</option>
+                                            <option value="C" {{ $inlineCn === 'C' ? 'selected' : '' }}>C</option>
+                                            <option value="E" {{ $inlineCn === 'E' ? 'selected' : '' }}>E</option>
+                                        </select>
                                     </td>
                                     <td>
-                                        @if($matchedMaterials->isNotEmpty())
-                                            @foreach($matchedMaterials as $matched)
-                                                <div>{{ $matched->maker ?: '-' }}</div>
-                                            @endforeach
-                                        @else
-                                            {{ $item->matched_maker ?: '-' }}
-                                        @endif
+                                        <input type="text" class="form-input unpriced-inline-maker" value="{{ $defaultInlineMaker }}" placeholder="Maker">
                                     </td>
                                     <td>
-                                        @if($matchedMaterials->isNotEmpty())
-                                            @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? rtrim(rtrim(number_format((float) $matched->add_cost_import_tax, 4, '.', ''), '0'), '.') : '-' }}</div>
-                                            @endforeach
-                                        @else
-                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? rtrim(rtrim(number_format((float) $item->matched_add_cost_import_tax, 4, '.', ''), '0'), '.') : '-' }}
-                                        @endif
+                                        <input type="number" step="0.0001" class="form-input unpriced-inline-add-cost" value="{{ $defaultInlineAddCost !== '' ? rtrim(rtrim(number_format((float) $defaultInlineAddCost, 4, '.', ''), '0'), '.') : '' }}" placeholder="Add Cost (%)">
                                     </td>
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
@@ -1355,24 +1568,20 @@
                                         @endif
                                     </td>
                                     <td>
-                                        <input type="number" step="0.0001" class="form-input unpriced-manual-price"
-                                            name="manual_unpriced_prices[{{ $item->part_number }}]"
-                                            data-part-number="{{ $item->part_number }}"
-                                            value="{{ $item->manual_price ?? '' }}" placeholder="Isi harga jika sudah ada">
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="{{ $item->part_number }}">
-                                            Tambah
-                                        </button>
-                                        <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="{{ $item->part_number }}">
-                                            Hapus
-                                        </button>
+                                        <div class="unpriced-action-stack">
+                                            <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="{{ $item->part_number }}">
+                                                Tambah
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="{{ $item->part_number }}">
+                                                Hapus
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             @endforeach
                         @else
                             <tr>
-                                <td colspan="15" style="text-align: center; color: var(--slate-500);">
+                                <td colspan="13" style="text-align: center; color: var(--slate-500);">
                                     Belum ada part tanpa harga untuk versi dokumen ini.
                                 </td>
                             </tr>
@@ -2073,7 +2282,7 @@
                 banner.style.display = 'none';
             }
 
-            tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Rekapan part tanpa harga akan muncul setelah tombol Update diklik.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--slate-500);">Rekapan part tanpa harga akan muncul setelah tombol Update diklik.</td></tr>';
 
             bindUnpricedManualPriceInputs();
             bindUnpricedDeleteButtons();
@@ -2112,6 +2321,55 @@
                                 sibling.checked = false;
                             }
                         });
+
+                        const row = this.closest('tr');
+                        if (row instanceof HTMLTableRowElement) {
+                            const priceInput = row.querySelector('.unpriced-inline-price');
+                            const purchaseUnitInput = row.querySelector('.unpriced-inline-purchase-unit');
+                            const currencySelect = row.querySelector('.unpriced-inline-currency');
+                            const moqInput = row.querySelector('.unpriced-inline-moq');
+                            const cnSelect = row.querySelector('.unpriced-inline-cn');
+                            const makerInput = row.querySelector('.unpriced-inline-maker');
+                            const addCostInput = row.querySelector('.unpriced-inline-add-cost');
+
+                            if (priceInput instanceof HTMLInputElement) {
+                                priceInput.value = this.dataset.price || '';
+                            }
+
+                            if (purchaseUnitInput instanceof HTMLInputElement) {
+                                purchaseUnitInput.value = this.dataset.purchaseUnit || '';
+                            }
+
+                            if (currencySelect instanceof HTMLSelectElement) {
+                                const targetCurrency = (this.dataset.currency || '').toUpperCase();
+                                const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === targetCurrency);
+                                if (hasOption) {
+                                    currencySelect.value = targetCurrency;
+                                }
+                            }
+
+                            if (moqInput instanceof HTMLInputElement) {
+                                moqInput.value = this.dataset.moq !== '' ? (this.dataset.moq || '') : '-';
+                            }
+
+                            if (cnSelect instanceof HTMLSelectElement) {
+                                const targetCn = (this.dataset.cn || '').toUpperCase();
+                                const hasCnOption = Array.from(cnSelect.options).some((opt) => opt.value === targetCn);
+                                if (hasCnOption) {
+                                    cnSelect.value = targetCn;
+                                } else {
+                                    cnSelect.value = '';
+                                }
+                            }
+
+                            if (makerInput instanceof HTMLInputElement) {
+                                makerInput.value = this.dataset.maker || '';
+                            }
+
+                            if (addCostInput instanceof HTMLInputElement) {
+                                addCostInput.value = this.dataset.addCostImportTax || '';
+                            }
+                        }
                     }
                 });
             });
@@ -2138,6 +2396,39 @@
 
                     const row = this.closest('tr');
                     if (!(row instanceof HTMLTableRowElement)) {
+                        return;
+                    }
+
+                    const inlinePriceInput = row.querySelector('.unpriced-inline-price');
+                    const inlinePurchaseUnitInput = row.querySelector('.unpriced-inline-purchase-unit');
+                    const inlineCurrencySelect = row.querySelector('.unpriced-inline-currency');
+                    const inlineMoqInput = row.querySelector('.unpriced-inline-moq');
+                    const inlineCnSelect = row.querySelector('.unpriced-inline-cn');
+                    const inlineMakerInput = row.querySelector('.unpriced-inline-maker');
+                    const inlineAddCostInput = row.querySelector('.unpriced-inline-add-cost');
+
+                    const inlinePrice = inlinePriceInput instanceof HTMLInputElement
+                        ? (parseFloat(inlinePriceInput.value || '0') || 0)
+                        : 0;
+                    const inlineCurrency = inlineCurrencySelect instanceof HTMLSelectElement
+                        ? (inlineCurrencySelect.value || '')
+                        : '';
+                    const inlineMoqValue = inlineMoqInput instanceof HTMLInputElement
+                        ? ((inlineMoqInput.value || '').trim())
+                        : '';
+                    const inlineMeta = {
+                        purchaseUnit: inlinePurchaseUnitInput instanceof HTMLInputElement ? (inlinePurchaseUnitInput.value || '') : '',
+                        currency: inlineCurrency,
+                        moq: inlineMoqValue === '-' ? '' : inlineMoqValue,
+                        cn: inlineCnSelect instanceof HTMLSelectElement ? (inlineCnSelect.value || '') : '',
+                        maker: inlineMakerInput instanceof HTMLInputElement ? (inlineMakerInput.value || '') : '',
+                        addCostImportTax: inlineAddCostInput instanceof HTMLInputElement ? (inlineAddCostInput.value || '') : '',
+                    };
+
+                    if (inlinePrice > 0) {
+                        applySelectedMatchedPrice(partNumber, inlinePrice, inlineCurrency, {
+                            selectedMeta: inlineMeta,
+                        });
                         return;
                     }
 
@@ -2217,7 +2508,7 @@
 
             const tbody = document.getElementById('unpricedRecapBody');
             if (tbody && tbody.children.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
             }
 
             const banner = document.getElementById('unpricedTopBanner');
@@ -2510,6 +2801,30 @@
                     }, 450);
                 });
             });
+
+            const inlinePriceInputs = document.querySelectorAll('.unpriced-inline-price');
+            inlinePriceInputs.forEach((input) => {
+                if (!(input instanceof HTMLInputElement)) {
+                    return;
+                }
+
+                if (input.dataset.boundInlinePrice === '1') {
+                    return;
+                }
+
+                input.dataset.boundInlinePrice = '1';
+                input.addEventListener('input', function () {
+                    const row = this.closest('tr');
+                    if (!(row instanceof HTMLTableRowElement)) {
+                        return;
+                    }
+
+                    const manualInput = row.querySelector('.unpriced-manual-price');
+                    if (manualInput instanceof HTMLInputElement) {
+                        manualInput.value = this.value;
+                    }
+                });
+            });
         }
 
         function bindUnpricedDeleteButtons() {
@@ -2612,7 +2927,7 @@
 
                     const tbody = document.getElementById('unpricedRecapBody');
                     if (tbody && tbody.children.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
                     }
 
                     const banner = document.getElementById('unpricedTopBanner');
@@ -2687,7 +3002,7 @@
                                     <td><input type="text" class="form-input unit-price-basis" name="materials[${rowCounter}][unit_price_basis]" value="" placeholder="Unit Price" onchange="calculateRow(this)"></td>
                                     <td><select class="form-select currency" name="materials[${rowCounter}][currency]" onchange="calculateRow(this)"><option value="IDR">IDR</option><option value="USD">USD</option><option value="JPY">JPY</option></select></td>
                                     <td><input type="number" class="form-input w-28 qty-moq" name="materials[${rowCounter}][qty_moq]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
-                                    <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
+                                    <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option><option value="E">E</option></select></td>
                                     <td><input type="text" class="form-input supplier" name="materials[${rowCounter}][supplier]" value="" placeholder="Supplier"></td>
                                     <td><input type="number" class="form-input import-tax" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
                                     <td class="calculated multiply-factor">1</td>
@@ -4082,6 +4397,65 @@
                         prepareSectionOnlySubmit(section, submitter);
                     }
                 });
+            }
+
+            const wireRateSelector = document.getElementById('wireRateSelector');
+            const wireRateSourceHint = document.getElementById('wireRateSourceHint');
+            const rateUsdInput = document.getElementById('rateUSD');
+            const rateJpyInput = document.getElementById('rateJPY');
+            const lmeRateInput = document.getElementById('lmeRate');
+
+            function applySelectedWireRateToInputs(autoSubmitRates = false) {
+                if (!wireRateSelector || !rateUsdInput || !rateJpyInput || !lmeRateInput) {
+                    return;
+                }
+
+                const selectedOption = wireRateSelector.options[wireRateSelector.selectedIndex];
+                if (!selectedOption) {
+                    return;
+                }
+
+                const usd = parseFloat(selectedOption.dataset.usd || '0');
+                const jpy = parseFloat(selectedOption.dataset.jpy || '0');
+                const lme = parseFloat(selectedOption.dataset.lme || '0');
+
+                rateUsdInput.value = Number.isFinite(usd) ? usd : 0;
+                rateJpyInput.value = Number.isFinite(jpy) ? jpy : 0;
+                lmeRateInput.value = Number.isFinite(lme) ? lme : 0;
+
+                if (wireRateSourceHint) {
+                    const label = selectedOption.dataset.label || selectedOption.textContent.trim();
+                    wireRateSourceHint.textContent = 'Sumber rate: Database Wire (' + label + ')';
+                }
+
+                recalculateAllRows();
+
+                if (autoSubmitRates) {
+                    const form = document.getElementById('costingForm');
+                    const ratesUpdateBtn = document.querySelector('.section-update-btn[data-section="rates"]');
+                    const updateSectionInput = document.getElementById('updateSectionInput');
+
+                    if (!form || !ratesUpdateBtn) {
+                        return;
+                    }
+
+                    if (updateSectionInput) {
+                        updateSectionInput.value = 'rates';
+                    }
+
+                    if (typeof form.requestSubmit === 'function') {
+                        form.requestSubmit(ratesUpdateBtn);
+                    } else {
+                        ratesUpdateBtn.click();
+                    }
+                }
+            }
+
+            if (wireRateSelector) {
+                wireRateSelector.addEventListener('change', function () {
+                    applySelectedWireRateToInputs(true);
+                });
+                applySelectedWireRateToInputs(false);
             }
         });
 
