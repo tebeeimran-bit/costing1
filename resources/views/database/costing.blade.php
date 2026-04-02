@@ -18,37 +18,49 @@
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Periode</th>
-                        <th>Model</th>
-                        <th>Assy No</th>
-                        <th>Produk</th>
-                        <th>Customer</th>
-                        <th>Material Cost</th>
-                        <th>Labor Cost</th>
-                        <th>Overhead Cost</th>
-                        <th>Total Cost</th>
-                        <th>Margin (%)</th>
+                        <th>NO.</th>
+                        <th>PERIODE</th>
+                        <th>CUSTOMER</th>
+                        <th>MODEL</th>
+                        <th>ID CODE</th>
+                        <th>ASSY NO</th>
+                        <th>PRODUCT</th>
+                        <th>MATERIAL COST</th>
+                        <th>%</th>
+                        <th>PROCESS COST</th>
+                        <th>%</th>
+                        <th>TOOLING COST</th>
+                        <th>%</th>
+                        <th>COGM</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($costingData as $costing)
+                    @forelse($costingData as $key => $costing)
+                        @php
+                            $cogm = $costing->material_cost + $costing->labor_cost + $costing->overhead_cost;
+                            $materialPct = $cogm > 0 ? ($costing->material_cost / $cogm * 100) : 0;
+                            $processPct = $cogm > 0 ? ($costing->labor_cost / $cogm * 100) : 0;
+                            $toolingPct = $cogm > 0 ? ($costing->overhead_cost / $cogm * 100) : 0;
+                        @endphp
                         <tr>
-                            <td>{{ $costing->id }}</td>
+                            <td>{{ $key + 1 }}</td>
                             <td>{{ $costing->period }}</td>
+                            <td>{{ $costing->customer->name ?? '-' }}</td>
                             <td>{{ $costing->model ?? '-' }}</td>
+                            <td>{{ $costing->id }}</td>
                             <td>{{ $costing->assy_no ?? '-' }}</td>
                             <td>{{ $costing->product->name ?? '-' }}</td>
-                            <td>{{ $costing->customer->name ?? '-' }}</td>
                             <td>Rp {{ number_format($costing->material_cost, 0, ',', '.') }}</td>
+                            <td>{{ number_format($materialPct, 2) }}%</td>
                             <td>Rp {{ number_format($costing->labor_cost, 0, ',', '.') }}</td>
+                            <td>{{ number_format($processPct, 2) }}%</td>
                             <td>Rp {{ number_format($costing->overhead_cost, 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format($costing->total_cost, 0, ',', '.') }}</td>
-                            <td>{{ number_format($costing->margin, 2) }}%</td>
+                            <td>{{ number_format($toolingPct, 2) }}%</td>
+                            <td><strong>Rp {{ number_format($cogm, 0, ',', '.') }}</strong></td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" style="text-align: center;">Tidak ada data costing ditemukan</td>
+                            <td colspan="14" style="text-align: center;">Tidak ada data costing ditemukan</td>
                         </tr>
                     @endforelse
                 </tbody>
