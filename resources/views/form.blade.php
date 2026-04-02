@@ -105,7 +105,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 1rem;
+            gap: 2rem;
+        }
+
+        .form-page .calc-item .calc-label {
+            flex: 1;
+        }
+
+        .form-page .calc-item .calc-value-with-percentage {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            white-space: nowrap;
         }
 
         .form-page .calc-item .calc-percentage {
@@ -113,6 +124,10 @@
             color: #666;
             min-width: 60px;
             text-align: right;
+        }
+
+        .form-page .calc-item .separator {
+            color: #999;
         }
 
         .form-page .material-table-container {
@@ -1918,39 +1933,44 @@
 
             <div class="calc-box" style="margin-top: 1.5rem;">
                 <div class="calc-item">
-                    <div>
-                        <span class="calc-label">Total Material Cost</span>
+                    <span class="calc-label">Total Material Cost</span>
+                    <div class="calc-value-with-percentage">
+                        <span class="calc-value" id="calcTotalMaterialCost">Rp 0</span>
+                        <span class="separator">|</span>
                         <span class="calc-percentage" id="calcTotalMaterialCostPercentage">0%</span>
                     </div>
-                    <span class="calc-value" id="calcTotalMaterialCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
-                    <div>
-                        <span class="calc-label">Process Cost</span>
+                    <span class="calc-label">Process Cost</span>
+                    <div class="calc-value-with-percentage">
+                        <span class="calc-value" id="calcProcessCost">Rp 0</span>
+                        <span class="separator">|</span>
                         <span class="calc-percentage" id="calcProcessCostPercentage">0%</span>
                     </div>
-                    <span class="calc-value" id="calcProcessCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
-                    <div>
-                        <span class="calc-label">Depresiasi Tooling Cost</span>
+                    <span class="calc-label">Depresiasi Tooling Cost</span>
+                    <div class="calc-value-with-percentage">
+                        <span class="calc-value" id="calcToolingCost">Rp 0</span>
+                        <span class="separator">|</span>
                         <span class="calc-percentage" id="calcToolingCostPercentage">0%</span>
                     </div>
-                    <span class="calc-value" id="calcToolingCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
-                    <div>
-                        <span class="calc-label">Administrasi Cost</span>
+                    <span class="calc-label">Administrasi Cost</span>
+                    <div class="calc-value-with-percentage">
+                        <span class="calc-value" id="calcAdministrasiCost">Rp 0</span>
+                        <span class="separator">|</span>
                         <span class="calc-percentage" id="calcAdministrasiCostPercentage">0%</span>
                     </div>
-                    <span class="calc-value" id="calcAdministrasiCost">Rp 0</span>
                 </div>
                 <div class="calc-item" style="border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 0.5rem; font-weight: 600;">
-                    <div>
-                        <span class="calc-label">COGM</span>
+                    <span class="calc-label">COGM</span>
+                    <div class="calc-value-with-percentage">
+                        <span class="calc-value" id="calcCogsTotal">Rp 0</span>
+                        <span class="separator">|</span>
                         <span class="calc-percentage" id="calcCogsPercentage">100%</span>
                     </div>
-                    <span class="calc-value" id="calcCogsTotal">Rp 0</span>
                 </div>
             </div>
         </div>
