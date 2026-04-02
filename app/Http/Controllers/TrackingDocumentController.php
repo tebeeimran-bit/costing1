@@ -320,7 +320,58 @@ class TrackingDocumentController extends Controller
             return redirect()->back()->with('warning', 'Pilih minimal satu file (Partlist atau UMH) untuk diupdate.');
         }
 
-        $newRevision = DB::transaction(function () use ($request, $revision, $validated) {
+        $updatedRevision = DB::transaction(function () use ($request, $revision) {
+            $targetRevision = DocumentRevision::query()
+                ->whereKey($revision->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $partlistPath = $targetRevision->partlist_file_path;
+            $partlistOriginalName = $targetRevision->partlist_original_name;
+            $umhPath = $targetRevision->umh_file_path;
+            $umhOriginalName = $targetRevision->umh_original_name;
+
+            if ($request->hasFile('partlist_file')) {
+                $partlistFile = $request->file('partlist_file');
+                if ($partlistPath && Storage::exists($partlistPath)) {
+                    Storage::delete($partlistPath);
+                }
+                $partlistPath = $partlistFile->storeAs(
+                    'tracking-documents/partlist',
+                    now()->format('YmdHis') . '-' . Str::uuid() . '.' . $partlistFile->getClientOriginalExtension()
+                );
+                $partlistOriginalName = $partlistFile->getClientOriginalName();
+            }
+
+            if ($request->hasFile('umh_file')) {
+                $umhFile = $request->file('umh_file');
+                if ($umhPath && Storage::exists($umhPath)) {
+                    Storage::delete($umhPath);
+                }
+                $umhPath = $umhFile->storeAs(
+                    'tracking-documents/umh',
+                    now()->format('YmdHis') . '-' . Str::uuid() . '.' . $umhFile->getClientOriginalExtension()
+                );
+                $umhOriginalName = $umhFile->getClientOriginalName();
+            }
+
+            $targetRevision->update([
+                'partlist_original_name' => $partlistOriginalName,
+                'partlist_file_path' => $partlistPath,
+                'umh_original_name' => $umhOriginalName,
+                'umh_file_path' => $umhPath,
+                'change_remark' => $validated['change_remark'] ?? 'Revisi Engineering diperbarui melalui update dokumen.',
+            ]);
+
+            return $targetRevision->fresh();
+        });
+
+        return redirect()->back()->with('success', 'Dokumen pada ' . $updatedRevision->version_label . ' berhasil diperbarui.');
+    }
+
+    public function addVersion(DocumentRevision $revision)
+    {
+        $newRevision = DB::transaction(function () use ($revision) {
             $project = $revision->project()->lockForUpdate()->firstOrFail();
 
             $baseRevision = $project->revisions()
@@ -331,36 +382,12 @@ class TrackingDocumentController extends Controller
 
             $nextVersion = (int) $project->revisions()->max('version_number') + 1;
 
-            $partlistPath = $baseRevision->partlist_file_path;
-            $partlistOriginalName = $baseRevision->partlist_original_name;
-            $umhPath = $baseRevision->umh_file_path;
-            $umhOriginalName = $baseRevision->umh_original_name;
-
-            if ($request->hasFile('partlist_file')) {
-                $partlistFile = $request->file('partlist_file');
-                $partlistPath = $partlistFile->storeAs(
-                    'tracking-documents/partlist',
-                    now()->format('YmdHis') . '-' . Str::uuid() . '.' . $partlistFile->getClientOriginalExtension()
-                );
-                $partlistOriginalName = $partlistFile->getClientOriginalName();
-            }
-
-            if ($request->hasFile('umh_file')) {
-                $umhFile = $request->file('umh_file');
-                $umhPath = $umhFile->storeAs(
-                    'tracking-documents/umh',
-                    now()->format('YmdHis') . '-' . Str::uuid() . '.' . $umhFile->getClientOriginalExtension()
-                );
-                $umhOriginalName = $umhFile->getClientOriginalName();
-            }
-
             return DocumentRevision::create([
                 'document_project_id' => $project->id,
                 'version_number' => $nextVersion,
                 'received_date' => now()->toDateString(),
                 'pic_engineering' => $baseRevision->pic_engineering,
                 'status' => DocumentRevision::STATUS_PENDING_FORM_INPUT,
-                'cogm_generated_at' => null,
                 'pic_marketing' => $baseRevision->pic_marketing,
                 'a00' => $baseRevision->a00,
                 'a00_received_date' => $baseRevision->a00_received_date,
@@ -374,16 +401,87 @@ class TrackingDocumentController extends Controller
                 'a05_received_date' => $baseRevision->a05_received_date,
                 'a05_document_original_name' => $baseRevision->a05_document_original_name,
                 'a05_document_file_path' => $baseRevision->a05_document_file_path,
-                'partlist_original_name' => $partlistOriginalName,
-                'partlist_file_path' => $partlistPath,
-                'umh_original_name' => $umhOriginalName,
-                'umh_file_path' => $umhPath,
+                'partlist_original_name' => $baseRevision->partlist_original_name,
+                'partlist_file_path' => $baseRevision->partlist_file_path,
+                'umh_original_name' => $baseRevision->umh_original_name,
+                'umh_file_path' => $baseRevision->umh_file_path,
                 'notes' => $baseRevision->notes,
-                'change_remark' => $validated['change_remark'] ?? 'Revisi Engineering diterima melalui update dokumen.',
+                'change_remark' => 'Revisi Engineering diterima. Versi baru dibuat.',
             ]);
         });
 
-        return redirect()->back()->with('success', 'Dokumen berhasil diupdate. Revisi baru ' . $newRevision->version_label . ' berhasil dibuat.');
+        return redirect()->back()->with('success', 'Versi baru ' . $newRevision->version_label . ' berhasil ditambahkan.');
+    }
+
+    public function deleteVersion(DocumentRevision $revision)
+    {
+        $result = DB::transaction(function () use ($revision) {
+            $project = $revision->project()->lockForUpdate()->firstOrFail();
+
+            $targetRevision = $project->revisions()
+                ->whereKey($revision->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$targetRevision) {
+                return [
+                    'deleted' => false,
+                    'reason' => 'not_found',
+                ];
+            }
+
+            $revisionCount = $project->revisions()->lockForUpdate()->count();
+            if ($revisionCount <= 1) {
+                return [
+                    'deleted' => false,
+                    'reason' => 'last_version',
+                ];
+            }
+
+            $filePaths = collect([
+                $targetRevision->partlist_file_path,
+                $targetRevision->umh_file_path,
+                $targetRevision->a00_document_file_path,
+                $targetRevision->a04_document_file_path,
+                $targetRevision->a05_document_file_path,
+            ])->filter()->unique()->values();
+
+            $deletedVersionLabel = $targetRevision->version_label;
+            $targetRevisionId = (int) $targetRevision->id;
+            $targetRevision->delete();
+
+            foreach ($filePaths as $path) {
+                $isStillUsed = DocumentRevision::query()
+                    ->where(function ($query) use ($path) {
+                        $query->where('partlist_file_path', $path)
+                            ->orWhere('umh_file_path', $path)
+                            ->orWhere('a00_document_file_path', $path)
+                            ->orWhere('a04_document_file_path', $path)
+                            ->orWhere('a05_document_file_path', $path);
+                    })
+                    ->exists();
+
+                if (!$isStillUsed && Storage::exists($path)) {
+                    Storage::delete($path);
+                }
+            }
+
+            return [
+                'deleted' => true,
+                'version_label' => $deletedVersionLabel,
+                'revision_id' => $targetRevisionId,
+            ];
+        });
+
+        if (!($result['deleted'] ?? false)) {
+            if (($result['reason'] ?? '') === 'last_version') {
+                return redirect()->back()->with('warning', 'Versi tidak bisa dihapus karena project harus memiliki minimal satu versi.');
+            }
+
+            return redirect()->back()->with('warning', 'Versi tidak ditemukan atau sudah terhapus.');
+        }
+
+        return redirect()->back()->with('success', 'Versi ' . ($result['version_label'] ?? '') . ' berhasil dihapus.');
     }
 
     public function updateProjectInfo(Request $request, DocumentProject $project)
@@ -835,6 +933,40 @@ class TrackingDocumentController extends Controller
         }
 
         return Storage::download($path, $name);
+    }
+
+    public function viewDocument(DocumentRevision $revision, string $type)
+    {
+        if (!in_array($type, ['partlist', 'umh', 'a00', 'a04', 'a05'], true)) {
+            abort(404);
+        }
+
+        $fieldMap = [
+            'partlist' => ['path' => 'partlist_file_path', 'name' => 'partlist_original_name'],
+            'umh' => ['path' => 'umh_file_path', 'name' => 'umh_original_name'],
+            'a00' => ['path' => 'a00_document_file_path', 'name' => 'a00_document_original_name'],
+            'a04' => ['path' => 'a04_document_file_path', 'name' => 'a04_document_original_name'],
+            'a05' => ['path' => 'a05_document_file_path', 'name' => 'a05_document_original_name'],
+        ];
+
+        $pathField = $fieldMap[$type]['path'];
+        $nameField = $fieldMap[$type]['name'];
+
+        $path = $revision->{$pathField};
+        $name = $revision->{$nameField};
+
+        if (!$path || !Storage::exists($path)) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        $absolutePath = Storage::path($path);
+        $mimeType = Storage::mimeType($path) ?: 'application/octet-stream';
+        $safeName = str_replace('"', '\\"', (string) ($name ?: basename($path)));
+
+        return response()->file($absolutePath, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $safeName . '"',
+        ]);
     }
 
     private function findMaterialForUnpricedPart(string $partNumber, string $partName = ''): ?Material

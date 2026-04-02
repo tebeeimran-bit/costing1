@@ -679,17 +679,6 @@
                                             <span>View History</span>
                                         </button>
 
-                                        <button type="button" class="btn btn-secondary btn-sm"
-                                            onclick="openUpdateFilesModal({{ $latestRevision->id }})">
-                                            <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M23 4v6h-6" />
-                                                <path d="M1 20v-6h6" />
-                                                <path d="M3.5 9a9 9 0 0 1 14-3.4L23 10" />
-                                                <path d="M20.5 15a9 9 0 0 1-14 3.4L1 14" />
-                                            </svg>
-                                            <span>Update</span>
-                                        </button>
-
                                         <button type="button" class="btn btn-primary btn-sm"
                                             onclick="openSubmitModal({{ $latestRevision->id }})">
                                             <svg class="action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -745,26 +734,58 @@
                         <div class="history-title">Ringkasan History</div>
                         <div class="history-sub">Total revisi dari Engineering: {{ $project->revisions->count() }} kali</div>
                         <div class="history-sub">Total submit COGM ke Marketing: {{ $project->revisions->sum(fn ($item) => $item->cogmSubmissions->count()) }} kali</div>
+                        @if($project->revisions->isNotEmpty())
+                            <div class="action-group" style="margin-top: 0.6rem;">
+                                <form action="{{ route('tracking-documents.add-version', ['revision' => $project->revisions->first()->id], absolute: false) }}" method="POST" style="display: inline-flex;">
+                                    @csrf
+                                    <button type="submit" class="btn btn-primary btn-sm">Tambah Versi</button>
+                                </form>
+                            </div>
+                        @endif
                     </div>
 
                     @forelse ($project->revisions as $revision)
+                        @php
+                            $updateCount = $loop->index;
+                        @endphp
                         <div class="history-block">
                             <div class="history-title">{{ $revision->version_label }} - Diterima {{ optional($revision->received_date)->format('d/m/Y') ?: '-' }}</div>
                             <div class="history-sub">PIC Engineering: {{ $revision->pic_engineering }}</div>
                             <div class="history-sub">Status Terakhir: {{ $revision->status_label }}</div>
-                            <div class="history-sub">Jumlah Submit COGM ke Marketing: {{ $revision->cogmSubmissions->count() }} kali</div>
-                            <div class="history-sub"><strong>Nama Dokumen Partlist:</strong> {{ $revision->partlist_original_name ?: '-' }}</div>
-                            <div class="history-sub"><strong>Nama Dokumen UMH:</strong> {{ $revision->umh_original_name ?: '-' }}</div>
+                            <div class="history-sub">Jumlah Update/Revisi Setelah Ini: {{ $updateCount }} kali</div>
+                            <div class="history-sub">
+                                <strong>Nama Dokumen Partlist:</strong>
+                                @if(!empty($revision->partlist_original_name) && !empty($revision->partlist_file_path))
+                                    <a href="{{ route('tracking-documents.view', ['revision' => $revision->id, 'type' => 'partlist'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->partlist_original_name }}</a>
+                                @else
+                                    -
+                                @endif
+                            </div>
+                            <div class="history-sub">
+                                <strong>Nama Dokumen UMH:</strong>
+                                @if(!empty($revision->umh_original_name) && !empty($revision->umh_file_path))
+                                    <a href="{{ route('tracking-documents.view', ['revision' => $revision->id, 'type' => 'umh'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->umh_original_name }}</a>
+                                @else
+                                    -
+                                @endif
+                            </div>
                             <div class="history-sub"><strong>Remark Perubahan:</strong> {{ $revision->change_remark ?: '-' }}</div>
                             <div class="action-group" style="margin-bottom: 0.5rem; min-width: 0;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="openUpdateFilesModal({{ $revision->id }})">Update</button>
                                 <form action="{{ route('tracking-documents.process-form-input', ['revision' => $revision->id], absolute: false) }}" method="POST" style="display: inline-flex;">
                                     @csrf
-                                    <button type="submit" class="btn btn-primary btn-sm">Proses ke Form Input</button>
+                                    <button type="submit" class="btn btn-primary btn-sm">Costing</button>
                                 </form>
-                                <a href="{{ route('tracking-documents.download', ['revision' => $revision->id, 'type' => 'partlist'], absolute: false) }}"
-                                    class="btn btn-secondary btn-sm">Partlist</a>
-                                <a href="{{ route('tracking-documents.download', ['revision' => $revision->id, 'type' => 'umh'], absolute: false) }}"
-                                    class="btn btn-secondary btn-sm">UMH</a>
+                                @if($project->revisions->count() > 1)
+                                    <form action="{{ route('tracking-documents.delete-version', ['revision' => $revision->id], absolute: false) }}" method="POST"
+                                        onsubmit="return confirmDeleteVersion(event, this);"
+                                        data-version-label="{{ $revision->version_label }} - {{ $project->customer }} / {{ $project->model }} / {{ $project->part_number }}"
+                                        style="display: inline-flex;">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger btn-sm">Hapus Versi</button>
+                                    </form>
+                                @endif
                             </div>
 
                             @if ($revision->cogmSubmissions->isNotEmpty())
@@ -1060,7 +1081,7 @@
                             <label class="form-label">Remark Perubahan</label>
                             <textarea name="change_remark" class="form-input" rows="2"
                                 placeholder="Contoh: update qty part A, ganti material part B"></textarea>
-                            <small class="field-help">Jika disimpan, sistem akan membuat revisi baru (V+1).</small>
+                            <small class="field-help">Jika disimpan, sistem akan memperbarui revisi yang dipilih.</small>
                         </div>
 
                         <div class="form-actions">
@@ -1124,8 +1145,26 @@
         </div>
     </div>
 
+    <div id="delete-version-confirm-modal" class="modal is-hidden" onclick="handleOverlayClose(event, this.id)">
+        <div class="modal-content danger-modal-content">
+            <div class="danger-modal-header">
+                <div class="danger-modal-icon">!</div>
+                <h4 class="danger-modal-title">Konfirmasi Hapus Versi</h4>
+            </div>
+            <div class="danger-modal-body">
+                Tindakan ini akan menghapus versi yang dipilih beserta data turunannya pada versi tersebut.
+                <div class="danger-modal-project" id="deleteVersionConfirmLabel">-</div>
+            </div>
+            <div class="danger-modal-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeDeleteVersionConfirmModal()">Batal</button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="submitDeleteVersion()">Ya, Hapus Versi</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let pendingDeleteForm = null;
+        let pendingDeleteVersionForm = null;
 
         function searchProjects() {
             const input = document.getElementById('projectSearchInput');
@@ -1220,6 +1259,10 @@
                     closeDeleteConfirmModal();
                     return;
                 }
+                if (id === 'delete-version-confirm-modal') {
+                    closeDeleteVersionConfirmModal();
+                    return;
+                }
                 closeModal(id);
             }
         }
@@ -1251,6 +1294,36 @@
             const formToSubmit = pendingDeleteForm;
             pendingDeleteForm = null;
             closeModal('delete-confirm-modal');
+            formToSubmit.submit();
+        }
+
+        function confirmDeleteVersion(event, form) {
+            event.preventDefault();
+            pendingDeleteVersionForm = form;
+
+            const label = document.getElementById('deleteVersionConfirmLabel');
+            if (label) {
+                label.textContent = form.getAttribute('data-version-label') || '-';
+            }
+
+            openModal('delete-version-confirm-modal');
+            return false;
+        }
+
+        function closeDeleteVersionConfirmModal() {
+            pendingDeleteVersionForm = null;
+            closeModal('delete-version-confirm-modal');
+        }
+
+        function submitDeleteVersion() {
+            if (!pendingDeleteVersionForm) {
+                closeModal('delete-version-confirm-modal');
+                return;
+            }
+
+            const formToSubmit = pendingDeleteVersionForm;
+            pendingDeleteVersionForm = null;
+            closeModal('delete-version-confirm-modal');
             formToSubmit.submit();
         }
 
@@ -1294,6 +1367,12 @@
                     const deleteModal = document.getElementById('delete-confirm-modal');
                     if (deleteModal && !deleteModal.classList.contains('is-hidden')) {
                         closeDeleteConfirmModal();
+                        return;
+                    }
+
+                    const deleteVersionModal = document.getElementById('delete-version-confirm-modal');
+                    if (deleteVersionModal && !deleteVersionModal.classList.contains('is-hidden')) {
+                        closeDeleteVersionConfirmModal();
                     }
                 }
             });
