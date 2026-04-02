@@ -101,6 +101,20 @@
             margin-top: 1rem !important;
         }
 
+        .form-page .calc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .form-page .calc-item .calc-percentage {
+            font-size: 0.875rem;
+            color: #666;
+            min-width: 60px;
+            text-align: right;
+        }
+
         .form-page .material-table-container {
             max-width: 100%;
             overflow: auto;
@@ -1904,23 +1918,38 @@
 
             <div class="calc-box" style="margin-top: 1.5rem;">
                 <div class="calc-item">
-                    <span class="calc-label">Total Material Cost</span>
+                    <div>
+                        <span class="calc-label">Total Material Cost</span>
+                        <span class="calc-percentage" id="calcTotalMaterialCostPercentage">0%</span>
+                    </div>
                     <span class="calc-value" id="calcTotalMaterialCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
-                    <span class="calc-label">Process Cost</span>
+                    <div>
+                        <span class="calc-label">Process Cost</span>
+                        <span class="calc-percentage" id="calcProcessCostPercentage">0%</span>
+                    </div>
                     <span class="calc-value" id="calcProcessCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
-                    <span class="calc-label">Depresiasi Tooling Cost</span>
+                    <div>
+                        <span class="calc-label">Depresiasi Tooling Cost</span>
+                        <span class="calc-percentage" id="calcToolingCostPercentage">0%</span>
+                    </div>
                     <span class="calc-value" id="calcToolingCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
-                    <span class="calc-label">Administrasi Cost</span>
+                    <div>
+                        <span class="calc-label">Administrasi Cost</span>
+                        <span class="calc-percentage" id="calcAdministrasiCostPercentage">0%</span>
+                    </div>
                     <span class="calc-value" id="calcAdministrasiCost">Rp 0</span>
                 </div>
-                <div class="calc-item">
-                    <span class="calc-label">COGM</span>
+                <div class="calc-item" style="border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 0.5rem; font-weight: 600;">
+                    <div>
+                        <span class="calc-label">COGM</span>
+                        <span class="calc-percentage" id="calcCogsPercentage">100%</span>
+                    </div>
                     <span class="calc-value" id="calcCogsTotal">Rp 0</span>
                 </div>
             </div>
@@ -3088,6 +3117,18 @@
             document.getElementById('calcToolingCost').textContent = formatRupiah(overheadCost);
             document.getElementById('calcAdministrasiCost').textContent = formatRupiah(scrapCost);
             document.getElementById('calcCogsTotal').textContent = formatRupiah(cogmTotal);
+
+            // Calculate percentages
+            const calculatePercentage = (value, total) => {
+                if (total <= 0) return '0%';
+                return ((value / total) * 100).toFixed(2) + '%';
+            };
+
+            document.getElementById('calcTotalMaterialCostPercentage').textContent = calculatePercentage(materialCost, cogmTotal);
+            document.getElementById('calcProcessCostPercentage').textContent = calculatePercentage(laborCost, cogmTotal);
+            document.getElementById('calcToolingCostPercentage').textContent = calculatePercentage(overheadCost, cogmTotal);
+            document.getElementById('calcAdministrasiCostPercentage').textContent = calculatePercentage(scrapCost, cogmTotal);
+            document.getElementById('calcCogsPercentage').textContent = '100%';
 
             // Revalidate material cost
             if (recalculateMaterialTable) {
