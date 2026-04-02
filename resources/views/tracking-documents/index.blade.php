@@ -654,7 +654,7 @@
                                 <td>{{ $displayPicMarketing ?: '-' }}</td>
                                 <td>
                                     <span
-                                        class="status-badge {{ $latestRevision->status === \App\Models\DocumentRevision::STATUS_PENDING_FORM_INPUT ? 'status-pending' : ($latestRevision->status === \App\Models\DocumentRevision::STATUS_PENDING_PRICING ? 'status-warning' : ($latestRevision->status === \App\Models\DocumentRevision::STATUS_COGM_GENERATED ? 'status-generated' : 'status-submitted')) }}">
+                                        class="status-badge {{ $latestRevision->status === \App\Models\DocumentRevision::STATUS_PENDING_FORM_INPUT ? 'status-pending' : ($latestRevision->status === \App\Models\DocumentRevision::STATUS_SUDAH_COSTING ? 'status-generated' : ($latestRevision->status === \App\Models\DocumentRevision::STATUS_PENDING_PRICING ? 'status-warning' : ($latestRevision->status === \App\Models\DocumentRevision::STATUS_COGM_GENERATED ? 'status-generated' : 'status-submitted'))) }}">
                                         {{ $latestRevision->status_label }}
                                     </span>
                                 </td>

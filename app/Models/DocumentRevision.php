@@ -10,6 +10,7 @@ class DocumentRevision extends Model
     use HasFactory;
 
     public const STATUS_PENDING_FORM_INPUT = 'pending_form_input';
+    public const STATUS_SUDAH_COSTING = 'sudah_costing';
     public const STATUS_PENDING_PRICING = 'pending_pricing';
     public const STATUS_COGM_GENERATED = 'cogm_generated';
     public const STATUS_SUBMITTED_TO_MARKETING = 'submitted_to_marketing';
@@ -86,6 +87,7 @@ class DocumentRevision extends Model
     {
         return match ($this->status) {
             self::STATUS_PENDING_FORM_INPUT => 'Pending Form Input',
+            self::STATUS_SUDAH_COSTING => 'Sudah Costing',
             self::STATUS_PENDING_PRICING => 'Draft / Pending Pricing',
             self::STATUS_COGM_GENERATED => 'COGM Generated',
             self::STATUS_SUBMITTED_TO_MARKETING => 'Submitted to Marketing',
