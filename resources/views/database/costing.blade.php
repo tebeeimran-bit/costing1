@@ -10,12 +10,121 @@
 @endsection
 
 @section('content')
+    <style>
+        .costing-table-container {
+            overflow-x: auto;
+        }
+
+        .costing-table {
+            table-layout: fixed;
+            min-width: 1780px;
+        }
+
+        .costing-table th,
+        .costing-table td {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            vertical-align: middle;
+        }
+
+        .costing-table th:nth-child(1),
+        .costing-table td:nth-child(1) {
+            width: 52px;
+            text-align: center;
+        }
+
+        .costing-table th:nth-child(2),
+        .costing-table td:nth-child(2) {
+            width: 84px;
+        }
+
+        .costing-table th:nth-child(3),
+        .costing-table td:nth-child(3) {
+            width: 96px;
+        }
+
+        .costing-table th:nth-child(4),
+        .costing-table td:nth-child(4) {
+            width: 170px;
+        }
+
+        .costing-table th:nth-child(5),
+        .costing-table td:nth-child(5) {
+            width: 96px;
+        }
+
+        .costing-table th:nth-child(6),
+        .costing-table td:nth-child(6) {
+            width: 120px;
+        }
+
+        .costing-table th:nth-child(7),
+        .costing-table td:nth-child(7) {
+            width: 140px;
+        }
+
+        .costing-table th:nth-child(8),
+        .costing-table td:nth-child(8) {
+            width: 170px;
+        }
+
+        .costing-table th:nth-child(9),
+        .costing-table td:nth-child(9) {
+            width: 72px;
+            text-align: center;
+        }
+
+        .costing-table th:nth-child(10),
+        .costing-table td:nth-child(10),
+        .costing-table th:nth-child(12),
+        .costing-table td:nth-child(12),
+        .costing-table th:nth-child(14),
+        .costing-table td:nth-child(14),
+        .costing-table th:nth-child(16),
+        .costing-table td:nth-child(16) {
+            width: 120px;
+        }
+
+        .costing-table th:nth-child(11),
+        .costing-table td:nth-child(11),
+        .costing-table th:nth-child(13),
+        .costing-table td:nth-child(13),
+        .costing-table th:nth-child(15),
+        .costing-table td:nth-child(15) {
+            width: 66px;
+            text-align: center;
+        }
+
+        .costing-table th:nth-child(17),
+        .costing-table td:nth-child(17) {
+            width: 128px;
+        }
+
+        .costing-table th:nth-child(18),
+        .costing-table td:nth-child(18) {
+            width: 140px;
+            text-align: center;
+        }
+
+        .costing-table th:nth-child(19),
+        .costing-table td:nth-child(19) {
+            width: 130px;
+            text-align: center;
+        }
+
+        .costing-action-btn {
+            min-width: 108px;
+            white-space: nowrap;
+        }
+    </style>
+
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Data Costing</h3>
         </div>
-        <div class="material-table-container" style="overflow-x: auto;">
-            <table class="data-table">
+        <div class="costing-table-container">
+            <table class="data-table costing-table">
                 <thead>
                     <tr>
                         <th>NO.</th>
@@ -71,7 +180,7 @@
                             <td><strong>Rp {{ number_format($cogm, 0, ',', '.') }}</strong></td>
                             <td>{{ $costing->updated_at ? \Carbon\Carbon::parse($costing->updated_at)->format('d-m-Y H:i') : '-' }}</td>
                             <td>
-                                <a href="{{ $formUrl }}" class="btn btn-secondary btn-sm" style="white-space: nowrap;">
+                                <a href="{{ $formUrl }}" class="btn btn-secondary btn-sm costing-action-btn">
                                     TO FORM INPUT
                                 </a>
                             </td>
