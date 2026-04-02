@@ -69,7 +69,10 @@ class DatabaseController extends Controller
 
     public function costing()
     {
-        $costingData = CostingData::with(['product', 'customer'])->get();
+        $costingData = CostingData::with(['product', 'customer', 'trackingRevision'])
+            ->orderByDesc('updated_at')
+            ->orderByDesc('id')
+            ->get();
         return view('database.costing', compact('costingData'));
     }
 
