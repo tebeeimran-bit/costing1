@@ -11,13 +11,20 @@
 
 @section('content')
     <style>
+        .costing-table-viewport {
+            width: 100%;
+            overflow: hidden;
+        }
+
         .costing-table-container {
-            overflow-x: auto;
+            overflow: hidden;
         }
 
         .costing-table {
             table-layout: fixed;
-            min-width: 1780px;
+            width: calc(100% / 0.78);
+            transform: scale(0.78);
+            transform-origin: top left;
         }
 
         .costing-table th,
@@ -36,17 +43,17 @@
 
         .costing-table th:nth-child(2),
         .costing-table td:nth-child(2) {
-            width: 84px;
+            width: 100px;
         }
 
         .costing-table th:nth-child(3),
         .costing-table td:nth-child(3) {
-            width: 96px;
+            width: 130px;
         }
 
         .costing-table th:nth-child(4),
         .costing-table td:nth-child(4) {
-            width: 170px;
+            width: 200px;
         }
 
         .costing-table th:nth-child(5),
@@ -61,7 +68,7 @@
 
         .costing-table th:nth-child(7),
         .costing-table td:nth-child(7) {
-            width: 140px;
+            width: 240px;
         }
 
         .costing-table th:nth-child(8),
@@ -71,7 +78,7 @@
 
         .costing-table th:nth-child(9),
         .costing-table td:nth-child(9) {
-            width: 72px;
+            width: 96px;
             text-align: center;
         }
 
@@ -83,7 +90,7 @@
         .costing-table td:nth-child(14),
         .costing-table th:nth-child(16),
         .costing-table td:nth-child(16) {
-            width: 120px;
+            width: 140px;
         }
 
         .costing-table th:nth-child(11),
@@ -92,18 +99,18 @@
         .costing-table td:nth-child(13),
         .costing-table th:nth-child(15),
         .costing-table td:nth-child(15) {
-            width: 66px;
+            width: 96px;
             text-align: center;
         }
 
         .costing-table th:nth-child(17),
         .costing-table td:nth-child(17) {
-            width: 128px;
+            width: 160px;
         }
 
         .costing-table th:nth-child(18),
         .costing-table td:nth-child(18) {
-            width: 140px;
+            width: 180px;
             text-align: center;
         }
 
@@ -124,31 +131,32 @@
             <h3 class="card-title">Data Costing</h3>
         </div>
         <div class="costing-table-container">
-            <table class="data-table costing-table">
-                <thead>
-                    <tr>
-                        <th>NO.</th>
-                        <th>PERIODE</th>
-                        <th>TANGGAL</th>
-                        <th>CUSTOMER</th>
-                        <th>MODEL</th>
-                        <th>ID CODE</th>
-                        <th>ASSY NO</th>
-                        <th>PRODUCT</th>
-                        <th>REVISI</th>
-                        <th>MATERIAL COST</th>
-                        <th>%</th>
-                        <th>PROCESS COST</th>
-                        <th>%</th>
-                        <th>DEPRESIASI TOOLING COST</th>
-                        <th>%</th>
-                        <th>COGM</th>
-                        <th>LAST UPDATED</th>
-                        <th>ACTION</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($costingData as $key => $costing)
+            <div class="costing-table-viewport">
+                <table class="data-table costing-table">
+                    <thead>
+                        <tr>
+                            <th>NO.</th>
+                            <th>PERIODE</th>
+                            <th>TANGGAL</th>
+                            <th>CUSTOMER</th>
+                            <th>MODEL</th>
+                            <th>ID CODE</th>
+                            <th>ASSY NO</th>
+                            <th>PRODUCT</th>
+                            <th>REVISI</th>
+                            <th>MATERIAL COST</th>
+                            <th>%</th>
+                            <th>PROCESS COST</th>
+                            <th>%</th>
+                            <th>DEPRESIASI TOOLING COST</th>
+                            <th>%</th>
+                            <th>COGM</th>
+                            <th>LAST UPDATED</th>
+                            <th>ACTION</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($costingData as $key => $costing)
                         @php
                             $cogm = $costing->material_cost + $costing->labor_cost + $costing->overhead_cost;
                             $materialPct = $cogm > 0 ? ($costing->material_cost / $cogm * 100) : 0;
@@ -185,13 +193,14 @@
                                 </a>
                             </td>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="18" style="text-align: center;">Tidak ada data costing ditemukan</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                        @empty
+                            <tr>
+                                <td colspan="18" style="text-align: center;">Tidak ada data costing ditemukan</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 @endsection
