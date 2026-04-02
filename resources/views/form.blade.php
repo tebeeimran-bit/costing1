@@ -516,7 +516,7 @@
         }
 
         .form-page .cycle-table {
-            min-width: 1100px;
+            min-width: 1240px;
         }
 
         .form-page .cycle-table th {
@@ -538,6 +538,20 @@
 
         .form-page .cycle-table .ct-process {
             min-width: 260px;
+        }
+
+        .form-page .cycle-table .ct-area-of-process {
+            min-width: 170px;
+        }
+
+        .form-page .cycle-row-no-cell {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .form-page .cycle-row-number {
+            font-weight: 600;
         }
 
         .form-page .cycle-table .ct-qty,
@@ -847,7 +861,9 @@
             $toastNotifications[] = ['type' => 'error', 'message' => session('error')];
         }
         if ($errors->any()) {
-            $toastNotifications[] = ['type' => 'error', 'message' => $errors->first()];
+            foreach ($errors->all() as $error) {
+                $toastNotifications[] = ['type' => 'error', 'message' => $error];
+            }
         }
         $openUnpricedCount = isset($openUnpricedParts) ? $openUnpricedParts->count() : 0;
         if ($openUnpricedCount > 0) {
@@ -1606,6 +1622,27 @@
                     <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="cycle_time" data-section="cycle_time" formnovalidate>
                         Update
                     </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cycleUndoBtn" onclick="undoCycleTimeTable()" disabled aria-label="Undo" title="Undo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="9 14 4 9 9 4"></polyline>
+                            <path d="M20 20a8 8 0 0 0-8-8H4"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cycleRedoBtn" onclick="redoCycleTimeTable()" disabled aria-label="Redo" title="Redo">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="15 14 20 9 15 4"></polyline>
+                            <path d="M4 20a8 8 0 0 1 8-8h8"></path>
+                        </svg>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="cycleDeleteSelectedBtn" onclick="deleteSelectedCycleRows()" disabled>
+                        Hapus Terpilih
+                    </button>
+                    <a href="{{ route('costing.template-cycle-time', absolute: false) }}" class="btn btn-secondary btn-sm">
+                        Download Template
+                    </a>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="triggerCycleTimeImport()">
+                        Import Cycle Time
+                    </button>
                     <button type="button" class="btn btn-secondary" onclick="addCycleTimeRow()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19" />
@@ -1620,7 +1657,12 @@
                 <table class="cycle-table" id="cycleTimeTable">
                     <thead>
                         <tr>
-                            <th>NO</th>
+                            <th>
+                                <span class="cycle-row-no-cell">
+                                    <input type="checkbox" id="cycleSelectAllRows" title="Pilih semua baris">
+                                    <span>No</span>
+                                </span>
+                            </th>
                             <th>PROCESS</th>
                             <th>QTY</th>
                             <th>TIME (HOUR)</th>
@@ -1628,6 +1670,7 @@
                             <th>TIME (SEC) / 1 Qty</th>
                             <th>Cost / SEC</th>
                             <th>Cost / Unit</th>
+                            <th>Area of Process</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -1652,8 +1695,27 @@
                         @endphp
                         @if(count($cycleTimes) > 0)
                             @foreach($cycleTimes as $index => $cycle)
+                                @php
+                                    $cycleQtyValue = isset($cycle['qty']) && $cycle['qty'] !== '' ? (float) $cycle['qty'] : 0;
+                                    $cycleHourValue = isset($cycle['time_hour']) && $cycle['time_hour'] !== '' ? (float) $cycle['time_hour'] : 0;
+                                    $cycleSecValue = isset($cycle['time_sec']) && $cycle['time_sec'] !== ''
+                                        ? (float) $cycle['time_sec']
+                                        : ($cycleHourValue > 0 ? ($cycleHourValue * 3600) : 0);
+                                    $cycleSecPerQtyValue = isset($cycle['time_sec_per_qty']) && $cycle['time_sec_per_qty'] !== ''
+                                        ? (float) $cycle['time_sec_per_qty']
+                                        : ($cycleQtyValue > 0 ? ($cycleSecValue / $cycleQtyValue) : 0);
+                                    $cycleCostPerSecValue = isset($cycle['cost_per_sec']) && $cycle['cost_per_sec'] !== '' ? (float) $cycle['cost_per_sec'] : 10.33;
+                                    $cycleCostPerUnitValue = isset($cycle['cost_per_unit']) && $cycle['cost_per_unit'] !== ''
+                                        ? (float) $cycle['cost_per_unit']
+                                        : ($cycleSecValue > 0 ? ($cycleSecValue * $cycleCostPerSecValue) : 0);
+                                @endphp
                                 <tr data-cycle-row="{{ $index }}">
-                                    <td>{{ $index + 1 }}</td>
+                                    <td>
+                                        <span class="cycle-row-no-cell">
+                                            <input type="checkbox" class="cycle-row-select" title="Pilih baris">
+                                            <span class="cycle-row-number">{{ $index + 1 }}</span>
+                                        </span>
+                                    </td>
                                     <td>
                                         <select class="form-select ct-process" name="cycle_times[{{ $index }}][process]">
                                             <option value="">-- Pilih Process --</option>
@@ -1680,22 +1742,29 @@
                                     <td>
                                         <input type="number" class="form-input ct-sec"
                                             name="cycle_times[{{ $index }}][time_sec]"
-                                            value="{{ isset($cycle['time_sec']) && $cycle['time_sec'] !== '' ? round((float) $cycle['time_sec']) : '' }}" step="1" onchange="calculateCycleRow(this)">
+                                            value="{{ $cycleSecValue > 0 ? round($cycleSecValue) : '' }}" step="1" readonly onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-sec-per"
                                             name="cycle_times[{{ $index }}][time_sec_per_qty]"
-                                            value="{{ isset($cycle['time_sec_per_qty']) && $cycle['time_sec_per_qty'] !== '' ? round((float) $cycle['time_sec_per_qty']) : '' }}" step="1" onchange="calculateCycleRow(this)">
+                                            value="{{ $cycleSecPerQtyValue > 0 ? round($cycleSecPerQtyValue) : '' }}" step="1" readonly onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-sec"
                                             name="cycle_times[{{ $index }}][cost_per_sec]"
-                                            value="{{ $cycle['cost_per_sec'] ?? '10.33' }}" step="0.0001" onchange="calculateCycleRow(this)">
+                                            value="{{ $cycleCostPerSecValue }}" step="0.0001" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-unit"
                                             name="cycle_times[{{ $index }}][cost_per_unit]"
-                                            value="{{ isset($cycle['cost_per_unit']) && $cycle['cost_per_unit'] !== '' ? round((float) $cycle['cost_per_unit']) : '' }}" step="1" onchange="calculateCycleRow(this)">
+                                            value="{{ $cycleCostPerUnitValue > 0 ? round($cycleCostPerUnitValue) : '' }}" step="1" readonly onchange="calculateCycleRow(this)">
+                                    </td>
+                                    <td>
+                                        <select class="form-select ct-area-of-process" name="cycle_times[{{ $index }}][area_of_process]">
+                                            <option value="">-- Pilih Area --</option>
+                                            <option value="PP - Preparation" {{ (($cycle['area_of_process'] ?? '') === 'PP - Preparation') ? 'selected' : '' }}>PP - Preparation</option>
+                                            <option value="FA - Final Assy" {{ (($cycle['area_of_process'] ?? '') === 'FA - Final Assy') ? 'selected' : '' }}>FA - Final Assy</option>
+                                        </select>
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeCycleTimeRow(this)"
@@ -1713,7 +1782,12 @@
                         @else
                             @for($i = 0; $i < 5; $i++)
                                 <tr data-cycle-row="{{ $i }}">
-                                    <td>{{ $i + 1 }}</td>
+                                    <td>
+                                        <span class="cycle-row-no-cell">
+                                            <input type="checkbox" class="cycle-row-select" title="Pilih baris">
+                                            <span class="cycle-row-number">{{ $i + 1 }}</span>
+                                        </span>
+                                    </td>
                                     <td>
                                         <select class="form-select ct-process" name="cycle_times[{{ $i }}][process]">
                                             <option value="">-- Pilih Process --</option>
@@ -1732,11 +1806,11 @@
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-sec"
-                                            name="cycle_times[{{ $i }}][time_sec]" value="" step="1" onchange="calculateCycleRow(this)">
+                                            name="cycle_times[{{ $i }}][time_sec]" value="" step="1" readonly onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-sec-per"
-                                            name="cycle_times[{{ $i }}][time_sec_per_qty]" value="" step="1" onchange="calculateCycleRow(this)">
+                                            name="cycle_times[{{ $i }}][time_sec_per_qty]" value="" step="1" readonly onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-sec"
@@ -1744,7 +1818,14 @@
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-unit"
-                                            name="cycle_times[{{ $i }}][cost_per_unit]" value="" step="1" onchange="calculateCycleRow(this)">
+                                            name="cycle_times[{{ $i }}][cost_per_unit]" value="" step="1" readonly onchange="calculateCycleRow(this)">
+                                    </td>
+                                    <td>
+                                        <select class="form-select ct-area-of-process" name="cycle_times[{{ $i }}][area_of_process]">
+                                            <option value="">-- Pilih Area --</option>
+                                            <option value="PP - Preparation">PP - Preparation</option>
+                                            <option value="FA - Final Assy">FA - Final Assy</option>
+                                        </select>
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeCycleTimeRow(this)"
@@ -1763,12 +1844,14 @@
                     </tbody>
                     <tfoot>
                         <tr style="background: var(--slate-700);">
-                            <td colspan="4" style="text-align: right; font-weight: 600;">Total</td>
-                            <td class="calculated" id="cycleTotalSec" style="font-weight: 700; color: var(--blue-300);">0</td>
-                            <td></td>
-                            <td></td>
-                            <td class="calculated" id="cycleTotalCostUnit" style="font-weight: 700; color: var(--blue-300);">0</td>
-                            <td></td>
+                            <td colspan="3" style="text-align: right; font-weight: 700; color: #f8fafc; background: #334155;">Total</td>
+                            <td class="calculated" id="cycleTotalHour" style="font-weight: 800; color: #1e293b; background: #fbbf24;">0</td>
+                            <td class="calculated" id="cycleTotalSec" style="font-weight: 800; color: #0f172a; background: #67e8f9;">0</td>
+                            <td style="background: #334155;"></td>
+                            <td style="background: #334155;"></td>
+                            <td class="calculated" id="cycleTotalCostUnit" style="font-weight: 800; color: #052e16; background: #a3e635;">0</td>
+                            <td style="background: #334155;"></td>
+                            <td style="background: #334155;"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1876,6 +1959,39 @@
         <input type="file" name="import_partlist_file" id="importPartlistFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitPartlistImport(); }">
     </form>
 
+    <form action="{{ route('costing.import-cycle-time', absolute: false) }}" method="POST" id="cycleTimeImportForm" enctype="multipart/form-data" style="display:none;">
+        @csrf
+        @if(isset($costingData) && $costingData)
+            <input type="hidden" name="costing_data_id" value="{{ $costingData->id }}">
+        @endif
+        @if(isset($trackingRevisionId) && $trackingRevisionId)
+            <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
+        @endif
+        <input type="file" name="import_cycle_time_file" id="importCycleTimeFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitCycleTimeImport(); }">
+    </form>
+
+    <div id="cycleTimeDeleteConfirmModal" class="confirm-modal is-hidden" aria-hidden="true">
+        <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="cycleTimeDeleteConfirmTitle">
+            <div class="confirm-modal-head">
+                <span class="confirm-modal-icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                    </svg>
+                </span>
+                <h3 id="cycleTimeDeleteConfirmTitle" class="confirm-modal-title">Konfirmasi Hapus Baris</h3>
+            </div>
+            <div class="confirm-modal-body">
+                Yakin ingin menghapus baris Cycle Time yang dipilih?
+            </div>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-secondary" id="cycleTimeDeleteCancelBtn">Batal</button>
+                <button type="button" class="btn btn-primary" id="cycleTimeDeleteOkBtn">Ya, Hapus</button>
+            </div>
+        </div>
+    </div>
+
     <div id="partlistImportConfirmModal" class="confirm-modal is-hidden" aria-hidden="true">
         <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="partlistImportConfirmTitle">
             <div class="confirm-modal-head">
@@ -1909,6 +2025,10 @@
         let materialRedoHistory = [];
         const materialUndoLimit = 50;
         let materialHistoryApplying = false;
+        let cycleUndoHistory = [];
+        let cycleRedoHistory = [];
+        const cycleUndoLimit = 50;
+        let cycleHistoryApplying = false;
         const materialFilterState = {};
         const materialFilterableColumns = [1, 2, 3, 5, 6, 9, 11, 12];
         let materialFilterPopup = null;
@@ -1980,7 +2100,16 @@
         }
 
         function formatWholeNumber(number) {
-            return String(Math.round(Number(number) || 0));
+            return new Intl.NumberFormat('id-ID', {
+                maximumFractionDigits: 0
+            }).format(Math.round(Number(number) || 0));
+        }
+
+        function formatDecimalNumber(number, maximumFractionDigits = 4) {
+            return new Intl.NumberFormat('id-ID', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits
+            }).format(Number(number) || 0);
         }
 
         function parsePositiveInteger(value) {
@@ -4054,17 +4183,23 @@
         }
 
         function calculateCycleTotals() {
+            let totalHour = 0;
             let totalSec = 0;
             let totalCostUnit = 0;
             const rows = document.querySelectorAll('#cycleTimeTableBody tr');
 
             rows.forEach((row) => {
+                totalHour += parseFloat(row.querySelector('.ct-hour')?.value) || 0;
                 totalSec += parseFloat(row.querySelector('.ct-sec')?.value) || 0;
                 totalCostUnit += parseFloat(row.querySelector('.ct-cost-unit')?.value) || 0;
             });
 
+            const totalHourEl = document.getElementById('cycleTotalHour');
             const totalSecEl = document.getElementById('cycleTotalSec');
             const totalCostUnitEl = document.getElementById('cycleTotalCostUnit');
+            if (totalHourEl) {
+                totalHourEl.textContent = formatDecimalNumber(totalHour, 4);
+            }
             if (totalSecEl) {
                 totalSecEl.textContent = formatWholeNumber(totalSec);
             }
@@ -4081,7 +4216,447 @@
             calculateTotals(false);
         }
 
+        function refreshCycleTimeCalculations() {
+            const rows = Array.from(document.querySelectorAll('#cycleTimeTableBody tr'));
+            rows.forEach((row) => {
+                const input = row.querySelector('.ct-hour') || row.querySelector('.ct-sec') || row.querySelector('.ct-cost-sec');
+                if (input) {
+                    calculateCycleRow(input);
+                }
+            });
+
+            calculateCycleTotals();
+        }
+
+        function getCycleStateSnapshot() {
+            const tbody = document.getElementById('cycleTimeTableBody');
+            if (!tbody) {
+                return null;
+            }
+
+            const clone = tbody.cloneNode(true);
+            const liveControls = Array.from(tbody.querySelectorAll('input, select, textarea'));
+            const cloneControls = Array.from(clone.querySelectorAll('input, select, textarea'));
+
+            cloneControls.forEach((control, index) => {
+                const liveControl = liveControls[index];
+                if (!liveControl) {
+                    return;
+                }
+
+                if (control instanceof HTMLInputElement) {
+                    control.value = liveControl.value;
+                    if (control.type === 'checkbox' || control.type === 'radio') {
+                        control.checked = liveControl.checked;
+                    }
+                } else if (control instanceof HTMLSelectElement) {
+                    control.value = liveControl.value;
+                    Array.from(control.options).forEach((option) => {
+                        option.selected = option.value === liveControl.value;
+                    });
+                } else if (control instanceof HTMLTextAreaElement) {
+                    control.value = liveControl.value;
+                    control.textContent = liveControl.value;
+                }
+            });
+
+            return {
+                html: clone.innerHTML,
+                rowCounter: cycleRowCounter,
+            };
+        }
+
+        function updateCycleUndoButtonState() {
+            const undoBtn = document.getElementById('cycleUndoBtn');
+            const redoBtn = document.getElementById('cycleRedoBtn');
+            if (!undoBtn) return;
+            undoBtn.disabled = cycleUndoHistory.length === 0;
+            if (redoBtn) {
+                redoBtn.disabled = cycleRedoHistory.length === 0;
+            }
+        }
+
+        function pushCycleHistoryAction(action) {
+            if (!action || cycleHistoryApplying) {
+                return;
+            }
+
+            cycleUndoHistory.push(action);
+            if (cycleUndoHistory.length > cycleUndoLimit) {
+                cycleUndoHistory.shift();
+            }
+
+            cycleRedoHistory = [];
+            updateCycleUndoButtonState();
+        }
+
+        function commitActiveCycleFieldChange(control = null) {
+            const active = control instanceof HTMLElement ? control : document.activeElement;
+            if (!(active instanceof HTMLElement)) {
+                return;
+            }
+
+            if (!active.matches('#cycleTimeTableBody input.form-input, #cycleTimeTableBody select.form-select')) {
+                return;
+            }
+
+            const previousValue = active.dataset.undoValue ?? '';
+            const currentValue = active.value ?? '';
+            if (previousValue === currentValue) {
+                return;
+            }
+
+            pushCycleHistoryAction({
+                type: 'field',
+                name: active.name,
+                oldValue: previousValue,
+                newValue: currentValue,
+            });
+
+            active.dataset.undoValue = currentValue;
+        }
+
+        function applyCycleFieldValueByName(name, value) {
+            if (!name) {
+                return;
+            }
+
+            const escapedName = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+                ? CSS.escape(name)
+                : name.replace(/([\[\]\.:#])/g, '\\$1');
+
+            const target = document.querySelector(`#cycleTimeTableBody [name="${escapedName}"]`);
+            if (!(target instanceof HTMLElement)) {
+                return;
+            }
+
+            target.value = value ?? '';
+            target.dataset.undoValue = target.value ?? '';
+
+            const shouldRecalculate = target.matches('.ct-qty, .ct-hour, .ct-sec, .ct-cost-sec');
+            if (shouldRecalculate) {
+                calculateCycleRow(target);
+            } else {
+                calculateCycleTotals();
+            }
+
+            updateCycleSelectAllRowsState();
+
+            const focused = document.activeElement;
+            if (focused instanceof HTMLElement && focused.matches('#cycleTimeTableBody input.form-input, #cycleTimeTableBody select.form-select')) {
+                focused.dataset.undoValue = focused.value ?? '';
+            }
+        }
+
+        function markCycleControlsUndoBase() {
+            const controls = document.querySelectorAll('#cycleTimeTableBody input.form-input, #cycleTimeTableBody select.form-select');
+            controls.forEach((control) => {
+                control.dataset.undoValue = control.value ?? '';
+            });
+        }
+
+        function clearCycleSelectionState() {
+            const rowCheckboxes = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select'));
+            rowCheckboxes.forEach((cb) => {
+                if (cb instanceof HTMLInputElement) {
+                    cb.checked = false;
+                }
+            });
+
+            const master = document.getElementById('cycleSelectAllRows');
+            if (master instanceof HTMLInputElement) {
+                master.checked = false;
+                master.indeterminate = false;
+            }
+
+            updateCycleDeleteSelectedButtonState();
+        }
+
+        function restoreCycleSnapshot(snapshot) {
+            if (!snapshot) {
+                return;
+            }
+
+            const tbody = document.getElementById('cycleTimeTableBody');
+            if (!tbody) {
+                return;
+            }
+
+            tbody.innerHTML = snapshot.html;
+            cycleRowCounter = snapshot.rowCounter;
+
+            renumberCycleRows();
+            clearCycleSelectionState();
+            markCycleControlsUndoBase();
+            refreshCycleTimeCalculations();
+            updateCycleSelectAllRowsState();
+        }
+
+        function applyCycleAction(action, direction) {
+            if (!action) {
+                return;
+            }
+
+            cycleHistoryApplying = true;
+
+            if (action.type === 'field') {
+                const targetValue = direction === 'undo' ? action.oldValue : action.newValue;
+                applyCycleFieldValueByName(action.name, targetValue);
+            } else if (action.type === 'snapshot') {
+                const snapshot = direction === 'undo' ? action.before : action.after;
+                restoreCycleSnapshot(snapshot);
+            }
+
+            cycleHistoryApplying = false;
+            markCycleControlsUndoBase();
+            updateCycleUndoButtonState();
+        }
+
+        function undoCycleTimeTable() {
+            commitActiveCycleFieldChange();
+
+            if (cycleUndoHistory.length === 0) {
+                return;
+            }
+
+            const action = cycleUndoHistory.pop();
+            if (!action) {
+                updateCycleUndoButtonState();
+                return;
+            }
+
+            applyCycleAction(action, 'undo');
+
+            cycleRedoHistory.push(action);
+            if (cycleRedoHistory.length > cycleUndoLimit) {
+                cycleRedoHistory.shift();
+            }
+
+            updateCycleUndoButtonState();
+        }
+
+        function redoCycleTimeTable() {
+            if (cycleRedoHistory.length === 0) {
+                return;
+            }
+
+            const next = cycleRedoHistory.pop();
+            if (!next) {
+                updateCycleUndoButtonState();
+                return;
+            }
+
+            applyCycleAction(next, 'redo');
+
+            cycleUndoHistory.push(next);
+            if (cycleUndoHistory.length > cycleUndoLimit) {
+                cycleUndoHistory.shift();
+            }
+
+            updateCycleUndoButtonState();
+        }
+
+        function applyCycleSelectAllRows(checked) {
+            const rowCheckboxes = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select'));
+            rowCheckboxes.forEach((cb) => {
+                if (cb instanceof HTMLInputElement) {
+                    cb.checked = !!checked;
+                }
+            });
+
+            const master = document.getElementById('cycleSelectAllRows');
+            if (master instanceof HTMLInputElement) {
+                master.checked = !!checked;
+                master.indeterminate = false;
+            }
+        }
+
+        function updateCycleSelectAllRowsState() {
+            const master = document.getElementById('cycleSelectAllRows');
+            if (!(master instanceof HTMLInputElement)) {
+                return;
+            }
+
+            const rowCheckboxes = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select'));
+            if (rowCheckboxes.length === 0) {
+                master.checked = false;
+                master.indeterminate = false;
+                return;
+            }
+
+            const checkedCount = rowCheckboxes.filter((cb) => cb instanceof HTMLInputElement && cb.checked).length;
+            master.checked = checkedCount === rowCheckboxes.length;
+            master.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
+
+            updateCycleDeleteSelectedButtonState();
+        }
+
+        function updateCycleDeleteSelectedButtonState() {
+            const deleteBtn = document.getElementById('cycleDeleteSelectedBtn');
+            if (!deleteBtn) {
+                return;
+            }
+
+            const hasSelectedRows = document.querySelector('#cycleTimeTableBody .cycle-row-select:checked') !== null;
+            deleteBtn.disabled = !hasSelectedRows;
+        }
+
+        function bindCycleSelectAllRows() {
+            const masterSelectAll = document.getElementById('cycleSelectAllRows');
+            if (!(masterSelectAll instanceof HTMLInputElement) || masterSelectAll.dataset.boundSelectAll === '1') {
+                return;
+            }
+
+            masterSelectAll.dataset.boundSelectAll = '1';
+            masterSelectAll.addEventListener('change', function () {
+                applyCycleSelectAllRows(this.checked);
+                updateCycleDeleteSelectedButtonState();
+            });
+        }
+
+        function getCycleEditableCells(row) {
+            return Array.from(row.querySelectorAll('input.form-input, select.form-select'));
+        }
+
+        function moveCycleFocusLinear(currentElement, step) {
+            const currentRow = currentElement.closest('tr');
+            if (!currentRow) return;
+
+            const rows = Array.from(document.querySelectorAll('#cycleTimeTableBody tr'));
+            const currentRowIndex = rows.indexOf(currentRow);
+            if (currentRowIndex < 0) return;
+
+            const currentCells = getCycleEditableCells(currentRow);
+            const currentCellIndex = currentCells.indexOf(currentElement);
+            if (currentCellIndex < 0) return;
+
+            let nextRowIndex = currentRowIndex;
+            let nextCellIndex = currentCellIndex + step;
+
+            if (nextCellIndex >= currentCells.length) {
+                nextRowIndex += 1;
+                if (nextRowIndex >= rows.length) {
+                    return;
+                }
+                nextCellIndex = 0;
+            } else if (nextCellIndex < 0) {
+                nextRowIndex -= 1;
+                if (nextRowIndex < 0) {
+                    return;
+                }
+                const prevCells = getCycleEditableCells(rows[nextRowIndex]);
+                nextCellIndex = Math.max(prevCells.length - 1, 0);
+            }
+
+            const nextCells = getCycleEditableCells(rows[nextRowIndex]);
+            if (!nextCells.length) return;
+
+            const target = nextCells[Math.min(nextCellIndex, nextCells.length - 1)];
+            if (!target) return;
+
+            target.focus();
+            if (target.tagName === 'INPUT') {
+                target.select();
+            }
+        }
+
+        function moveCycleFocusVertical(currentElement, step) {
+            const currentRow = currentElement.closest('tr');
+            if (!currentRow) return;
+
+            const rows = Array.from(document.querySelectorAll('#cycleTimeTableBody tr'));
+            const currentRowIndex = rows.indexOf(currentRow);
+            if (currentRowIndex < 0) return;
+
+            const currentCells = getCycleEditableCells(currentRow);
+            const currentCellIndex = currentCells.indexOf(currentElement);
+            if (currentCellIndex < 0) return;
+
+            const nextRowIndex = currentRowIndex + step;
+            if (nextRowIndex < 0 || nextRowIndex >= rows.length) {
+                return;
+            }
+
+            const nextCells = getCycleEditableCells(rows[nextRowIndex]);
+            if (!nextCells.length) return;
+
+            const target = nextCells[Math.min(currentCellIndex, nextCells.length - 1)];
+            if (!target) return;
+
+            target.focus();
+            if (target.tagName === 'INPUT') {
+                target.select();
+            }
+        }
+
+        function bindCycleTableBehaviors() {
+            const cycleBody = document.getElementById('cycleTimeTableBody');
+            if (!cycleBody || cycleBody.dataset.boundBehavior === '1') {
+                return;
+            }
+
+            cycleBody.dataset.boundBehavior = '1';
+
+            cycleBody.addEventListener('focusin', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (!target.matches('input.form-input, select.form-select')) {
+                    return;
+                }
+
+                target.dataset.undoValue = target.value ?? '';
+            });
+
+            cycleBody.addEventListener('change', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (target.matches('.cycle-row-select')) {
+                    updateCycleSelectAllRowsState();
+                    updateCycleDeleteSelectedButtonState();
+                    return;
+                }
+
+                if (!target.matches('input.form-input, select.form-select')) {
+                    return;
+                }
+
+                commitActiveCycleFieldChange(target);
+            });
+
+            cycleBody.addEventListener('keydown', function (event) {
+                const target = event.target;
+                if (!(target instanceof HTMLElement)) {
+                    return;
+                }
+
+                if (!target.matches('input.form-input, select.form-select')) {
+                    return;
+                }
+
+                if (event.key === 'ArrowRight') {
+                    event.preventDefault();
+                    moveCycleFocusLinear(target, 1);
+                } else if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    moveCycleFocusLinear(target, -1);
+                } else if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    moveCycleFocusVertical(target, 1);
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    moveCycleFocusVertical(target, -1);
+                }
+            });
+        }
+
         function addCycleTimeRow() {
+            const beforeSnapshot = getCycleStateSnapshot();
             const tbody = document.getElementById('cycleTimeTableBody');
             const newRow = document.createElement('tr');
             newRow.setAttribute('data-cycle-row', cycleRowCounter);
@@ -4101,34 +4676,105 @@
                 .join('');
 
             newRow.innerHTML = `
-                <td>${cycleRowCounter + 1}</td>
+                <td>
+                    <span class="cycle-row-no-cell">
+                        <input type="checkbox" class="cycle-row-select" title="Pilih baris">
+                        <span class="cycle-row-number">${cycleRowCounter + 1}</span>
+                    </span>
+                </td>
                 <td><select class="form-select ct-process" name="cycle_times[${cycleRowCounter}][process]">${processOptionsHtml}</select></td>
                 <td><input type="number" class="form-input ct-qty" name="cycle_times[${cycleRowCounter}][qty]" value="" step="0.0001" onchange="calculateCycleRow(this)"></td>
                 <td><input type="number" class="form-input ct-hour" name="cycle_times[${cycleRowCounter}][time_hour]" value="" step="0.0001" onchange="calculateCycleRow(this)"></td>
-                <td><input type="number" class="form-input ct-sec" name="cycle_times[${cycleRowCounter}][time_sec]" value="" step="1" onchange="calculateCycleRow(this)"></td>
-                <td><input type="number" class="form-input ct-sec-per" name="cycle_times[${cycleRowCounter}][time_sec_per_qty]" value="" step="1" onchange="calculateCycleRow(this)"></td>
+                <td><input type="number" class="form-input ct-sec" name="cycle_times[${cycleRowCounter}][time_sec]" value="" step="1" readonly onchange="calculateCycleRow(this)"></td>
+                <td><input type="number" class="form-input ct-sec-per" name="cycle_times[${cycleRowCounter}][time_sec_per_qty]" value="" step="1" readonly onchange="calculateCycleRow(this)"></td>
                 <td><input type="number" class="form-input ct-cost-sec" name="cycle_times[${cycleRowCounter}][cost_per_sec]" value="10.33" step="0.0001" onchange="calculateCycleRow(this)"></td>
-                <td><input type="number" class="form-input ct-cost-unit" name="cycle_times[${cycleRowCounter}][cost_per_unit]" value="" step="1" onchange="calculateCycleRow(this)"></td>
+                <td><input type="number" class="form-input ct-cost-unit" name="cycle_times[${cycleRowCounter}][cost_per_unit]" value="" step="1" readonly onchange="calculateCycleRow(this)"></td>
+                <td>
+                    <select class="form-select ct-area-of-process" name="cycle_times[${cycleRowCounter}][area_of_process]">
+                        <option value="">-- Pilih Area --</option>
+                        <option value="PP - Preparation">PP - Preparation</option>
+                        <option value="FA - Final Assy">FA - Final Assy</option>
+                    </select>
+                </td>
                 <td><button type="button" class="btn btn-secondary" onclick="removeCycleTimeRow(this)" style="padding: 0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td>
             `;
 
             tbody.appendChild(newRow);
             cycleRowCounter++;
             renumberCycleRows();
+
+            const afterSnapshot = getCycleStateSnapshot();
+            pushCycleHistoryAction({
+                type: 'snapshot',
+                before: beforeSnapshot,
+                after: afterSnapshot,
+            });
+            updateCycleDeleteSelectedButtonState();
+            updateCycleUndoButtonState();
+            refreshCycleTimeCalculations();
         }
 
         function removeCycleTimeRow(button) {
+            const beforeSnapshot = getCycleStateSnapshot();
             const row = button.closest('tr');
             row.remove();
             renumberCycleRows();
-            calculateCycleTotals();
+            refreshCycleTimeCalculations();
+
+            const afterSnapshot = getCycleStateSnapshot();
+            pushCycleHistoryAction({
+                type: 'snapshot',
+                before: beforeSnapshot,
+                after: afterSnapshot,
+            });
+            updateCycleDeleteSelectedButtonState();
+            updateCycleUndoButtonState();
+        }
+
+        async function deleteSelectedCycleRows() {
+            const selectedRows = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select:checked'))
+                .map((cb) => cb.closest('tr'))
+                .filter((row) => row instanceof HTMLTableRowElement);
+
+            if (selectedRows.length === 0) {
+                return;
+            }
+
+            const confirmed = await showCycleTimeDeleteConfirmModal();
+            if (!confirmed) {
+                return;
+            }
+
+            const beforeSnapshot = getCycleStateSnapshot();
+            selectedRows.forEach((row) => row.remove());
+
+            renumberCycleRows();
+            refreshCycleTimeCalculations();
+
+            const afterSnapshot = getCycleStateSnapshot();
+            pushCycleHistoryAction({
+                type: 'snapshot',
+                before: beforeSnapshot,
+                after: afterSnapshot,
+            });
+
+            updateCycleDeleteSelectedButtonState();
+            updateCycleUndoButtonState();
         }
 
         function renumberCycleRows() {
             const rows = document.querySelectorAll('#cycleTimeTableBody tr');
             rows.forEach((row, index) => {
-                row.cells[0].textContent = index + 1;
+                const numberEl = row.querySelector('.cycle-row-number');
+                if (numberEl) {
+                    numberEl.textContent = index + 1;
+                } else if (row.cells[0]) {
+                    row.cells[0].textContent = index + 1;
+                }
             });
+
+            updateCycleSelectAllRowsState();
+            updateCycleDeleteSelectedButtonState();
         }
 
         function initSectionToggles() {
@@ -4168,7 +4814,9 @@
                 'tracking_revision_id',
                 'update_section',
                 'import_partlist',
-                'import_partlist_file'
+                'import_partlist_file',
+                'import_cycle_time',
+                'import_cycle_time_file'
             ];
 
             if (alwaysKeep.includes(fieldName)) {
@@ -4319,6 +4967,70 @@
             form.submit();
         }
 
+        function showCycleTimeDeleteConfirmModal() {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('cycleTimeDeleteConfirmModal');
+                const okBtn = document.getElementById('cycleTimeDeleteOkBtn');
+                const cancelBtn = document.getElementById('cycleTimeDeleteCancelBtn');
+
+                if (!modal || !okBtn || !cancelBtn) {
+                    resolve(false);
+                    return;
+                }
+
+                const closeWith = (result) => {
+                    modal.classList.add('is-hidden');
+                    modal.setAttribute('aria-hidden', 'true');
+                    okBtn.removeEventListener('click', handleOk);
+                    cancelBtn.removeEventListener('click', handleCancel);
+                    modal.removeEventListener('click', handleOverlay);
+                    document.removeEventListener('keydown', handleEsc);
+                    resolve(result);
+                };
+
+                const handleOk = () => closeWith(true);
+                const handleCancel = () => closeWith(false);
+                const handleOverlay = (event) => {
+                    if (event.target === modal) {
+                        closeWith(false);
+                    }
+                };
+                const handleEsc = (event) => {
+                    if (event.key === 'Escape') {
+                        closeWith(false);
+                    }
+                };
+
+                modal.classList.remove('is-hidden');
+                modal.setAttribute('aria-hidden', 'false');
+
+                okBtn.addEventListener('click', handleOk);
+                cancelBtn.addEventListener('click', handleCancel);
+                modal.addEventListener('click', handleOverlay);
+                document.addEventListener('keydown', handleEsc);
+            });
+        }
+
+        function triggerCycleTimeImport() {
+            const fileInput = document.getElementById('importCycleTimeFileInput');
+            if (!fileInput) return;
+
+            fileInput.value = '';
+            fileInput.click();
+        }
+
+        function submitCycleTimeImport() {
+            const form = document.getElementById('cycleTimeImportForm');
+            if (!form) return;
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+                return;
+            }
+
+            form.submit();
+        }
+
         // Initialize calculations on page load
         document.addEventListener('DOMContentLoaded', function () {
             if (Array.isArray(initialToastNotifications)) {
@@ -4334,10 +5046,14 @@
             bindMaterialTableBehaviors();
             initMaterialFilterPopup();
             initMaterialHeaderFilters();
+            bindCycleSelectAllRows();
+            bindCycleTableBehaviors();
             normalizeMaterialTextInputs();
             markMaterialControlsUndoBase();
+            markCycleControlsUndoBase();
             applyMaterialFilters();
             updateMaterialSelectAllRowsState();
+            updateCycleUndoButtonState();
             formatForecastDisplay();
             calculateTotals();
 
@@ -4360,7 +5076,23 @@
                 if (input) calculateCycleRow(input);
             });
 
-            calculateCycleTotals();
+            refreshCycleTimeCalculations();
+            updateCycleSelectAllRowsState();
+            clearCycleSelectionState();
+            markCycleControlsUndoBase();
+            updateCycleUndoButtonState();
+            updateCycleDeleteSelectedButtonState();
+
+            const cycleTableBody = document.getElementById('cycleTimeTableBody');
+            if (cycleTableBody && !cycleTableBody.dataset.boundSelectAllRows) {
+                cycleTableBody.dataset.boundSelectAllRows = '1';
+                cycleTableBody.addEventListener('change', function (event) {
+                    const target = event.target;
+                    if (target instanceof HTMLElement && target.matches('.cycle-row-select')) {
+                        updateCycleSelectAllRowsState();
+                    }
+                });
+            }
 
             const forecastDisplay = document.getElementById('forecastDisplay');
             if (forecastDisplay) {

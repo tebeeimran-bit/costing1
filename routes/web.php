@@ -70,8 +70,10 @@ Route::put('/database/wires/rates/{id}', [DatabaseController::class, 'updateWire
 Route::delete('/database/wires/rates/{id}', [DatabaseController::class, 'destroyWireRate'])->name('database.wires.rates.destroy');
 Route::get('/form', [CostingController::class, 'form'])->name('form');
 Route::post('/costing/store', [CostingController::class, 'store'])->name('costing.store');
+Route::get('/costing/template-cycle-time', [CostingController::class, 'downloadCycleTimeTemplate'])->name('costing.template-cycle-time');
 Route::get('/costing/import-partlist', fn () => redirect()->route('form'))->name('costing.import-partlist.get');
 Route::post('/costing/import-partlist', [CostingController::class, 'importPartlist'])->name('costing.import-partlist');
+Route::post('/costing/import-cycle-time', [CostingController::class, 'importCycleTime'])->name('costing.import-cycle-time');
 Route::get('/document-receipts', [DocumentReceiptController::class, 'index'])->name('document-receipts.index');
 Route::post('/document-receipts', [DocumentReceiptController::class, 'store'])->name('document-receipts.store');
 Route::get('/document-receipts/{documentReceipt}/{type}', [DocumentReceiptController::class, 'download'])

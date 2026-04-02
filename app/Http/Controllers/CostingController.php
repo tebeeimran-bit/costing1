@@ -20,7 +20,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use ZipArchive;
 
 class CostingController extends Controller
@@ -376,10 +378,13 @@ class CostingController extends Controller
     public function store(Request $request)
     {
         $updateSection = trim((string) $request->input('update_section', ''));
-        $importFileUploaded = $request->hasFile('import_partlist_file');
+        $importPartlistFileUploaded = $request->hasFile('import_partlist_file');
+        $importCycleTimeFileUploaded = $request->hasFile('import_cycle_time_file');
 
-        if ($importFileUploaded && $updateSection === '') {
+        if ($importPartlistFileUploaded && $updateSection === '') {
             $updateSection = 'material';
+        } elseif ($importCycleTimeFileUploaded && $updateSection === '') {
+            $updateSection = 'cycle_time';
         }
 
         $baseRules = [
@@ -387,6 +392,7 @@ class CostingController extends Controller
             'tracking_revision_id' => 'nullable|exists:document_revisions,id',
             'update_section' => 'nullable|string',
             'import_partlist' => 'nullable|boolean',
+            'import_cycle_time' => 'nullable|boolean',
             'wire_rate_id' => 'nullable|exists:wire_rates,id',
         ];
 
@@ -429,6 +435,7 @@ class CostingController extends Controller
             'cycle_times.*.time_sec_per_qty' => 'nullable|numeric',
             'cycle_times.*.cost_per_sec' => 'nullable|numeric',
             'cycle_times.*.cost_per_unit' => 'nullable|numeric',
+            'cycle_times.*.area_of_process' => 'nullable|in:PP - Preparation,FA - Final Assy',
         ];
 
         $sectionRules = [
@@ -476,6 +483,7 @@ class CostingController extends Controller
                 'cycle_times.*.time_sec_per_qty' => 'nullable|numeric',
                 'cycle_times.*.cost_per_sec' => 'nullable|numeric',
                 'cycle_times.*.cost_per_unit' => 'nullable|numeric',
+                'cycle_times.*.area_of_process' => 'nullable|in:PP - Preparation,FA - Final Assy',
             ],
             'resume_cogm' => [
                 'material_cost' => 'required|numeric',
@@ -495,8 +503,12 @@ class CostingController extends Controller
             ? array_merge($baseRules, $sectionRules[$updateSection])
             : array_merge($baseRules, $fullRules);
 
-        if ($updateSection === 'material' && ($request->boolean('import_partlist') || $importFileUploaded)) {
+        if ($updateSection === 'material' && ($request->boolean('import_partlist') || $importPartlistFileUploaded)) {
             $rules['import_partlist_file'] = 'nullable';
+        }
+
+        if ($updateSection === 'cycle_time' && ($request->boolean('import_cycle_time') || $importCycleTimeFileUploaded)) {
+            $rules['import_cycle_time_file'] = 'nullable';
         }
 
         $messages = [
@@ -505,6 +517,11 @@ class CostingController extends Controller
             'import_partlist_file.uploaded' => 'Upload gagal. Kemungkinan ukuran file melebihi batas server. Naikkan upload_max_filesize dan post_max_size di PHP.',
             'import_partlist_file.mimes' => 'Format file harus .xlsx atau .xls sesuai template partlist.',
             'import_partlist_file.max' => 'Ukuran file partlist terlalu besar (maks 20MB).',
+            'import_cycle_time_file.required' => 'File Cycle Time wajib dipilih.',
+            'import_cycle_time_file.file' => 'File Cycle Time tidak valid.',
+            'import_cycle_time_file.uploaded' => 'Upload file Cycle Time gagal. Kemungkinan ukuran file melebihi batas server. Naikkan upload_max_filesize dan post_max_size di PHP.',
+            'import_cycle_time_file.mimes' => 'Format file Cycle Time harus .xlsx atau .xls.',
+            'import_cycle_time_file.max' => 'Ukuran file Cycle Time terlalu besar (maks 20MB).',
         ];
 
         $validated = $request->validate($rules, $messages);
@@ -523,9 +540,12 @@ class CostingController extends Controller
             }
         }
 
-        $importRequested = $updateSection === 'material' && ($request->boolean('import_partlist') || $importFileUploaded);
-        $importFromPartlist = $updateSection === 'material' && $importFileUploaded;
+        $importRequested = $updateSection === 'material' && ($request->boolean('import_partlist') || $importPartlistFileUploaded);
+        $importFromPartlist = $updateSection === 'material' && $importPartlistFileUploaded;
         $importedMaterialRows = [];
+        $importCycleTimeRequested = $updateSection === 'cycle_time' && ($request->boolean('import_cycle_time') || $importCycleTimeFileUploaded);
+        $importFromCycleTime = $updateSection === 'cycle_time' && $importCycleTimeFileUploaded;
+        $importedCycleTimeRows = [];
 
         if ($importRequested) {
             $trackingRevisionId = isset($validated['tracking_revision_id']) ? (int) $validated['tracking_revision_id'] : null;
@@ -569,6 +589,45 @@ class CostingController extends Controller
             if (count($importedMaterialRows) === 0) {
                 return back()->with('warning', 'Data partlist tidak ditemukan. Pastikan data diisi mulai kolom D-J dari baris 12 ke bawah (sesuai template).')->withInput();
             }
+        }
+
+        if ($importCycleTimeRequested) {
+            $uploadedCycleTimeFile = $request->file('import_cycle_time_file');
+            $uploadErrorCode = (int) ($_FILES['import_cycle_time_file']['error'] ?? UPLOAD_ERR_NO_FILE);
+
+            if ($uploadedCycleTimeFile) {
+                if (!$uploadedCycleTimeFile->isValid()) {
+                    $errorCode = (int) $uploadedCycleTimeFile->getError();
+                    return back()->with('error', 'Upload file Cycle Time gagal: ' . $this->uploadErrorCodeToMessage($errorCode))->withInput();
+                }
+
+                $ext = strtolower((string) $uploadedCycleTimeFile->getClientOriginalExtension());
+                if (!in_array($ext, ['xlsx', 'xls'], true)) {
+                    return back()->with('error', 'Format file Cycle Time harus .xlsx atau .xls.')->withInput();
+                }
+
+                if ($uploadedCycleTimeFile->getSize() > (20 * 1024 * 1024)) {
+                    return back()->with('error', 'Ukuran file Cycle Time terlalu besar (maks 20MB).')->withInput();
+                }
+            } elseif ($uploadErrorCode !== UPLOAD_ERR_NO_FILE) {
+                return back()->with('error', 'Upload file Cycle Time gagal: ' . $this->uploadErrorCodeToMessage($uploadErrorCode))->withInput();
+            } else {
+                return back()->with('warning', 'Silakan pilih file Cycle Time terlebih dahulu sebelum import.')->withInput();
+            }
+
+            $importResult = $this->loadCycleTimeRows($uploadedCycleTimeFile);
+
+            if (!empty($importResult['error'])) {
+                return back()->with('error', $importResult['error'])->withInput();
+            }
+
+            $importedCycleTimeRows = array_values($importResult['rows']);
+
+            if (count($importedCycleTimeRows) === 0) {
+                return back()->with('warning', 'Data Cycle Time tidak ditemukan. Pastikan data No/Process/Qty/Time/Area diisi sesuai template (B18, C18, D17, G18, I18 ke bawah).')->withInput();
+            }
+
+            $request->merge(['cycle_times' => $importedCycleTimeRows]);
         }
 
         DB::beginTransaction();
@@ -1016,6 +1075,8 @@ class CostingController extends Controller
 
             if ($importFromPartlist) {
                 $successMessage = 'Partlist berhasil diimport ke Material (' . count($importedMaterialRows) . ' baris).';
+            } elseif ($importFromCycleTime) {
+                $successMessage = 'Cycle Time berhasil diimport (' . count($importedCycleTimeRows) . ' baris).';
             }
 
             if ($updateSection === 'unpriced_parts') {
@@ -1041,6 +1102,79 @@ class CostingController extends Controller
         ]);
 
         return $this->store($request);
+    }
+
+    public function importCycleTime(Request $request)
+    {
+        $request->merge([
+            'update_section' => 'cycle_time',
+            'import_cycle_time' => 1,
+        ]);
+
+        return $this->store($request);
+    }
+
+    public function downloadCycleTimeTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Cycle Time');
+
+        $sheet->setCellValue('B17', 'No.');
+        $sheet->setCellValue('C17', 'Process');
+        $sheet->setCellValue('F17', 'Qty');
+        $sheet->setCellValue('G17', 'Time (hour)');
+        $sheet->setCellValue('I17', 'Area of Process');
+
+        $sampleRows = [
+            ['no' => 1, 'process' => 'Cutting, Stripping, Crimping', 'qty' => 120, 'time_hour' => 0.40, 'area' => 'PP - Preparation'],
+            ['no' => 2, 'process' => 'Twisting', 'qty' => 120, 'time_hour' => 0.30, 'area' => 'PP - Preparation'],
+            ['no' => 3, 'process' => 'HF Sealer', 'qty' => 120, 'time_hour' => 0.25, 'area' => 'FA - Final Assy'],
+        ];
+
+        $startRow = 18;
+        foreach ($sampleRows as $index => $sample) {
+            $row = $startRow + $index;
+            $sheet->setCellValue('B' . $row, $sample['no']);
+            $sheet->setCellValue('C' . $row, $sample['process']);
+            $sheet->setCellValue('F' . $row, $sample['qty']);
+            $sheet->setCellValue('G' . $row, $sample['time_hour']);
+            $sheet->setCellValue('I' . $row, $sample['area']);
+        }
+
+        // Add dropdown validation for Area of Process (I18:I5000).
+        for ($row = 18; $row <= 5000; $row++) {
+            $validation = $sheet->getCell('I' . $row)->getDataValidation();
+            $validation->setType(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::TYPE_LIST);
+            $validation->setErrorStyle(\PhpOffice\PhpSpreadsheet\Cell\DataValidation::STYLE_STOP);
+            $validation->setAllowBlank(true);
+            $validation->setShowInputMessage(true);
+            $validation->setShowErrorMessage(true);
+            $validation->setShowDropDown(true);
+            $validation->setErrorTitle('Input tidak valid');
+            $validation->setError('Pilih Area of Process: PP - Preparation atau FA - Final Assy.');
+            $validation->setPromptTitle('Pilih Area of Process');
+            $validation->setPrompt('Gunakan dropdown: PP - Preparation atau FA - Final Assy.');
+            $validation->setFormula1('"PP - Preparation,FA - Final Assy"');
+        }
+
+        foreach (['A', 'B', 'C', 'F', 'G', 'I'] as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $tmpPath = tempnam(sys_get_temp_dir(), 'cycle_time_tpl_');
+        if ($tmpPath === false) {
+            abort(500, 'Gagal membuat file template sementara.');
+        }
+
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tmpPath);
+
+        return response()->download(
+            $tmpPath,
+            'cycle-time-template.xlsx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        )->deleteFileAfterSend(true);
     }
 
     private function loadPartlistMaterialRows(?int $trackingRevisionId, $uploadedPartlistFile = null): array
@@ -1095,6 +1229,147 @@ class CostingController extends Controller
         } catch (\Throwable $e) {
             return ['rows' => [], 'error' => 'Gagal membaca file partlist: ' . $e->getMessage()];
         }
+    }
+
+    private function loadCycleTimeRows($uploadedCycleTimeFile): array
+    {
+        if (!$uploadedCycleTimeFile) {
+            return ['rows' => [], 'error' => 'File Cycle Time belum dipilih.'];
+        }
+
+        $sourcePath = $uploadedCycleTimeFile->getPathname();
+        $extension = strtolower((string) $uploadedCycleTimeFile->getClientOriginalExtension());
+
+        if (!in_array($extension, ['xlsx', 'xls'], true)) {
+            return ['rows' => [], 'error' => 'Format file Cycle Time tidak didukung untuk import otomatis.'];
+        }
+
+        if (!$sourcePath || !is_readable($sourcePath)) {
+            return ['rows' => [], 'error' => 'File Cycle Time tidak dapat diakses oleh server.'];
+        }
+
+        $fileSize = @filesize($sourcePath);
+        if ($fileSize === false || $fileSize <= 0) {
+            return ['rows' => [], 'error' => 'File Cycle Time kosong atau rusak.'];
+        }
+
+        try {
+            $rows = $this->parseCycleTimeXlsx((string) $sourcePath);
+            return ['rows' => $rows, 'error' => null];
+        } catch (\Throwable $e) {
+            return ['rows' => [], 'error' => 'Gagal membaca file Cycle Time: ' . $e->getMessage()];
+        }
+    }
+
+    private function parseCycleTimeXlsx(string $filePath): array
+    {
+        if (!class_exists(IOFactory::class)) {
+            throw new \RuntimeException('Parser PhpSpreadsheet tidak tersedia.');
+        }
+
+        $spreadsheet = IOFactory::load($filePath);
+        $bestCycleTimes = [];
+
+        foreach ($spreadsheet->getAllSheets() as $sheet) {
+            if (!$sheet instanceof Worksheet) {
+                continue;
+            }
+
+            $rows = $this->extractCycleTimesFromTemplateSheet($sheet);
+            if (count($rows) > count($bestCycleTimes)) {
+                $bestCycleTimes = $rows;
+            }
+        }
+
+        return $bestCycleTimes;
+    }
+
+    private function extractCycleTimesFromTemplateSheet(Worksheet $sheet): array
+    {
+        $highestDataRow = (int) $sheet->getHighestDataRow();
+        $highestRow = (int) $sheet->getHighestRow();
+
+        $scanEnd = max($highestDataRow, 18);
+        if ($scanEnd < 18 && $highestRow >= 18) {
+            $scanEnd = min($highestRow, 5000);
+        } else {
+            $scanEnd = min(max($scanEnd + 120, 250), 5000);
+        }
+
+        $cycleTimes = [];
+        $emptyStreak = 0;
+
+        for ($row = 18; $row <= $scanEnd; $row++) {
+            $noRaw = trim((string) $sheet->getCell('B' . $row)->getFormattedValue());
+            $process = trim((string) $sheet->getCell('C' . $row)->getFormattedValue());
+            $qtyRaw = trim((string) $sheet->getCell('F' . $row)->getFormattedValue());
+            $timeHourRaw = trim((string) $sheet->getCell('G' . $row)->getFormattedValue());
+            $areaRaw = trim((string) $sheet->getCell('I' . $row)->getFormattedValue());
+
+            $hasSignal = $noRaw !== ''
+                || $process !== ''
+                || $qtyRaw !== ''
+                || $timeHourRaw !== ''
+                || $areaRaw !== '';
+
+            if (!$hasSignal) {
+                $emptyStreak++;
+                if ($emptyStreak >= 60) {
+                    break;
+                }
+                continue;
+            }
+
+            $emptyStreak = 0;
+
+            if ($process === '') {
+                continue;
+            }
+
+            $rowData = [
+                'process' => $process,
+                'qty' => $qtyRaw !== '' ? $this->toFloatValue($qtyRaw) : null,
+                'time_hour' => $timeHourRaw !== '' ? $this->toFloatValue($timeHourRaw) : null,
+                'time_sec' => null,
+                'time_sec_per_qty' => null,
+                'cost_per_sec' => 10.33,
+                'cost_per_unit' => null,
+                'area_of_process' => $this->normalizeAreaOfProcess($areaRaw),
+            ];
+
+            // Qty only applied when process (column C) exists.
+            if ($rowData['process'] === '') {
+                $rowData['qty'] = null;
+            }
+
+            $cycleTimes[] = $rowData;
+        }
+
+        return $cycleTimes;
+    }
+
+    private function normalizeAreaOfProcess(?string $value): ?string
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return null;
+        }
+
+        if ($raw === 'PP - Preparation' || $raw === 'FA - Final Assy') {
+            return $raw;
+        }
+
+        $normalized = strtoupper(preg_replace('/\s+/', ' ', $raw));
+
+        if (in_array($normalized, ['PP', 'PREPARATION', 'PP PREPARATION', 'PP - PREPARATION'], true)) {
+            return 'PP - Preparation';
+        }
+
+        if (in_array($normalized, ['FA', 'FINAL ASSY', 'FINAL ASSY', 'FA FINAL ASSY', 'FA - FINAL ASSY'], true)) {
+            return 'FA - Final Assy';
+        }
+
+        return null;
     }
 
     private function buildUnpricedAggregationFromBreakdowns(int $costingDataId, $manualUnpricedPrices): array
