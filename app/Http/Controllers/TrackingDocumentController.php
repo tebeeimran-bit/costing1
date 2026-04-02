@@ -215,8 +215,12 @@ class TrackingDocumentController extends Controller
                 'status' => DocumentRevision::STATUS_PENDING_FORM_INPUT,
                 'partlist_original_name' => $partlistOriginalName,
                 'partlist_file_path' => $partlistPath,
+                'partlist_update_count' => 0,
+                'partlist_updated_at' => null,
                 'umh_original_name' => $umhOriginalName,
                 'umh_file_path' => $umhPath,
+                'umh_update_count' => 0,
+                'umh_updated_at' => null,
                 'notes' => $validated['notes'] ?? null,
                 'change_remark' => $nextVersion === 1
                     ? 'Dokumen awal diterima (baseline V0).'
@@ -358,8 +362,16 @@ class TrackingDocumentController extends Controller
             $targetRevision->update([
                 'partlist_original_name' => $partlistOriginalName,
                 'partlist_file_path' => $partlistPath,
+                'partlist_update_count' => $request->hasFile('partlist_file')
+                    ? ((int) ($targetRevision->partlist_update_count ?? 0) + 1)
+                    : (int) ($targetRevision->partlist_update_count ?? 0),
+                'partlist_updated_at' => $request->hasFile('partlist_file') ? now() : $targetRevision->partlist_updated_at,
                 'umh_original_name' => $umhOriginalName,
                 'umh_file_path' => $umhPath,
+                'umh_update_count' => $request->hasFile('umh_file')
+                    ? ((int) ($targetRevision->umh_update_count ?? 0) + 1)
+                    : (int) ($targetRevision->umh_update_count ?? 0),
+                'umh_updated_at' => $request->hasFile('umh_file') ? now() : $targetRevision->umh_updated_at,
                 'change_remark' => $validated['change_remark'] ?? 'Revisi Engineering diperbarui melalui update dokumen.',
             ]);
 
@@ -403,8 +415,12 @@ class TrackingDocumentController extends Controller
                 'a05_document_file_path' => $baseRevision->a05_document_file_path,
                 'partlist_original_name' => $baseRevision->partlist_original_name,
                 'partlist_file_path' => $baseRevision->partlist_file_path,
+                'partlist_update_count' => 0,
+                'partlist_updated_at' => null,
                 'umh_original_name' => $baseRevision->umh_original_name,
                 'umh_file_path' => $baseRevision->umh_file_path,
+                'umh_update_count' => 0,
+                'umh_updated_at' => null,
                 'notes' => $baseRevision->notes,
                 'change_remark' => 'Revisi Engineering diterima. Versi baru dibuat.',
             ]);

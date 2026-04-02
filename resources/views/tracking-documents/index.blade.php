@@ -747,6 +747,8 @@
                     @forelse ($project->revisions as $revision)
                         @php
                             $updateCount = $loop->index;
+                            $partlistUpdatedAt = $revision->partlist_updated_at ? $revision->partlist_updated_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : null;
+                            $umhUpdatedAt = $revision->umh_updated_at ? $revision->umh_updated_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : null;
                         @endphp
                         <div class="history-block">
                             <div class="history-title">{{ $revision->version_label }} - Diterima {{ optional($revision->received_date)->format('d/m/Y') ?: '-' }}</div>
@@ -757,6 +759,9 @@
                                 <strong>Nama Dokumen Partlist:</strong>
                                 @if(!empty($revision->partlist_original_name) && !empty($revision->partlist_file_path))
                                     <a href="{{ route('tracking-documents.view', ['revision' => $revision->id, 'type' => 'partlist'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->partlist_original_name }}</a>
+                                    @if((int) ($revision->partlist_update_count ?? 0) > 0)
+                                        <span style="font-size: 0.78rem; color: var(--slate-500);">({{ $revision->partlist_update_count }}x update{{ $partlistUpdatedAt ? ', ' . $partlistUpdatedAt : '' }})</span>
+                                    @endif
                                 @else
                                     -
                                 @endif
@@ -765,6 +770,9 @@
                                 <strong>Nama Dokumen UMH:</strong>
                                 @if(!empty($revision->umh_original_name) && !empty($revision->umh_file_path))
                                     <a href="{{ route('tracking-documents.view', ['revision' => $revision->id, 'type' => 'umh'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->umh_original_name }}</a>
+                                    @if((int) ($revision->umh_update_count ?? 0) > 0)
+                                        <span style="font-size: 0.78rem; color: var(--slate-500);">({{ $revision->umh_update_count }}x update{{ $umhUpdatedAt ? ', ' . $umhUpdatedAt : '' }})</span>
+                                    @endif
                                 @else
                                     -
                                 @endif

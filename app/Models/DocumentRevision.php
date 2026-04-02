@@ -36,8 +36,12 @@ class DocumentRevision extends Model
         'a05_document_file_path',
         'partlist_original_name',
         'partlist_file_path',
+        'partlist_update_count',
+        'partlist_updated_at',
         'umh_original_name',
         'umh_file_path',
+        'umh_update_count',
+        'umh_updated_at',
         'notes',
         'change_remark',
     ];
@@ -48,6 +52,8 @@ class DocumentRevision extends Model
         'a00_received_date' => 'date',
         'a04_received_date' => 'date',
         'a05_received_date' => 'date',
+        'partlist_updated_at' => 'datetime',
+        'umh_updated_at' => 'datetime',
     ];
 
     public function project()
