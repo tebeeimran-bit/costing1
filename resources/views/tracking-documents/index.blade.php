@@ -746,7 +746,6 @@
 
                     @forelse ($project->revisions as $revision)
                         @php
-                            $updateCount = $loop->index;
                             $partlistUpdatedAt = $revision->partlist_updated_at ? $revision->partlist_updated_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : null;
                             $umhUpdatedAt = $revision->umh_updated_at ? $revision->umh_updated_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : null;
                         @endphp
@@ -754,7 +753,6 @@
                             <div class="history-title">{{ $revision->version_label }} - Diterima {{ optional($revision->received_date)->format('d/m/Y') ?: '-' }}</div>
                             <div class="history-sub">PIC Engineering: {{ $revision->pic_engineering }}</div>
                             <div class="history-sub">Status Terakhir: {{ $revision->status_label }}</div>
-                            <div class="history-sub">Jumlah Update/Revisi Setelah Ini: {{ $updateCount }} kali</div>
                             <div class="history-sub">
                                 <strong>Nama Dokumen Partlist:</strong>
                                 @if(!empty($revision->partlist_original_name) && !empty($revision->partlist_file_path))

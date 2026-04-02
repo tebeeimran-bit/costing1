@@ -372,7 +372,9 @@ class TrackingDocumentController extends Controller
                     ? ((int) ($targetRevision->umh_update_count ?? 0) + 1)
                     : (int) ($targetRevision->umh_update_count ?? 0),
                 'umh_updated_at' => $request->hasFile('umh_file') ? now() : $targetRevision->umh_updated_at,
-                'change_remark' => $validated['change_remark'] ?? 'Revisi Engineering diperbarui melalui update dokumen.',
+                'change_remark' => trim((string) ($validated['change_remark'] ?? '')) !== ''
+                    ? trim((string) $validated['change_remark'])
+                    : '-',
             ]);
 
             return $targetRevision->fresh();
