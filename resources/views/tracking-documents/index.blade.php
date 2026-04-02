@@ -748,6 +748,15 @@
                         @php
                             $partlistUpdatedAt = $revision->partlist_updated_at ? $revision->partlist_updated_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : null;
                             $umhUpdatedAt = $revision->umh_updated_at ? $revision->umh_updated_at->timezone('Asia/Jakarta')->format('d/m/Y H:i') : null;
+                            $remarkValue = trim((string) ($revision->change_remark ?? ''));
+                            if ($remarkValue === '' || in_array($remarkValue, [
+                                '-',
+                                'Revisi Engineering diperbarui melalui update dokumen.',
+                                'Revisi Engineering diterima. Versi baru dibuat.',
+                                'Revisi Engineering diterima melalui update dokumen.',
+                            ], true)) {
+                                $remarkValue = '-';
+                            }
                         @endphp
                         <div class="history-block">
                             <div class="history-title">{{ $revision->version_label }} - Diterima {{ optional($revision->received_date)->format('d/m/Y') ?: '-' }}</div>
@@ -775,7 +784,7 @@
                                     -
                                 @endif
                             </div>
-                            <div class="history-sub"><strong>Remark Perubahan:</strong> {{ $revision->change_remark ?: '-' }}</div>
+                            <div class="history-sub"><strong>Remark Perubahan:</strong> {{ $remarkValue }}</div>
                             <div class="action-group" style="margin-bottom: 0.5rem; min-width: 0;">
                                 <button type="button" class="btn btn-secondary btn-sm" onclick="openUpdateFilesModal({{ $revision->id }})">Update</button>
                                 <form action="{{ route('tracking-documents.process-form-input', ['revision' => $revision->id], absolute: false) }}" method="POST" style="display: inline-flex;">
