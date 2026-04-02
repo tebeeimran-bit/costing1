@@ -1890,13 +1890,13 @@
                 <div class="form-group">
                     <label class="form-label">Total Material Cost (IDR)</label>
                     <input type="number" name="material_cost" class="form-input" id="materialCost"
-                        value="{{ $costingData->material_cost ?? '' }}" required placeholder="0"
+                        value="{{ $costingData->material_cost ?? 0 }}" placeholder="0"
                         readonly>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Process Cost (IDR)</label>
                     <input type="number" name="labor_cost" class="form-input" id="laborCost"
-                        value="{{ $costingData->labor_cost ?? '' }}" required placeholder="0"
+                        value="{{ $costingData->labor_cost ?? 0 }}" placeholder="0"
                         readonly>
                 </div>
                 <div class="form-group">
