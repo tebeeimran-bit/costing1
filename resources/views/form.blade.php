@@ -5214,5 +5214,35 @@
                 if (input) calculateCycleRow(input);
             });
         }
+
+        // Handle Enter key to save section
+        document.addEventListener('keydown', function (event) {
+            // Only handle Enter key without modifiers
+            if (event.key !== 'Enter' || event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
+                return;
+            }
+
+            // Check if the focused element is inside a form section
+            const activeElement = document.activeElement;
+            if (!activeElement || !activeElement.matches('input, textarea, select')) {
+                return;
+            }
+
+            // Find the closest form-section
+            const formSection = activeElement.closest('.form-section');
+            if (!formSection) {
+                return;
+            }
+
+            // Find the section update button within this section
+            const updateButton = formSection.querySelector('.section-update-btn');
+            if (updateButton) {
+                // Prevent default form submission to avoid submitting entire form
+                event.preventDefault();
+                
+                // Trigger section save
+                updateButton.click();
+            }
+        });
     </script>
 @endsection
