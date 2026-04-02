@@ -943,12 +943,6 @@ class CostingController extends Controller
                     $trackedPartKeys = collect($partAggregation)->keys();
 
                     $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
-
-            if ($trackingRevisionId && $updateSection === '') {
-                DocumentRevision::whereKey($trackingRevisionId)->update([
-                    'status' => DocumentRevision::STATUS_SUDAH_COSTING,
-                ]);
-            }
                         ->whereNull('resolved_at')
                         ->get()
                         ->keyBy(fn ($item) => strtolower($item->part_number));
@@ -1057,6 +1051,12 @@ class CostingController extends Controller
                     : ['status' => DocumentRevision::STATUS_COGM_GENERATED, 'cogm_generated_at' => now()];
 
                 DocumentRevision::whereKey($trackingRevisionId)->update($statusPayload);
+            }
+
+            if ($trackingRevisionId && in_array($updateSection, ['', 'resume_cogm'], true)) {
+                DocumentRevision::whereKey($trackingRevisionId)->update([
+                    'status' => DocumentRevision::STATUS_SUDAH_COSTING,
+                ]);
             }
 
             DB::commit();
