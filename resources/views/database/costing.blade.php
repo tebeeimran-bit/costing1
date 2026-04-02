@@ -11,28 +11,22 @@
 
 @section('content')
     <style>
-        .costing-table-viewport {
-            width: 100%;
-            overflow: hidden;
-        }
-
         .costing-table-container {
-            overflow: hidden;
+            overflow-x: auto;
         }
 
         .costing-table {
             table-layout: fixed;
-            width: calc(100% / 0.78);
-            transform: scale(0.78);
-            transform-origin: top left;
+            min-width: 1780px;
         }
 
         .costing-table th,
         .costing-table td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
             vertical-align: middle;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            text-overflow: clip;
         }
 
         .costing-table th:nth-child(1),
@@ -114,15 +108,41 @@
             text-align: center;
         }
 
-        .costing-table th:nth-child(19),
-        .costing-table td:nth-child(19) {
-            width: 130px;
-            text-align: center;
-        }
-
         .costing-action-btn {
             min-width: 108px;
             white-space: nowrap;
+        }
+
+        .costing-filter-row th {
+            background: #eef2ff;
+            border-bottom: 1px solid #cbd5e1;
+            padding: 0.45rem 0.5rem;
+        }
+
+        .costing-filter-input {
+            width: 100%;
+            min-height: 30px;
+            padding: 0.35rem 0.45rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.35rem;
+            font-size: 0.75rem;
+            color: #1e293b;
+            background: #fff;
+        }
+
+        .costing-filter-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .costing-filter-btn {
+            min-width: 64px;
+            padding: 0.3rem 0.55rem;
+            font-size: 0.7rem;
+            line-height: 1.2;
         }
     </style>
 
@@ -131,32 +151,57 @@
             <h3 class="card-title">Data Costing</h3>
         </div>
         <div class="costing-table-container">
-            <div class="costing-table-viewport">
-                <table class="data-table costing-table">
-                    <thead>
-                        <tr>
-                            <th>NO.</th>
-                            <th>PERIODE</th>
-                            <th>TANGGAL</th>
-                            <th>CUSTOMER</th>
-                            <th>MODEL</th>
-                            <th>ID CODE</th>
-                            <th>ASSY NO</th>
-                            <th>PRODUCT</th>
-                            <th>REVISI</th>
-                            <th>MATERIAL COST</th>
-                            <th>%</th>
-                            <th>PROCESS COST</th>
-                            <th>%</th>
-                            <th>DEPRESIASI TOOLING COST</th>
-                            <th>%</th>
-                            <th>COGM</th>
-                            <th>LAST UPDATED</th>
-                            <th>ACTION</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($costingData as $key => $costing)
+            <form method="GET" action="{{ route('database.costing', absolute: false) }}">
+            <table class="data-table costing-table">
+                <thead>
+                    <tr>
+                        <th>NO.</th>
+                        <th>PERIODE</th>
+                        <th>TANGGAL</th>
+                        <th>CUSTOMER</th>
+                        <th>MODEL</th>
+                        <th>ID CODE</th>
+                        <th>ASSY NO</th>
+                        <th>PRODUCT</th>
+                        <th>REVISI</th>
+                        <th>MATERIAL COST</th>
+                        <th>%</th>
+                        <th>PROCESS COST</th>
+                        <th>%</th>
+                        <th>DEPRESIASI TOOLING COST</th>
+                        <th>%</th>
+                        <th>COGM</th>
+                        <th>LAST UPDATED</th>
+                        <th>ACTION</th>
+                    </tr>
+                    <tr class="costing-filter-row">
+                        <th></th>
+                        <th><input type="text" name="period" class="costing-filter-input" value="{{ $filters['period'] ?? '' }}" placeholder="Periode"></th>
+                        <th><input type="date" name="tanggal" class="costing-filter-input" value="{{ $filters['tanggal'] ?? '' }}"></th>
+                        <th><input type="text" name="customer" class="costing-filter-input" value="{{ $filters['customer'] ?? '' }}" placeholder="Customer"></th>
+                        <th><input type="text" name="model" class="costing-filter-input" value="{{ $filters['model'] ?? '' }}" placeholder="Model"></th>
+                        <th><input type="text" name="id_code" class="costing-filter-input" value="{{ $filters['id_code'] ?? '' }}" placeholder="ID Code"></th>
+                        <th><input type="text" name="assy_no" class="costing-filter-input" value="{{ $filters['assy_no'] ?? '' }}" placeholder="Assy No"></th>
+                        <th><input type="text" name="product" class="costing-filter-input" value="{{ $filters['product'] ?? '' }}" placeholder="Product"></th>
+                        <th><input type="text" name="revisi" class="costing-filter-input" value="{{ $filters['revisi'] ?? '' }}" placeholder="V3"></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th></th>
+                        <th>
+                            <div class="costing-filter-actions">
+                                <button type="submit" class="btn btn-primary btn-sm costing-filter-btn">Search</button>
+                                <a href="{{ route('database.costing', absolute: false) }}" class="btn btn-secondary btn-sm costing-filter-btn">Reset</a>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($costingData as $key => $costing)
                         @php
                             $cogm = $costing->material_cost + $costing->labor_cost + $costing->overhead_cost;
                             $materialPct = $cogm > 0 ? ($costing->material_cost / $cogm * 100) : 0;
@@ -193,14 +238,14 @@
                                 </a>
                             </td>
                         </tr>
-                        @empty
-                            <tr>
-                                <td colspan="18" style="text-align: center;">Tidak ada data costing ditemukan</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+                    @empty
+                        <tr>
+                            <td colspan="18" style="text-align: center;">Tidak ada data costing ditemukan</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+            </form>
         </div>
     </div>
 @endsection

@@ -67,13 +67,80 @@ class DatabaseController extends Controller
         return view('database.parts', compact('materials'));
     }
 
-    public function costing()
+    public function costing(Request $request)
     {
-        $costingData = CostingData::with(['product', 'customer', 'trackingRevision'])
+        $filters = [
+            'period' => trim((string) $request->input('period', '')),
+            'tanggal' => trim((string) $request->input('tanggal', '')),
+            'customer' => trim((string) $request->input('customer', '')),
+            'model' => trim((string) $request->input('model', '')),
+            'id_code' => trim((string) $request->input('id_code', '')),
+            'assy_no' => trim((string) $request->input('assy_no', '')),
+            'product' => trim((string) $request->input('product', '')),
+            'revisi' => trim((string) $request->input('revisi', '')),
+        ];
+
+        $query = CostingData::with(['product', 'customer', 'trackingRevision']);
+
+        if ($filters['period'] !== '') {
+            $query->where('period', 'like', '%' . $filters['period'] . '%');
+        }
+
+        if ($filters['tanggal'] !== '') {
+            $query->where(function ($dateQuery) use ($filters) {
+                $dateQuery->whereHas('trackingRevision', function ($revisionQuery) use ($filters) {
+                    $revisionQuery->whereDate('received_date', $filters['tanggal']);
+                })->orWhereDate('created_at', $filters['tanggal']);
+            });
+        }
+
+        if ($filters['customer'] !== '') {
+            $query->whereHas('customer', function ($customerQuery) use ($filters) {
+                $keyword = '%' . $filters['customer'] . '%';
+                $customerQuery->where('name', 'like', $keyword)
+                    ->orWhere('code', 'like', $keyword);
+            });
+        }
+
+        if ($filters['model'] !== '') {
+            $query->where('model', 'like', '%' . $filters['model'] . '%');
+        }
+
+        if ($filters['id_code'] !== '') {
+            $query->whereHas('product', function ($productQuery) use ($filters) {
+                $productQuery->where('code', 'like', '%' . $filters['id_code'] . '%');
+            });
+        }
+
+        if ($filters['assy_no'] !== '') {
+            $query->where('assy_no', 'like', '%' . $filters['assy_no'] . '%');
+        }
+
+        if ($filters['product'] !== '') {
+            $query->whereHas('product', function ($productQuery) use ($filters) {
+                $productQuery->where('name', 'like', '%' . $filters['product'] . '%');
+            });
+        }
+
+        if ($filters['revisi'] !== '') {
+            $revisionNumber = null;
+            if (preg_match('/\d+/', $filters['revisi'], $matches)) {
+                $revisionNumber = (int) $matches[0] + 1;
+            }
+
+            if ($revisionNumber !== null) {
+                $query->whereHas('trackingRevision', function ($revisionQuery) use ($revisionNumber) {
+                    $revisionQuery->where('version_number', $revisionNumber);
+                });
+            }
+        }
+
+        $costingData = $query
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->get();
-        return view('database.costing', compact('costingData'));
+
+        return view('database.costing', compact('costingData', 'filters'));
     }
 
     public function customers()
