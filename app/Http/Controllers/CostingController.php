@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Customer;
+use App\Models\CogmSubmission;
 use App\Models\Material;
 use App\Models\CostingData;
 use App\Models\UnpricedPart;
@@ -29,72 +30,524 @@ class CostingController extends Controller
 {
     public function dashboard(Request $request)
     {
-        $period = $request->get('period', '2025-01');
-        $line = $request->get('line', 'all');
-        $productFilter = $request->get('product', 'all');
+        $periods = CostingData::query()
+            ->select('period')
+            ->distinct()
+            ->orderBy('period', 'desc')
+            ->pluck('period')
+            ->values();
 
-        // Get all products and customers for filters
-        $products = Product::all();
-        $customers = Customer::all();
-        $lines = Product::distinct('line')->pluck('line');
+        $requestedPeriod = trim((string) $request->get('period', ''));
+        $period = $requestedPeriod !== '' ? $requestedPeriod : ((string) ($periods->first() ?? now()->format('Y-m')));
 
-        // Get costing data for the period
-        $query = CostingData::with(['product', 'customer'])
-            ->where('period', $period);
+        if ($period !== 'all' && $periods->isNotEmpty() && !$periods->contains($period)) {
+            $period = (string) $periods->first();
+        }
 
-        if ($line !== 'all') {
-            $query->whereHas('product', function ($q) use ($line) {
-                $q->where('line', $line);
+        $businessCategoryFilter = trim((string) $request->get('business_category', 'all'));
+        $customerFilter = trim((string) $request->get('customer', 'all'));
+        $modelFilter = trim((string) $request->get('model', 'all'));
+
+        $applyFilters = function ($query) use ($businessCategoryFilter, $customerFilter, $modelFilter) {
+            if ($businessCategoryFilter !== '' && $businessCategoryFilter !== 'all') {
+                $query->whereHas('product', function ($productQuery) use ($businessCategoryFilter) {
+                    $productQuery->where('line', $businessCategoryFilter);
+                });
+            }
+
+            if ($customerFilter !== '' && $customerFilter !== 'all') {
+                $query->where('customer_id', (int) $customerFilter);
+            }
+
+            if ($modelFilter !== '' && $modelFilter !== 'all') {
+                $query->where('model', $modelFilter);
+            }
+
+            return $query;
+        };
+
+        $resolveUnitQty = function ($item) {
+            $qtyGood = (float) ($item->qty_good ?? 0);
+            if ($qtyGood > 0) {
+                return $qtyGood;
+            }
+
+            $forecast = (float) ($item->forecast ?? 0);
+            if ($forecast > 0) {
+                return $forecast;
+            }
+
+            return 0.0;
+        };
+
+        $resolvePotentialSales = function ($item) {
+            $qtyPerMonth = (float) ($item->forecast ?? 0);
+            $productLifeYears = (float) ($item->project_period ?? 0);
+            $cogm = (float) ($item->material_cost ?? 0)
+                + (float) ($item->labor_cost ?? 0)
+                + (float) ($item->overhead_cost ?? 0)
+                + (float) ($item->scrap_cost ?? 0);
+
+            return $qtyPerMonth * $productLifeYears * $cogm;
+        };
+
+        $resolveAssyLabel = function ($item) {
+            $candidates = [
+                $item->assy_name ?? null,
+                $item->assy_no ?? null,
+                $item->model ?? null,
+                $item->product->name ?? null,
+            ];
+
+            foreach ($candidates as $candidate) {
+                $label = preg_replace('/\s+/u', ' ', (string) $candidate);
+                $label = trim((string) $label);
+                if ($label !== '') {
+                    return $label;
+                }
+            }
+
+            return 'Costing #' . (string) ($item->id ?? '-');
+        };
+
+        $resolveBusinessCategoryLabel = function ($item) {
+            $line = trim((string) ($item->product->line ?? ''));
+            if ($line !== '') {
+                return $line;
+            }
+
+            $productName = trim((string) ($item->product->name ?? ''));
+            return $productName !== '' ? $productName : 'Uncategorized';
+        };
+
+        // Get business category filter options from product line values used by costing records.
+        $businessCategories = CostingData::query()
+            ->join('products', 'products.id', '=', 'costing_data.product_id')
+            ->whereNotNull('products.line')
+            ->where('products.line', '!=', '')
+            ->select('products.line')
+            ->distinct()
+            ->orderBy('products.line')
+            ->pluck('products.line')
+            ->map(function ($line) {
+                return (object) [
+                    'id' => (string) $line,
+                    'name' => (string) $line,
+                    'code' => null,
+                ];
+            })
+            ->values();
+
+        $customers = Customer::query()
+            ->whereIn('id', CostingData::query()->select('customer_id')->distinct())
+            ->orderBy('name')
+            ->get();
+
+        $selectedCustomerName = null;
+        if ($customerFilter !== '' && $customerFilter !== 'all') {
+            $selectedCustomerName = trim((string) optional($customers->firstWhere('id', (int) $customerFilter))->name);
+            if ($selectedCustomerName === '') {
+                $selectedCustomerName = null;
+            }
+        }
+
+        $periodDisplayLabel = $period;
+        if ($period === 'all') {
+            $periodDisplayLabel = 'Semua Periode';
+        } elseif (preg_match('/^\d{4}-\d{2}$/', (string) $period) === 1) {
+            $periodDisplayLabel = \Carbon\Carbon::createFromFormat('Y-m', (string) $period)->format('M Y');
+        }
+
+        $periodStart = null;
+        $periodEnd = null;
+        if (preg_match('/^\d{4}-\d{2}$/', (string) $period) === 1) {
+            $periodStart = \Carbon\Carbon::createFromFormat('Y-m', (string) $period)->startOfMonth();
+            $periodEnd = $periodStart->copy()->endOfMonth();
+        }
+
+        $applyProjectFilters = function ($query) use ($businessCategoryFilter, $modelFilter, $selectedCustomerName) {
+            if ($businessCategoryFilter !== '' && $businessCategoryFilter !== 'all') {
+                $query->whereHas('product', function ($productQuery) use ($businessCategoryFilter) {
+                    $productQuery->where('line', $businessCategoryFilter);
+                });
+            }
+
+            if ($modelFilter !== '' && $modelFilter !== 'all') {
+                $query->where('model', $modelFilter);
+            }
+
+            if ($selectedCustomerName !== null) {
+                $query->whereRaw('LOWER(customer) = ?', [Str::lower($selectedCustomerName)]);
+            }
+
+            return $query;
+        };
+
+        $models = CostingData::query()
+            ->select('model')
+            ->whereNotNull('model')
+            ->where('model', '!=', '')
+            ->distinct()
+            ->orderBy('model')
+            ->pluck('model')
+            ->values();
+
+        $projectStatusScope = DocumentRevision::query();
+        if ($periodStart && $periodEnd) {
+            $projectStatusScope->whereBetween('received_date', [
+                $periodStart->toDateString(),
+                $periodEnd->toDateString(),
+            ]);
+        }
+        $projectStatusScope->whereHas('project', function ($projectQuery) use ($applyProjectFilters) {
+            $applyProjectFilters($projectQuery);
+        });
+
+        $a00ProjectCount = (clone $projectStatusScope)
+            ->where('a00', 'ada')
+            ->distinct('document_project_id')
+            ->count('document_project_id');
+
+        $a04ProjectCount = (clone $projectStatusScope)
+            ->where('a04', 'ada')
+            ->distinct('document_project_id')
+            ->count('document_project_id');
+
+        $a05ProjectCount = (clone $projectStatusScope)
+            ->where('a05', 'ada')
+            ->distinct('document_project_id')
+            ->count('document_project_id');
+
+        $totalProjectCount = $a00ProjectCount + $a04ProjectCount + $a05ProjectCount;
+
+        $statusProjectData = collect([
+            [
+                'label' => 'A00 (RFQ/RFI)',
+                'count' => $a00ProjectCount,
+                'color' => '#3b82f6',
+            ],
+            [
+                'label' => 'A04 (Canceled/Failed)',
+                'count' => $a04ProjectCount,
+                'color' => '#f97316',
+            ],
+            [
+                'label' => 'A05 (Die Go/Berhasil)',
+                'count' => $a05ProjectCount,
+                'color' => '#22c55e',
+            ],
+        ]);
+
+        $statusProjectTotal = (int) $statusProjectData->sum('count');
+        $statusProjectData = $statusProjectData->map(function ($item) use ($statusProjectTotal) {
+            $percentage = $statusProjectTotal > 0
+                ? (((int) $item['count'] / $statusProjectTotal) * 100)
+                : 0;
+
+            return [
+                'label' => $item['label'],
+                'count' => (int) $item['count'],
+                'percentage' => round($percentage, 1),
+                'color' => $item['color'],
+            ];
+        })->values();
+
+        $pieSegments = [];
+        $pieStartAngle = 0.0;
+        foreach ($statusProjectData as $statusItem) {
+            $count = (int) ($statusItem['count'] ?? 0);
+            if ($count <= 0 || $statusProjectTotal <= 0) {
+                continue;
+            }
+
+            $sliceAngle = ($count / $statusProjectTotal) * 360;
+            $pieEndAngle = $pieStartAngle + $sliceAngle;
+            $pieSegments[] = $statusItem['color']
+                . ' '
+                . number_format($pieStartAngle, 2, '.', '')
+                . 'deg '
+                . number_format($pieEndAngle, 2, '.', '')
+                . 'deg';
+            $pieStartAngle = $pieEndAngle;
+        }
+
+        if (empty($pieSegments)) {
+            $statusProjectPieGradient = 'conic-gradient(#e2e8f0 0deg 360deg)';
+        } else {
+            if ($pieStartAngle < 360) {
+                $pieSegments[] = '#e2e8f0 '
+                    . number_format($pieStartAngle, 2, '.', '')
+                    . 'deg 360deg';
+            }
+            $statusProjectPieGradient = 'conic-gradient(' . implode(', ', $pieSegments) . ')';
+        }
+
+        $submitScope = CogmSubmission::query()
+            ->whereNotNull('submitted_at')
+            ->whereHas('revision.project', function ($projectQuery) use ($applyProjectFilters) {
+                $applyProjectFilters($projectQuery);
             });
+
+        $totalSubmitCostingMonthly = 0;
+        if ($periodStart && $periodEnd) {
+            $totalSubmitCostingMonthly = (clone $submitScope)
+                ->whereBetween('submitted_at', [$periodStart, $periodEnd])
+                ->count();
         }
 
-        if ($productFilter !== 'all') {
-            $query->where('product_id', $productFilter);
+        $submitAnchorPeriod = $periodStart ? $periodStart->copy() : now()->startOfMonth();
+        $submitPeriodCandidates = collect(range(5, 0))
+            ->map(function ($offset) use ($submitAnchorPeriod) {
+                return $submitAnchorPeriod->copy()->subMonths($offset)->format('Y-m');
+            })
+            ->values();
+
+        $monthlySubmitCounts = $submitPeriodCandidates->map(function ($submitPeriod) use ($submitScope) {
+            $monthStart = \Carbon\Carbon::createFromFormat('Y-m', (string) $submitPeriod)->startOfMonth();
+            $monthEnd = $monthStart->copy()->endOfMonth();
+            $count = (clone $submitScope)
+                ->whereBetween('submitted_at', [$monthStart, $monthEnd])
+                ->count();
+
+            return [
+                'period' => $submitPeriod,
+                'period_label' => $monthStart->format('M y'),
+                'count' => $count,
+            ];
+        })->values();
+
+        $maxMonthlySubmitCount = $monthlySubmitCounts->max('count') ?: 1;
+
+        // Get costing data for selected period.
+        $query = CostingData::with(['product', 'customer', 'trackingRevision']);
+
+        if ($period !== 'all') {
+            $query->where('period', $period);
         }
+
+        $applyFilters($query);
 
         $costingData = $query->get();
 
         // Calculate KPIs
         $totalCost = $costingData->sum('total_cost');
-        $totalQty = $costingData->sum('qty_good');
+        $totalQty = $costingData->sum(function ($item) use ($resolveUnitQty) {
+            return $resolveUnitQty($item);
+        });
+        $estimatedQtyProduksi = $costingData->sum(function ($item) {
+            return (float) ($item->forecast ?? 0) * (float) ($item->project_period ?? 0);
+        });
         $avgCostPerUnit = $totalQty > 0 ? $totalCost / $totalQty : 0;
 
-        // Find highest cost per unit product
-        $highestCostProduct = $costingData->sortByDesc('cost_per_unit')->first();
+        // Status KPI must follow filtered costing rows so total matches actual data count.
+        $statusProjectCountsByLabel = [
+            'A00 (RFQ/RFI)' => 0,
+            'A04 (Canceled/Failed)' => 0,
+            'A05 (Die Go/Berhasil)' => 0,
+        ];
+        $statusPotentialCostByLabel = [
+            'A00 (RFQ/RFI)' => 0,
+            'A04 (Canceled/Failed)' => 0,
+            'A05 (Die Go/Berhasil)' => 0,
+        ];
 
-        // Get cost per product for bar chart
-        $costPerProduct = $costingData->map(function ($item) {
+        foreach ($costingData as $item) {
+            $revision = $item->trackingRevision;
+            if (!$revision) {
+                continue;
+            }
+
+            $potentialCost = $resolvePotentialSales($item);
+            if (($revision->a05 ?? null) === 'ada') {
+                $statusProjectCountsByLabel['A05 (Die Go/Berhasil)'] += 1;
+                $statusPotentialCostByLabel['A05 (Die Go/Berhasil)'] += $potentialCost;
+            } elseif (($revision->a04 ?? null) === 'ada') {
+                $statusProjectCountsByLabel['A04 (Canceled/Failed)'] += 1;
+                $statusPotentialCostByLabel['A04 (Canceled/Failed)'] += $potentialCost;
+            } elseif (($revision->a00 ?? null) === 'ada') {
+                $statusProjectCountsByLabel['A00 (RFQ/RFI)'] += 1;
+                $statusPotentialCostByLabel['A00 (RFQ/RFI)'] += $potentialCost;
+            }
+        }
+
+        $a00ProjectCount = (int) ($statusProjectCountsByLabel['A00 (RFQ/RFI)'] ?? 0);
+        $a04ProjectCount = (int) ($statusProjectCountsByLabel['A04 (Canceled/Failed)'] ?? 0);
+        $a05ProjectCount = (int) ($statusProjectCountsByLabel['A05 (Die Go/Berhasil)'] ?? 0);
+        $totalProjectCount = (int) $costingData->count();
+        $statusProjectTotal = $totalProjectCount;
+
+        $statusProjectData = collect([
+            [
+                'label' => 'A00 (RFQ/RFI)',
+                'count' => $a00ProjectCount,
+                'color' => '#3b82f6',
+            ],
+            [
+                'label' => 'A04 (Canceled/Failed)',
+                'count' => $a04ProjectCount,
+                'color' => '#f97316',
+            ],
+            [
+                'label' => 'A05 (Die Go/Berhasil)',
+                'count' => $a05ProjectCount,
+                'color' => '#22c55e',
+            ],
+        ])->map(function ($item) use ($statusProjectTotal, $statusPotentialCostByLabel) {
+            $percentage = $statusProjectTotal > 0
+                ? (((int) $item['count'] / $statusProjectTotal) * 100)
+                : 0;
+
             return [
-                'name' => $item->product->name,
-                'cost_per_unit' => $item->cost_per_unit,
-                'material_cost' => $item->material_cost,
-                'labor_cost' => $item->labor_cost,
-                'overhead_cost' => $item->overhead_cost,
+                'label' => $item['label'],
+                'count' => (int) ($item['count'] ?? 0),
+                'percentage' => round($percentage, 1),
+                'color' => $item['color'] ?? '#94a3b8',
+                'potential_cost' => (float) ($statusPotentialCostByLabel[$item['label']] ?? 0),
             ];
-        })->sortByDesc('cost_per_unit')->values();
+        })->values();
+
+        $pieSegments = [];
+        $pieStartAngle = 0.0;
+        foreach ($statusProjectData as $statusItem) {
+            $count = (int) ($statusItem['count'] ?? 0);
+            if ($count <= 0 || $statusProjectTotal <= 0) {
+                continue;
+            }
+
+            $sliceAngle = ($count / $statusProjectTotal) * 360;
+            $pieEndAngle = $pieStartAngle + $sliceAngle;
+            $pieSegments[] = $statusItem['color']
+                . ' '
+                . number_format($pieStartAngle, 2, '.', '')
+                . 'deg '
+                . number_format($pieEndAngle, 2, '.', '')
+                . 'deg';
+            $pieStartAngle = $pieEndAngle;
+        }
+
+        if (empty($pieSegments)) {
+            $statusProjectPieGradient = 'conic-gradient(#e2e8f0 0deg 360deg)';
+        } else {
+            if ($pieStartAngle < 360) {
+                $pieSegments[] = '#e2e8f0 '
+                    . number_format($pieStartAngle, 2, '.', '')
+                    . 'deg 360deg';
+            }
+            $statusProjectPieGradient = 'conic-gradient(' . implode(', ', $pieSegments) . ')';
+        }
+
+        // Aggregate by assy to reflect project-level costing records.
+        $costPerProduct = $costingData
+            ->groupBy(function ($item) use ($resolveAssyLabel) {
+                return Str::lower($resolveAssyLabel($item));
+            })
+            ->map(function ($items) use ($resolveUnitQty, $resolveAssyLabel, $resolvePotentialSales) {
+                $first = $items->first();
+                $productName = $resolveAssyLabel($first);
+
+                $productTotalCost = $items->sum('total_cost');
+                $productQty = $items->sum(function ($row) use ($resolveUnitQty) {
+                    return $resolveUnitQty($row);
+                });
+                $materialCost = $items->sum('material_cost');
+                $laborCost = $items->sum('labor_cost');
+                $effectiveOverheadCost = $items->sum(function ($row) {
+                    return (float) $row->overhead_cost + (float) $row->scrap_cost;
+                });
+
+                return [
+                    'name' => $productName,
+                    'total_cost' => $productTotalCost,
+                    'total_qty' => $productQty,
+                    'cost_per_unit' => $productQty > 0 ? ($productTotalCost / $productQty) : 0,
+                    'potential_sales' => $items->sum(function ($row) use ($resolvePotentialSales) {
+                        return $resolvePotentialSales($row);
+                    }),
+                    'material_cost' => $materialCost,
+                    'labor_cost' => $laborCost,
+                    'overhead_cost' => $effectiveOverheadCost,
+                ];
+            })
+            ->sortByDesc(function ($item) {
+                return ((float) $item['cost_per_unit'] * 1000000) + (float) $item['total_cost'];
+            })
+            ->values();
+
+        // Find highest cost per unit product from aggregated dataset.
+        $highestCostProduct = $costPerProduct->first();
 
         // Get max cost for chart scaling
         $maxCostPerUnit = $costPerProduct->max('cost_per_unit') ?: 1;
 
-        // Get trend data (last 6 months)
-        $trendData = CostingData::where('product_id', 1)
-            ->orderBy('period')
-            ->get()
-            ->map(function ($item) {
-                return [
-                    'period' => $item->period,
-                    'cost_per_unit' => $item->cost_per_unit,
-                ];
+        // Get trend data (last 6 periods) from real costing records.
+        $trendPeriodCandidates = CostingData::query()
+            ->select('period')
+            ->distinct()
+            ->orderBy('period', 'desc')
+            ->limit(6)
+            ->pluck('period')
+            ->reverse()
+            ->values();
+
+        $trendScope = CostingData::query();
+        $applyFilters($trendScope);
+
+        $trendData = $trendPeriodCandidates->map(function ($trendPeriod) use ($trendScope, $resolvePotentialSales) {
+            $items = (clone $trendScope)->where('period', $trendPeriod)->get();
+            $totalPotentialSalesPerPeriod = $items->sum(function ($row) use ($resolvePotentialSales) {
+                return $resolvePotentialSales($row);
             });
 
+            $label = $trendPeriod;
+            if (preg_match('/^\d{4}-\d{2}$/', (string) $trendPeriod) === 1) {
+                $label = \Carbon\Carbon::createFromFormat('Y-m', (string) $trendPeriod)->format('M y');
+            }
+
+            return [
+                'period' => $trendPeriod,
+                'period_label' => $label,
+                'potential_sales' => $totalPotentialSalesPerPeriod,
+            ];
+        })->values();
+
+        $maxTrendCost = $trendData->max('potential_sales') ?: 1;
+
+        $monthlyProductCounts = $trendPeriodCandidates->map(function ($trendPeriod) use ($trendScope, $resolveAssyLabel) {
+            $items = (clone $trendScope)
+                ->with('product')
+                ->where('period', $trendPeriod)
+                ->get();
+
+            $count = $items
+                ->map(function ($row) use ($resolveAssyLabel) {
+                    return Str::lower($resolveAssyLabel($row));
+                })
+                ->filter(function ($label) {
+                    return trim((string) $label) !== '';
+                })
+                ->unique()
+                ->count();
+
+            $label = $trendPeriod;
+            if (preg_match('/^\d{4}-\d{2}$/', (string) $trendPeriod) === 1) {
+                $label = \Carbon\Carbon::createFromFormat('Y-m', (string) $trendPeriod)->format('M y');
+            }
+
+            return [
+                'period' => $trendPeriod,
+                'period_label' => $label,
+                'count' => $count,
+            ];
+        })->values();
+
+        $maxMonthlyProducts = $monthlyProductCounts->max('count') ?: 1;
+
         // Get top 5 customers by revenue
-        $topCustomers = CostingData::with('customer')
-            ->where('period', $period)
-            ->get()
+        $topCustomers = $costingData
             ->groupBy('customer_id')
             ->map(function ($items) {
                 return [
-                    'name' => $items->first()->customer->name,
+                    'name' => $items->first()->customer->name ?? ('Customer #' . $items->first()->customer_id),
                     'revenue' => $items->sum('revenue'),
                 ];
             })
@@ -104,39 +557,286 @@ class CostingController extends Controller
 
         $maxRevenue = $topCustomers->max('revenue') ?: 1;
 
+        $businessCategorySales = $costingData
+            ->groupBy(function ($item) use ($resolveBusinessCategoryLabel) {
+                return $resolveBusinessCategoryLabel($item);
+            })
+            ->map(function ($items, $label) use ($resolvePotentialSales) {
+                $materialCost = (float) $items->sum('material_cost');
+                $laborCost = (float) $items->sum('labor_cost');
+                $overheadCost = $items->sum(function ($row) {
+                    return (float) $row->overhead_cost + (float) $row->scrap_cost;
+                });
+
+                return [
+                    'name' => $label,
+                    'potential_sales' => $items->sum(function ($row) use ($resolvePotentialSales) {
+                        return $resolvePotentialSales($row);
+                    }),
+                    'project_count' => $items->count(),
+                    'material_cost' => $materialCost,
+                    'labor_cost' => $laborCost,
+                    'overhead_cost' => $overheadCost,
+                ];
+            })
+            ->sortByDesc('potential_sales')
+            ->values();
+
+        $maxBusinessCategorySales = $businessCategorySales->max('potential_sales') ?: 1;
+
+        $analysisMode = 'business_category';
+        if ($customerFilter !== '' && $customerFilter !== 'all') {
+            $analysisMode = 'model';
+        } elseif ($businessCategoryFilter !== '' && $businessCategoryFilter !== 'all') {
+            $analysisMode = 'customer';
+        }
+
+        $analysisDimensionLabel = match ($analysisMode) {
+            'model' => 'Model',
+            'customer' => 'Customer',
+            default => 'Business Category',
+        };
+        $showCustomerPerspective = $analysisMode === 'customer';
+
+        $analysisSalesRows = $analysisMode === 'model'
+            ? $costingData
+                ->groupBy(function ($item) {
+                    $modelName = trim((string) ($item->model ?? ''));
+                    return $modelName !== '' ? $modelName : '-';
+                })
+                ->map(function ($items, $modelName) use ($resolvePotentialSales) {
+                    $materialCost = (float) $items->sum('material_cost');
+                    $laborCost = (float) $items->sum('labor_cost');
+                    $overheadCost = $items->sum(function ($row) {
+                        return (float) $row->overhead_cost + (float) $row->scrap_cost;
+                    });
+
+                    return [
+                        'dimension_key' => (string) $modelName,
+                        'name' => (string) $modelName,
+                        'potential_sales' => $items->sum(function ($row) use ($resolvePotentialSales) {
+                            return $resolvePotentialSales($row);
+                        }),
+                        'project_count' => $items->count(),
+                        'material_cost' => $materialCost,
+                        'labor_cost' => $laborCost,
+                        'overhead_cost' => $overheadCost,
+                    ];
+                })
+                ->sortByDesc('potential_sales')
+                ->values()
+            : ($analysisMode === 'customer'
+                ? $costingData
+                    ->groupBy(function ($item) {
+                        return (string) ($item->customer_id ?? '0');
+                    })
+                    ->map(function ($items, $customerId) use ($resolvePotentialSales) {
+                        $materialCost = (float) $items->sum('material_cost');
+                        $laborCost = (float) $items->sum('labor_cost');
+                        $overheadCost = $items->sum(function ($row) {
+                            return (float) $row->overhead_cost + (float) $row->scrap_cost;
+                        });
+
+                        return [
+                            'dimension_key' => (string) $customerId,
+                            'name' => $items->first()->customer->name ?? ('Customer #' . $customerId),
+                            'potential_sales' => $items->sum(function ($row) use ($resolvePotentialSales) {
+                                return $resolvePotentialSales($row);
+                            }),
+                            'project_count' => $items->count(),
+                            'material_cost' => $materialCost,
+                            'labor_cost' => $laborCost,
+                            'overhead_cost' => $overheadCost,
+                        ];
+                    })
+                    ->sortByDesc('potential_sales')
+                    ->values()
+                : $businessCategorySales
+                    ->map(function ($item) {
+                        return [
+                            'dimension_key' => (string) ($item['name'] ?? ''),
+                            'name' => (string) ($item['name'] ?? '-'),
+                            'potential_sales' => (float) ($item['potential_sales'] ?? 0),
+                            'project_count' => (int) ($item['project_count'] ?? 0),
+                            'material_cost' => (float) ($item['material_cost'] ?? 0),
+                            'labor_cost' => (float) ($item['labor_cost'] ?? 0),
+                            'overhead_cost' => (float) ($item['overhead_cost'] ?? 0),
+                        ];
+                    })
+                    ->values());
+
+        $topCustomerPotentialSales = $costingData
+            ->groupBy('customer_id')
+            ->map(function ($items) {
+                $customerName = $items->first()->customer->name ?? ('Customer #' . $items->first()->customer_id);
+                $resolvePotentialSales = function ($row) {
+                    $qtyPerMonth = (float) ($row->forecast ?? 0);
+                    $productLifeYears = (float) ($row->project_period ?? 0);
+                    $cogm = (float) ($row->material_cost ?? 0)
+                        + (float) ($row->labor_cost ?? 0)
+                        + (float) ($row->overhead_cost ?? 0)
+                        + (float) ($row->scrap_cost ?? 0);
+
+                    return $qtyPerMonth * $productLifeYears * $cogm;
+                };
+
+                $categoryBreakdown = $items
+                    ->groupBy(function ($item) {
+                        $line = trim((string) ($item->product->line ?? ''));
+                        if ($line !== '') {
+                            return $line;
+                        }
+
+                        $productName = trim((string) ($item->product->name ?? ''));
+                        return $productName !== '' ? $productName : 'Uncategorized';
+                    })
+                    ->map(function ($categoryItems, $categoryName) {
+                        $categoryPotentialSales = $categoryItems->sum(function ($row) {
+                            $qtyPerMonth = (float) ($row->forecast ?? 0);
+                            $productLifeYears = (float) ($row->project_period ?? 0);
+                            $cogm = (float) ($row->material_cost ?? 0)
+                                + (float) ($row->labor_cost ?? 0)
+                                + (float) ($row->overhead_cost ?? 0)
+                                + (float) ($row->scrap_cost ?? 0);
+
+                            return $qtyPerMonth * $productLifeYears * $cogm;
+                        });
+
+                        return [
+                            'category' => $categoryName,
+                            'potential_sales' => $categoryPotentialSales,
+                        ];
+                    })
+                    ->sortByDesc('potential_sales')
+                    ->values();
+
+                $dominantCategory = $categoryBreakdown->first();
+
+                return [
+                    'customer_name' => $customerName,
+                    'business_category' => $dominantCategory['category'] ?? '-',
+                    'potential_sales' => $items->sum(function ($row) use ($resolvePotentialSales) {
+                        return $resolvePotentialSales($row);
+                    }),
+                ];
+            })
+            ->sortByDesc('potential_sales')
+            ->take(5)
+            ->values();
+
         // Material breakdown summary
-        $materialBreakdown = $costingData->map(function ($item) {
-            $total = $item->material_cost + $item->labor_cost + $item->overhead_cost;
+        $materialBreakdown = $costPerProduct->map(function ($item) {
+            $effectiveOverheadCost = (float) ($item['overhead_cost'] ?? 0);
+            $materialCost = (float) ($item['material_cost'] ?? 0);
+            $laborCost = (float) ($item['labor_cost'] ?? 0);
+            $total = $materialCost + $laborCost + $effectiveOverheadCost;
+
             return [
-                'name' => $item->product->name,
-                'material_pct' => $total > 0 ? ($item->material_cost / $total) * 100 : 0,
-                'labor_pct' => $total > 0 ? ($item->labor_cost / $total) * 100 : 0,
-                'overhead_pct' => $total > 0 ? ($item->overhead_cost / $total) * 100 : 0,
+                'name' => $item['name'] ?? '-',
+                'material_pct' => $total > 0 ? ($materialCost / $total) * 100 : 0,
+                'labor_pct' => $total > 0 ? ($laborCost / $total) * 100 : 0,
+                'overhead_pct' => $total > 0 ? ($effectiveOverheadCost / $total) * 100 : 0,
             ];
         });
 
-        // Available periods
-        $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
+        // Count projects per business category broken down by status (A00, A04, A05)
+        $projectCountPerCustomer = collect();
+        foreach ($analysisSalesRows as $dimensionRow) {
+            $dimensionKey = (string) ($dimensionRow['dimension_key'] ?? '');
+            if ($dimensionKey === '') {
+                continue;
+            }
+
+            $categoryItems = $costingData->filter(function ($item) use ($analysisMode, $dimensionKey, $resolveBusinessCategoryLabel) {
+                if ($analysisMode === 'model') {
+                    $modelName = trim((string) ($item->model ?? ''));
+                    return ($modelName !== '' ? $modelName : '-') === $dimensionKey;
+                }
+
+                if ($analysisMode === 'customer') {
+                    return (string) ($item->customer_id ?? '') === $dimensionKey;
+                }
+
+                return $resolveBusinessCategoryLabel($item) === $dimensionKey;
+            })->values();
+
+            $a00Count = 0;
+            $a04Count = 0;
+            $a05Count = 0;
+            foreach ($categoryItems as $item) {
+                $revision = $item->trackingRevision;
+                if (!$revision) {
+                    continue;
+                }
+
+                if (($revision->a05 ?? null) === 'ada') {
+                    $a05Count++;
+                } elseif (($revision->a04 ?? null) === 'ada') {
+                    $a04Count++;
+                } elseif (($revision->a00 ?? null) === 'ada') {
+                    $a00Count++;
+                }
+            }
+
+            $totalCount = $categoryItems->count();
+            if ($totalCount > 0) {
+                $projectCountPerCustomer->push([
+                    'name' => (string) ($dimensionRow['name'] ?? '-'),
+                    'a00_count' => $a00Count,
+                    'a04_count' => $a04Count,
+                    'a05_count' => $a05Count,
+                    'total_count' => $totalCount,
+                ]);
+            }
+        }
+        $projectCountPerCustomer = $projectCountPerCustomer
+            ->take(8)
+            ->values();
+        $maxProjectCount = $projectCountPerCustomer->max('total_count') ?: 1;
 
         return view('dashboard', compact(
             'period',
-            'line',
-            'productFilter',
-            'products',
+            'businessCategoryFilter',
+            'customerFilter',
+            'modelFilter',
+            'businessCategories',
             'customers',
-            'lines',
+            'models',
             'costingData',
             'totalCost',
             'totalQty',
+            'estimatedQtyProduksi',
             'avgCostPerUnit',
             'highestCostProduct',
             'costPerProduct',
             'maxCostPerUnit',
+            'projectCountPerCustomer',
+            'maxProjectCount',
             'trendData',
+            'maxTrendCost',
+            'monthlyProductCounts',
+            'maxMonthlyProducts',
             'topCustomers',
             'maxRevenue',
+            'businessCategorySales',
+            'analysisSalesRows',
+            'analysisDimensionLabel',
+            'showCustomerPerspective',
+            'maxBusinessCategorySales',
+            'topCustomerPotentialSales',
             'materialBreakdown',
-            'periods'
+            'periods',
+            'periodDisplayLabel',
+            'totalProjectCount',
+            'a00ProjectCount',
+            'a04ProjectCount',
+            'a05ProjectCount',
+            'statusProjectData',
+            'statusProjectTotal',
+            'statusProjectPieGradient',
+            'totalSubmitCostingMonthly',
+            'monthlySubmitCounts',
+            'maxMonthlySubmitCount'
         ));
     }
 
@@ -410,8 +1110,8 @@ class CostingController extends Controller
             'wire_rate_id' => 'nullable|exists:wire_rates,id',
             'forecast' => 'required|integer',
             'project_period' => 'required|integer',
-            'material_cost' => 'required|numeric',
-            'labor_cost' => 'required|numeric',
+            'material_cost' => 'nullable|numeric',
+            'labor_cost' => 'nullable|numeric',
             'overhead_cost' => 'nullable|numeric',
             'scrap_cost' => 'nullable|numeric',
             'revenue' => 'nullable|numeric',
@@ -486,8 +1186,8 @@ class CostingController extends Controller
                 'cycle_times.*.area_of_process' => 'nullable|in:PP - Preparation,FA - Final Assy',
             ],
             'resume_cogm' => [
-                'material_cost' => 'required|numeric',
-                'labor_cost' => 'required|numeric',
+                'material_cost' => 'nullable|numeric',
+                'labor_cost' => 'nullable|numeric',
                 'overhead_cost' => 'nullable|numeric',
                 'scrap_cost' => 'nullable|numeric',
                 'revenue' => 'nullable|numeric',
@@ -687,6 +1387,14 @@ class CostingController extends Controller
             ];
 
             $basePayload = $request->only($fillableRequestFields);
+
+            if (array_key_exists('material_cost', $basePayload)) {
+                $basePayload['material_cost'] = $validated['material_cost'] ?? 0;
+            }
+
+            if (array_key_exists('labor_cost', $basePayload)) {
+                $basePayload['labor_cost'] = $validated['labor_cost'] ?? 0;
+            }
 
             if (array_key_exists('overhead_cost', $basePayload)) {
                 $basePayload['overhead_cost'] = $validated['overhead_cost'] ?? 0;
@@ -960,7 +1668,7 @@ class CostingController extends Controller
                                     'part_name' => $partInfo['part_name'] ?: null,
                                     'detected_price' => $partInfo['detected_price'],
                                     'manual_price' => null,
-                                    'notes' => 'Auto-detected from Form Input validation.',
+                                    'notes' => 'Auto-detected from Form Costing validation.',
                                 ]
                             );
                         } else {

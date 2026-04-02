@@ -4,7 +4,7 @@
 @section('page-title', $material ? 'Edit Material' : 'Tambah Material Baru')
 
 @section('breadcrumb')
-    <a href="{{ route('database.products', absolute: false) }}">Database</a>
+    <a href="{{ route('database.parts', absolute: false) }}">Database</a>
     <span class="breadcrumb-separator">/</span>
     <a href="{{ route('database.parts', absolute: false) }}">Parts</a>
     <span class="breadcrumb-separator">/</span>

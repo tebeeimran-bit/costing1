@@ -32,7 +32,7 @@ Server Laravel sedang berjalan dengan sempurna di port **8000**.
 
 | Path | Endpoint | Fungsi |
 |------|----------|--------|
-| `/form` | GET | Halaman form input costing (MAIN) |
+| `/form` | GET | Halaman Form Costing (MAIN) |
 | `/` | GET | Dashboard |
 | `/test` | GET | Test endpoint (debug) |
 | `/database` | GET | Database management |

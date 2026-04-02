@@ -4,7 +4,7 @@
 @section('page-title', 'Database Part (Material)')
 
 @section('breadcrumb')
-    <a href="{{ route('database.products', absolute: false) }}">Database</a>
+    <a href="{{ route('database.parts', absolute: false) }}">Database</a>
     <span class="breadcrumb-separator">/</span>
     <span>Parts</span>
 @endsection
@@ -973,7 +973,7 @@
                         .filter((value) => value !== '');
 
                     if (selectedIds.length === 0) {
-                        window.alert('Pilih minimal satu material untuk dihapus.');
+                        openAppNotify('Pilih minimal satu material untuk dihapus.');
                         return;
                     }
 

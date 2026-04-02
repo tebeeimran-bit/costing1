@@ -1237,14 +1237,6 @@
                             </svg>
                         </button>
                         <div class="sidebar-submenu">
-                            <a href="{{ route('database.products', absolute: false) }}"
-                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.products') ? 'active' : '' }}">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path
-                                        d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                                </svg>
-                                <span>Product</span>
-                            </a>
                             <a href="{{ route('database.parts', absolute: false) }}"
                                 class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.parts') ? 'active' : '' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1333,7 +1325,7 @@
                             <line x1="16" y1="17" x2="8" y2="17" />
                             <polyline points="10 9 9 9 8 9" />
                         </svg>
-                        <span>Form Input</span>
+                        <span>Form Costing</span>
                     </a>
                     <a href="{{ route('tracking-documents.index', absolute: false) }}"
                         class="sidebar-nav-item {{ request()->routeIs('tracking-documents.*') ? 'active' : '' }}">
@@ -1403,7 +1395,7 @@
                                     <line x1="16" y1="17" x2="8" y2="17" />
                                     <polyline points="10 9 9 9 8 9" />
                                 </svg>
-                                Form Input
+                                Form Costing
                             </a>
                         </nav>
                     </div>
@@ -1454,6 +1446,23 @@
             <div class="app-confirm-actions">
                 <button type="button" class="app-confirm-btn app-confirm-btn-secondary" onclick="closeAppConfirm()">Batal</button>
                 <button type="button" id="app-confirm-ok" class="app-confirm-btn app-confirm-btn-danger">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-notify-modal" class="app-confirm-modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="app-notify-title" onclick="closeAppNotifyOnOverlay(event)">
+        <div class="app-confirm-card app-notify-card">
+            <div class="app-confirm-icon app-notify-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 9v4" />
+                    <path d="M12 16h.01" />
+                </svg>
+            </div>
+            <h3 id="app-notify-title" class="app-confirm-title">Informasi</h3>
+            <p id="app-notify-message" class="app-confirm-message">Ada informasi untuk Anda.</p>
+            <div class="app-confirm-actions app-notify-actions">
+                <button type="button" id="app-notify-ok" class="app-confirm-btn app-confirm-btn-primary">OK</button>
             </div>
         </div>
     </div>
@@ -1558,6 +1567,29 @@
             background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
         }
 
+        .app-confirm-btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+        }
+
+        .app-confirm-btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        }
+
+        .app-notify-card {
+            width: min(400px, 100%);
+        }
+
+        .app-notify-icon {
+            background: #eff6ff;
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+
+        .app-notify-actions {
+            justify-content: flex-end;
+        }
+
         .app-loading-overlay {
             position: fixed;
             inset: 0;
@@ -1638,6 +1670,7 @@
 
     <script>
         let appConfirmCurrentOnConfirm = null;
+        let appNotifyCurrentOnClose = null;
         let appLoadingVisible = false;
 
         function showAppLoading(message) {
@@ -1687,6 +1720,48 @@
             appConfirmCurrentOnConfirm = null;
             modal.classList.add('is-hidden');
             document.body.style.overflow = '';
+        }
+
+        function openAppNotify(message, onClose) {
+            const modal = document.getElementById('app-notify-modal');
+            const messageNode = document.getElementById('app-notify-message');
+            const okButton = document.getElementById('app-notify-ok');
+
+            if (!modal || !messageNode || !okButton) {
+                window.alert(message || 'Ada informasi untuk Anda.');
+                if (typeof onClose === 'function') {
+                    onClose();
+                }
+                return;
+            }
+
+            messageNode.textContent = message || 'Ada informasi untuk Anda.';
+            appNotifyCurrentOnClose = onClose;
+            modal.classList.remove('is-hidden');
+            document.body.style.overflow = 'hidden';
+            okButton.focus();
+        }
+
+        function closeAppNotify() {
+            const modal = document.getElementById('app-notify-modal');
+            if (!modal) {
+                return;
+            }
+
+            const onClose = appNotifyCurrentOnClose;
+            appNotifyCurrentOnClose = null;
+            modal.classList.add('is-hidden');
+            document.body.style.overflow = '';
+
+            if (typeof onClose === 'function') {
+                onClose();
+            }
+        }
+
+        function closeAppNotifyOnOverlay(event) {
+            if (event.target && event.target.id === 'app-notify-modal') {
+                closeAppNotify();
+            }
         }
 
         function closeAppConfirmOnOverlay(event) {
@@ -1743,6 +1818,7 @@
 
         document.addEventListener('DOMContentLoaded', function () {
             const okButton = document.getElementById('app-confirm-ok');
+            const notifyOkButton = document.getElementById('app-notify-ok');
 
             okButton.addEventListener('click', function () {
                 if (typeof appConfirmCurrentOnConfirm === 'function') {
@@ -1754,6 +1830,12 @@
 
                 closeAppConfirm();
             });
+
+            if (notifyOkButton) {
+                notifyOkButton.addEventListener('click', function () {
+                    closeAppNotify();
+                });
+            }
 
             document.addEventListener('submit', function (event) {
                 const form = event.target;
@@ -1816,6 +1898,12 @@
                 const modal = document.getElementById('app-confirm-modal');
                 if (!modal.classList.contains('is-hidden')) {
                     closeAppConfirm();
+                    return;
+                }
+
+                const notifyModal = document.getElementById('app-notify-modal');
+                if (notifyModal && !notifyModal.classList.contains('is-hidden')) {
+                    closeAppNotify();
                 }
             });
         });

@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Form Input Costing')
-@section('page-title', 'Form Input Costing')
+@section('title', 'Form Costing')
+@section('page-title', 'Form Costing')
 
 @section('breadcrumb')
     <a href="{{ route('dashboard', absolute: false) }}">Dashboard</a>
     <span class="breadcrumb-separator">/</span>
-    <span>Form Input Costing</span>
+    <span>Form Costing</span>
 @endsection
 
 @section('content')
@@ -2903,7 +2903,7 @@
                 .then((response) => response.json())
                 .then((data) => {
                     if (!data || data.ok !== true) {
-                        window.alert('Harga part tidak ditemukan di database part.');
+                        openAppNotify('Harga part tidak ditemukan di database part.');
                         return;
                     }
 
@@ -2919,7 +2919,7 @@
                     };
 
                     if (selectedPrice <= 0) {
-                        window.alert('Harga part tidak ditemukan di database part.');
+                        openAppNotify('Harga part tidak ditemukan di database part.');
                         return;
                     }
 
@@ -2946,7 +2946,7 @@
                     }
                 })
                 .catch(() => {
-                    window.alert('Gagal mengambil harga dari database part.');
+                    openAppNotify('Gagal mengambil harga dari database part.');
                 })
                 .finally(() => {
                     if (button instanceof HTMLButtonElement) {
@@ -3014,12 +3014,9 @@
                     const partNumber = this.dataset.partNumber || '';
                     if (!partNumber) return;
 
-                    const confirmed = window.confirm(`Hapus part tanpa harga "${partNumber}"?`);
-                    if (!confirmed) {
-                        return;
-                    }
-
-                    deleteUnpricedPart(partNumber);
+                    openAppConfirm(`Hapus part tanpa harga "${partNumber}"?`, function () {
+                        deleteUnpricedPart(partNumber);
+                    });
                 });
             });
         }

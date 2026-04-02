@@ -86,7 +86,7 @@ class DocumentRevision extends Model
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
-            self::STATUS_PENDING_FORM_INPUT => 'Pending Form Input',
+            self::STATUS_PENDING_FORM_INPUT => 'Pending Form Costing',
             self::STATUS_SUDAH_COSTING => 'Sudah Costing',
             self::STATUS_PENDING_PRICING => 'Draft / Pending Pricing',
             self::STATUS_COGM_GENERATED => 'COGM Generated',

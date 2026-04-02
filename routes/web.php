@@ -28,7 +28,6 @@ Route::get('/test', function () {
 });
 
 Route::get('/database', [DatabaseController::class, 'index'])->name('database');
-Route::get('/database/products', [DatabaseController::class, 'products'])->name('database.products');
 Route::get('/database/parts', [DatabaseController::class, 'parts'])->name('database.parts');
 Route::get('/database/parts/template', [DatabaseController::class, 'downloadPartsTemplate'])->name('database.parts.template');
 Route::post('/database/parts/import', [DatabaseController::class, 'importPartsExcel'])->name('database.parts.import');
@@ -40,6 +39,7 @@ Route::get('/database/parts/{id}/edit', [DatabaseController::class, 'editPart'])
 Route::put('/database/parts/{id}', [DatabaseController::class, 'updatePart'])->name('database.parts.update');
 Route::delete('/database/parts/{id}', [DatabaseController::class, 'destroyPart'])->name('database.parts.destroy');
 Route::get('/database/costing', [DatabaseController::class, 'costing'])->name('database.costing');
+Route::delete('/database/costing/{id}', [DatabaseController::class, 'destroyCosting'])->name('database.costing.destroy');
 Route::get('/database/customers', [DatabaseController::class, 'customers'])->name('database.customers');
 Route::post('/database/customers', [DatabaseController::class, 'storeCustomer'])->name('database.customers.store');
 Route::put('/database/customers/{id}', [DatabaseController::class, 'updateCustomer'])->name('database.customers.update');
@@ -87,11 +87,16 @@ Route::post('/tracking-documents/{revision}/process-form-input', [TrackingDocume
 Route::post('/tracking-documents/{revision}/mark-cogm', [TrackingDocumentController::class, 'markCogmGenerated'])->name('tracking-documents.mark-cogm');
 Route::post('/tracking-documents/{revision}/submit-cogm', [TrackingDocumentController::class, 'submitCogm'])->name('tracking-documents.submit-cogm');
 Route::post('/tracking-documents/{revision}/update-files', [TrackingDocumentController::class, 'updateFiles'])->name('tracking-documents.update-files');
+Route::post('/tracking-documents/{revision}/add-version', [TrackingDocumentController::class, 'addVersion'])->name('tracking-documents.add-version');
+Route::delete('/tracking-documents/{revision}/delete-version', [TrackingDocumentController::class, 'deleteVersion'])->name('tracking-documents.delete-version');
 Route::post('/tracking-documents/{project}/update-project-info', [TrackingDocumentController::class, 'updateProjectInfo'])->name('tracking-documents.update-project-info');
 Route::delete('/tracking-documents/{project}', [TrackingDocumentController::class, 'destroyProject'])->name('tracking-documents.destroy-project');
 Route::post('/tracking-documents/{revision}/unpriced-price', [TrackingDocumentController::class, 'updateUnpricedPartPrice'])->name('tracking-documents.update-unpriced-price');
 Route::post('/tracking-documents/{revision}/unpriced-delete', [TrackingDocumentController::class, 'deleteUnpricedPart'])->name('tracking-documents.delete-unpriced-part');
 Route::post('/tracking-documents/{revision}/unpriced-restore', [TrackingDocumentController::class, 'restoreUnpricedPart'])->name('tracking-documents.restore-unpriced-part');
+Route::get('/tracking-documents/{revision}/{type}/view', [TrackingDocumentController::class, 'viewDocument'])
+    ->where('type', 'partlist|umh|a00|a04|a05')
+    ->name('tracking-documents.view');
 Route::get('/tracking-documents/{revision}/{type}', [TrackingDocumentController::class, 'download'])
 	->where('type', 'partlist|umh|a00|a04|a05')
 	->name('tracking-documents.download');

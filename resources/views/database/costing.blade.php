@@ -4,7 +4,7 @@
 @section('page-title', 'Database Costing')
 
 @section('breadcrumb')
-    <a href="{{ route('database.products', absolute: false) }}">Database</a>
+    <a href="{{ route('database.parts', absolute: false) }}">Database</a>
     <span class="breadcrumb-separator">/</span>
     <span>Costing</span>
 @endsection
@@ -17,7 +17,7 @@
 
         .costing-table {
             table-layout: fixed;
-            min-width: 1780px;
+            min-width: 1980px;
         }
 
         .costing-table th,
@@ -78,6 +78,8 @@
 
         .costing-table th:nth-child(10),
         .costing-table td:nth-child(10),
+        .costing-table th:nth-child(11),
+        .costing-table td:nth-child(11),
         .costing-table th:nth-child(12),
         .costing-table td:nth-child(12),
         .costing-table th:nth-child(14),
@@ -87,36 +89,64 @@
             width: 140px;
         }
 
-        .costing-table th:nth-child(11),
-        .costing-table td:nth-child(11),
         .costing-table th:nth-child(13),
         .costing-table td:nth-child(13),
         .costing-table th:nth-child(15),
-        .costing-table td:nth-child(15) {
+        .costing-table td:nth-child(15),
+        .costing-table th:nth-child(17),
+        .costing-table td:nth-child(17) {
             width: 96px;
             text-align: center;
         }
 
-        .costing-table th:nth-child(17),
-        .costing-table td:nth-child(17) {
+        .costing-table th:nth-child(18),
+        .costing-table td:nth-child(18) {
             width: 160px;
         }
 
-        .costing-table th:nth-child(18),
-        .costing-table td:nth-child(18) {
+        .costing-table th:nth-child(19),
+        .costing-table td:nth-child(19) {
             width: 180px;
+        }
+
+        .costing-table th:nth-child(20),
+        .costing-table td:nth-child(20) {
+            width: 160px;
             text-align: center;
         }
 
         .costing-action-btn {
-            min-width: 108px;
-            white-space: nowrap;
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        .costing-filter-row th {
-            background: #eef2ff;
-            border-bottom: 1px solid #cbd5e1;
-            padding: 0.45rem 0.5rem;
+        .costing-action-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+            align-items: center;
+        }
+
+        .costing-delete-btn {
+            width: 38px;
+            height: 38px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .costing-filter-form {
+            display: grid;
+            grid-template-columns: repeat(8, minmax(120px, 1fr)) auto;
+            gap: 0.5rem;
+            padding: 0.85rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
         }
 
         .costing-filter-input {
@@ -132,17 +162,28 @@
 
         .costing-filter-actions {
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: center;
             gap: 0.35rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
 
         .costing-filter-btn {
-            min-width: 64px;
-            padding: 0.3rem 0.55rem;
-            font-size: 0.7rem;
+            min-width: 72px;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
             line-height: 1.2;
+        }
+
+        @media (max-width: 1200px) {
+            .costing-filter-form {
+                grid-template-columns: repeat(4, minmax(120px, 1fr));
+            }
+
+            .costing-filter-actions {
+                grid-column: 1 / -1;
+                justify-content: flex-start;
+            }
         }
     </style>
 
@@ -150,63 +191,54 @@
         <div class="card-header">
             <h3 class="card-title">Data Costing</h3>
         </div>
+        <form method="GET" action="{{ route('database.costing', absolute: false) }}" class="costing-filter-form">
+            <input type="text" name="period" class="costing-filter-input" value="{{ $filters['period'] ?? '' }}" placeholder="Period">
+            <input type="date" name="tanggal" class="costing-filter-input" value="{{ $filters['tanggal'] ?? '' }}">
+            <input type="text" name="customer" class="costing-filter-input" value="{{ $filters['customer'] ?? '' }}" placeholder="Customer">
+            <input type="text" name="model" class="costing-filter-input" value="{{ $filters['model'] ?? '' }}" placeholder="Model">
+            <input type="text" name="id_code" class="costing-filter-input" value="{{ $filters['id_code'] ?? '' }}" placeholder="ID Code">
+            <input type="text" name="assy_no" class="costing-filter-input" value="{{ $filters['assy_no'] ?? '' }}" placeholder="Assy No">
+            <input type="text" name="assy_name" class="costing-filter-input" value="{{ $filters['assy_name'] ?? '' }}" placeholder="Assy Name">
+            <input type="text" name="revisi" class="costing-filter-input" value="{{ $filters['revisi'] ?? '' }}" placeholder="V3">
+            <div class="costing-filter-actions">
+                <button type="submit" class="btn btn-primary btn-sm costing-filter-btn">Search</button>
+                <a href="{{ route('database.costing', absolute: false) }}" class="btn btn-secondary btn-sm costing-filter-btn">Reset</a>
+            </div>
+        </form>
         <div class="costing-table-container">
-            <form method="GET" action="{{ route('database.costing', absolute: false) }}">
             <table class="data-table costing-table">
                 <thead>
                     <tr>
                         <th>NO.</th>
-                        <th>PERIODE</th>
-                        <th>TANGGAL</th>
+                        <th>PERIOD</th>
+                        <th>DATE</th>
                         <th>CUSTOMER</th>
                         <th>MODEL</th>
                         <th>ID CODE</th>
                         <th>ASSY NO</th>
-                        <th>PRODUCT</th>
+                        <th>ASSY NAME</th>
                         <th>REVISI</th>
+                        <th>QTY/MONTH</th>
+                        <th>PRODUCT LIFE</th>
                         <th>MATERIAL COST</th>
                         <th>%</th>
                         <th>PROCESS COST</th>
                         <th>%</th>
-                        <th>DEPRESIASI TOOLING COST</th>
+                        <th>OVERHEAD COST (TOOLING + ADMIN)</th>
                         <th>%</th>
                         <th>COGM</th>
                         <th>LAST UPDATED</th>
                         <th>ACTION</th>
                     </tr>
-                    <tr class="costing-filter-row">
-                        <th></th>
-                        <th><input type="text" name="period" class="costing-filter-input" value="{{ $filters['period'] ?? '' }}" placeholder="Periode"></th>
-                        <th><input type="date" name="tanggal" class="costing-filter-input" value="{{ $filters['tanggal'] ?? '' }}"></th>
-                        <th><input type="text" name="customer" class="costing-filter-input" value="{{ $filters['customer'] ?? '' }}" placeholder="Customer"></th>
-                        <th><input type="text" name="model" class="costing-filter-input" value="{{ $filters['model'] ?? '' }}" placeholder="Model"></th>
-                        <th><input type="text" name="id_code" class="costing-filter-input" value="{{ $filters['id_code'] ?? '' }}" placeholder="ID Code"></th>
-                        <th><input type="text" name="assy_no" class="costing-filter-input" value="{{ $filters['assy_no'] ?? '' }}" placeholder="Assy No"></th>
-                        <th><input type="text" name="product" class="costing-filter-input" value="{{ $filters['product'] ?? '' }}" placeholder="Product"></th>
-                        <th><input type="text" name="revisi" class="costing-filter-input" value="{{ $filters['revisi'] ?? '' }}" placeholder="V3"></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                        <th>
-                            <div class="costing-filter-actions">
-                                <button type="submit" class="btn btn-primary btn-sm costing-filter-btn">Search</button>
-                                <a href="{{ route('database.costing', absolute: false) }}" class="btn btn-secondary btn-sm costing-filter-btn">Reset</a>
-                            </div>
-                        </th>
-                    </tr>
                 </thead>
                 <tbody>
                     @forelse($costingData as $key => $costing)
                         @php
-                            $cogm = $costing->material_cost + $costing->labor_cost + $costing->overhead_cost;
+                            $effectiveOverheadCost = (float) $costing->overhead_cost + (float) $costing->scrap_cost;
+                            $cogm = $costing->material_cost + $costing->labor_cost + $effectiveOverheadCost;
                             $materialPct = $cogm > 0 ? ($costing->material_cost / $cogm * 100) : 0;
                             $processPct = $cogm > 0 ? ($costing->labor_cost / $cogm * 100) : 0;
-                            $toolingPct = $cogm > 0 ? ($costing->overhead_cost / $cogm * 100) : 0;
+                            $toolingPct = $cogm > 0 ? ($effectiveOverheadCost / $cogm * 100) : 0;
                             $tanggalValue = $costing->trackingRevision?->received_date ?? $costing->created_at;
                             $revisiValue = $costing->trackingRevision?->version_label ?? '-';
                             $formUrl = route('form', array_filter([
@@ -222,30 +254,51 @@
                             <td>{{ $costing->model ?? '-' }}</td>
                             <td>{{ $costing->product->code ?? '-' }}</td>
                             <td>{{ $costing->assy_no ?? '-' }}</td>
-                            <td>{{ $costing->product->name ?? '-' }}</td>
+                            <td>{{ $costing->assy_name ?? '-' }}</td>
                             <td>{{ $revisiValue }}</td>
+                            <td>{{ number_format((float) ($costing->forecast ?? 0), 0, ',', '.') }}</td>
+                            <td>{{ number_format((float) ($costing->project_period ?? 0), 0, ',', '.') }} Years</td>
                             <td>Rp {{ number_format($costing->material_cost, 0, ',', '.') }}</td>
                             <td>{{ number_format($materialPct, 2) }}%</td>
                             <td>Rp {{ number_format($costing->labor_cost, 0, ',', '.') }}</td>
                             <td>{{ number_format($processPct, 2) }}%</td>
-                            <td>Rp {{ number_format($costing->overhead_cost, 0, ',', '.') }}</td>
+                            <td>Rp {{ number_format($effectiveOverheadCost, 0, ',', '.') }}</td>
                             <td>{{ number_format($toolingPct, 2) }}%</td>
                             <td><strong>Rp {{ number_format($cogm, 0, ',', '.') }}</strong></td>
                             <td>{{ $costing->updated_at ? \Carbon\Carbon::parse($costing->updated_at)->format('d-m-Y H:i') : '-' }}</td>
                             <td>
-                                <a href="{{ $formUrl }}" class="btn btn-secondary btn-sm costing-action-btn">
-                                    TO FORM INPUT
-                                </a>
+                                <div class="costing-action-group">
+                                    <a href="{{ $formUrl }}" class="btn btn-secondary btn-sm costing-action-btn" title="Open Form Costing" aria-label="Open Form Costing">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                            <polyline points="14 2 14 8 20 8"/>
+                                            <path d="M12 18h-4"/>
+                                            <path d="M14.5 12.5l2 2L12 19l-2 0 0-2z"/>
+                                        </svg>
+                                    </a>
+                                    <form method="POST" action="{{ route('database.costing.destroy', $costing->id, absolute: false) }}" class="js-confirm-form" data-confirm-message="Hapus baris costing ini?">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger btn-sm costing-delete-btn" title="Delete Row" aria-label="Delete Row">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                                                <line x1="10" y1="11" x2="10" y2="17"/>
+                                                <line x1="14" y1="11" x2="14" y2="17"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="18" style="text-align: center;">Tidak ada data costing ditemukan</td>
+                            <td colspan="20" style="text-align: center;">Tidak ada data costing ditemukan</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
-            </form>
         </div>
     </div>
 @endsection

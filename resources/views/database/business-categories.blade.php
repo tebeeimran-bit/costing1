@@ -4,7 +4,7 @@
 @section('page-title', 'Database Business Categories')
 
 @section('breadcrumb')
-    <a href="{{ route('database.products', absolute: false) }}">Database</a>
+    <a href="{{ route('database.parts', absolute: false) }}">Database</a>
     <span class="breadcrumb-separator">/</span>
     <span>Business Categories</span>
 @endsection

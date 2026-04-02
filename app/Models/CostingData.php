@@ -24,6 +24,7 @@ class CostingData extends Model
         'exchange_rate_usd',
         'exchange_rate_jpy',
         'lme_rate',
+        'rate_periode',
         'forecast',
         'project_period',
         'material_cost',

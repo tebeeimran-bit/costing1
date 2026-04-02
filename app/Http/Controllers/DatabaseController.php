@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Plant;
 use App\Models\Pic;
 use App\Models\Customer;
@@ -25,13 +24,7 @@ class DatabaseController extends Controller
 {
     public function index()
     {
-        return redirect(route('database.products', absolute: false));
-    }
-
-    public function products()
-    {
-        $products = Product::all();
-        return view('database.products', compact('products'));
+        return redirect(route('database.parts', absolute: false));
     }
 
     public function parts(Request $request)
@@ -76,7 +69,7 @@ class DatabaseController extends Controller
             'model' => trim((string) $request->input('model', '')),
             'id_code' => trim((string) $request->input('id_code', '')),
             'assy_no' => trim((string) $request->input('assy_no', '')),
-            'product' => trim((string) $request->input('product', '')),
+            'assy_name' => trim((string) $request->input('assy_name', $request->input('product', ''))),
             'revisi' => trim((string) $request->input('revisi', '')),
         ];
 
@@ -116,10 +109,8 @@ class DatabaseController extends Controller
             $query->where('assy_no', 'like', '%' . $filters['assy_no'] . '%');
         }
 
-        if ($filters['product'] !== '') {
-            $query->whereHas('product', function ($productQuery) use ($filters) {
-                $productQuery->where('name', 'like', '%' . $filters['product'] . '%');
-            });
+        if ($filters['assy_name'] !== '') {
+            $query->where('assy_name', 'like', '%' . $filters['assy_name'] . '%');
         }
 
         if ($filters['revisi'] !== '') {
@@ -141,6 +132,14 @@ class DatabaseController extends Controller
             ->get();
 
         return view('database.costing', compact('costingData', 'filters'));
+    }
+
+    public function destroyCosting($id)
+    {
+        $costing = CostingData::findOrFail($id);
+        $costing->delete();
+
+        return back()->with('success', 'Baris costing berhasil dihapus.');
     }
 
     public function customers()
