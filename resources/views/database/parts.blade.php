@@ -4,7 +4,7 @@
 @section('page-title', 'Database Part (Material)')
 
 @section('breadcrumb')
-    <a href="{{ route('database.parts', absolute: false) }}">Database</a>
+    <a href="{{ route('database.products', absolute: false) }}">Database</a>
     <span class="breadcrumb-separator">/</span>
     <span>Parts</span>
 @endsection
@@ -166,7 +166,7 @@
                         <td>{{ $material->material_type ?? '-' }}</td>
                         <td>{{ $material->material_group ?? '-' }}</td>
                         <td>{{ $material->base_uom ?? '-' }}</td>
-                        <td>{{ $material->price !== null ? rtrim(rtrim(number_format((float) $material->price, 5, ',', '.'), '0'), ',') : '-' }}</td>
+                        <td>{{ $material->price ? number_format($material->price, 0, ',', '.') : '0' }}</td>
                         <td>{{ $material->purchase_unit ?? '-' }}</td>
                         <td>{{ $material->currency ?? '-' }}</td>
                         <td>{{ $material->moq ? number_format($material->moq, 0, ',', '.') : '-' }}</td>
@@ -380,7 +380,7 @@
                     </div>
                     <div class="form-group">
                         <label for="material_form_price">Price</label>
-                        <input type="number" id="material_form_price" name="price" value="{{ old('price', 0) }}" placeholder="0" step="0.00001" min="0">
+                        <input type="number" id="material_form_price" name="price" value="{{ old('price', 0) }}" placeholder="0" step="0.01" min="0">
                     </div>
                     <div class="form-group">
                         <label for="material_form_purchase_unit">Purchase Unit</label>
@@ -420,7 +420,7 @@
                     </div>
                     <div class="form-group">
                         <label for="material_form_price_before">Price Before</label>
-                        <input type="number" id="material_form_price_before" name="price_before" value="{{ old('price_before', '') }}" placeholder="0" step="0.00001" min="0">
+                        <input type="number" id="material_form_price_before" name="price_before" value="{{ old('price_before', '') }}" placeholder="0" step="0.01" min="0">
                     </div>
                 </div>
 
@@ -973,7 +973,7 @@
                         .filter((value) => value !== '');
 
                     if (selectedIds.length === 0) {
-                        openAppNotify('Pilih minimal satu material untuk dihapus.');
+                        window.alert('Pilih minimal satu material untuk dihapus.');
                         return;
                     }
 

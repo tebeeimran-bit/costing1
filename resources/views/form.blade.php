@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Form Costing')
-@section('page-title', 'Form Costing')
+@section('title', 'Form Input Costing')
+@section('page-title', 'Form Input Costing')
 
 @section('breadcrumb')
     <a href="{{ route('dashboard', absolute: false) }}">Dashboard</a>
     <span class="breadcrumb-separator">/</span>
-    <span>Form Costing</span>
+    <span>Form Input Costing</span>
 @endsection
 
 @section('content')
@@ -101,35 +101,6 @@
             margin-top: 1rem !important;
         }
 
-        .form-page .calc-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 2rem;
-        }
-
-        .form-page .calc-item .calc-label {
-            flex: 1;
-        }
-
-        .form-page .calc-item .calc-value-with-percentage {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            white-space: nowrap;
-        }
-
-        .form-page .calc-item .calc-percentage {
-            font-size: 0.875rem;
-            color: #666;
-            min-width: 60px;
-            text-align: right;
-        }
-
-        .form-page .calc-item .separator {
-            color: #999;
-        }
-
         .form-page .material-table-container {
             max-width: 100%;
             overflow: auto;
@@ -186,159 +157,6 @@
         .form-page .material-table .currency,
         .form-page .material-table .cn-type {
             min-width: 74px;
-        }
-
-        #unpricedRecapBody td {
-            vertical-align: top;
-        }
-
-        .unpriced-price-option {
-            display: flex;
-            align-items: center;
-            gap: 0.35rem;
-            min-height: 1.4rem;
-            margin-bottom: 0.2rem;
-        }
-
-        .unpriced-inline-editor {
-            margin-top: 0.35rem;
-        }
-
-        .unpriced-inline-price,
-        .unpriced-inline-purchase-unit,
-        .unpriced-inline-currency,
-        .unpriced-inline-moq,
-        .unpriced-inline-cn,
-        .unpriced-inline-maker,
-        .unpriced-inline-add-cost {
-            min-height: 30px;
-            font-size: 0.74rem;
-            padding-top: 0.35rem;
-            padding-bottom: 0.35rem;
-        }
-
-        .unpriced-inline-price {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-inline-purchase-unit {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-inline-currency {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-inline-moq {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-inline-cn {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-inline-add-cost {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-inline-maker {
-            min-width: 0;
-            width: 100%;
-        }
-
-        .unpriced-recap-table {
-            min-width: 100%;
-            width: 100%;
-            table-layout: fixed;
-        }
-
-        .unpriced-recap-table th {
-            white-space: normal;
-            line-height: 1.2;
-            overflow: visible;
-            text-overflow: clip;
-        }
-
-        .unpriced-recap-table td {
-            white-space: normal;
-            vertical-align: top;
-            overflow: hidden;
-        }
-
-        .unpriced-action-stack {
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            align-items: stretch;
-        }
-
-        .unpriced-recap-table th:nth-child(1),
-        .unpriced-recap-table td:nth-child(1) { width: 8%; }
-
-        .unpriced-recap-table th:nth-child(2),
-        .unpriced-recap-table td:nth-child(2) { width: 3%; }
-
-        .unpriced-recap-table th:nth-child(3),
-        .unpriced-recap-table td:nth-child(3) { width: 5%; }
-
-        .unpriced-recap-table th:nth-child(4),
-        .unpriced-recap-table td:nth-child(4) {
-            width: 22%;
-        }
-
-        .unpriced-recap-table th:nth-child(5),
-        .unpriced-recap-table td:nth-child(5) {
-            width: 9%;
-        }
-
-        .unpriced-recap-table th:nth-child(6),
-        .unpriced-recap-table td:nth-child(6) {
-            width: 11%;
-        }
-
-        .unpriced-recap-table th:nth-child(7),
-        .unpriced-recap-table td:nth-child(7) {
-            width: 7%;
-        }
-
-        .unpriced-recap-table th:nth-child(8),
-        .unpriced-recap-table td:nth-child(8) {
-            width: 5%;
-        }
-
-        .unpriced-recap-table th:nth-child(9),
-        .unpriced-recap-table td:nth-child(9) {
-            width: 17%;
-        }
-
-        .unpriced-recap-table th:nth-child(10),
-        .unpriced-recap-table td:nth-child(10) {
-            width: 8%;
-        }
-
-        .unpriced-recap-table th:nth-child(11),
-        .unpriced-recap-table td:nth-child(11) {
-            width: 6%;
-        }
-
-        .unpriced-recap-table th:nth-child(12),
-        .unpriced-recap-table td:nth-child(12) {
-            width: 5%;
-        }
-
-        .unpriced-recap-table th:nth-child(13),
-        .unpriced-recap-table td:nth-child(13) {
-            width: 7%;
-        }
-
-        .unpriced-recap-container {
-            overflow-x: hidden;
         }
 
         .material-row-no-header,
@@ -545,7 +363,7 @@
         }
 
         .form-page .cycle-table {
-            min-width: 1240px;
+            min-width: 1100px;
         }
 
         .form-page .cycle-table th {
@@ -567,20 +385,6 @@
 
         .form-page .cycle-table .ct-process {
             min-width: 260px;
-        }
-
-        .form-page .cycle-table .ct-area-of-process {
-            min-width: 170px;
-        }
-
-        .form-page .cycle-row-no-cell {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-        }
-
-        .form-page .cycle-row-number {
-            font-weight: 600;
         }
 
         .form-page .cycle-table .ct-qty,
@@ -805,102 +609,62 @@
                 justify-content: center;
             }
         }
-
-        .toast-stack {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.65rem;
-            width: min(92vw, 420px);
-            z-index: 4000;
-            pointer-events: none;
-        }
-
-        .toast-notification {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.55rem;
-            padding: 0.85rem 0.95rem;
-            border-radius: 0.75rem;
-            border: 1px solid var(--slate-200);
-            background: #ffffff;
-            color: var(--slate-800);
-            box-shadow: 0 14px 36px rgba(15, 23, 42, 0.16);
-            pointer-events: auto;
-            opacity: 0;
-            transform: translateY(-8px);
-            transition: opacity 0.22s ease, transform 0.22s ease;
-        }
-
-        .toast-notification.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .toast-notification.hide {
-            opacity: 0;
-            transform: translateY(-8px);
-        }
-
-        .toast-notification.success {
-            border-color: #86efac;
-            background: #ecfdf3;
-            color: #166534;
-        }
-
-        .toast-notification.warning {
-            border-color: #fde68a;
-            background: #fff8e6;
-            color: #92400e;
-        }
-
-        .toast-notification.error {
-            border-color: #fecaca;
-            background: #fef2f2;
-            color: #991b1b;
-        }
-
-        .toast-notification .toast-close {
-            margin-left: auto;
-            border: 0;
-            background: transparent;
-            color: inherit;
-            cursor: pointer;
-            font-size: 1rem;
-            line-height: 1;
-            opacity: 0.7;
-        }
-
-        .toast-notification .toast-close:hover {
-            opacity: 1;
-        }
     </style>
 
-    @php
-        $toastNotifications = [];
-        if (session('success')) {
-            $toastNotifications[] = ['type' => 'success', 'message' => session('success')];
-        }
-        if (session('warning')) {
-            $toastNotifications[] = ['type' => 'warning', 'message' => session('warning')];
-        }
-        if (session('error')) {
-            $toastNotifications[] = ['type' => 'error', 'message' => session('error')];
-        }
-        if ($errors->any()) {
-            foreach ($errors->all() as $error) {
-                $toastNotifications[] = ['type' => 'error', 'message' => $error];
-            }
-        }
-        $openUnpricedCount = isset($openUnpricedParts) ? $openUnpricedParts->count() : 0;
-        if ($openUnpricedCount > 0) {
-            $toastNotifications[] = ['type' => 'warning', 'message' => 'Terdapat ' . $openUnpricedCount . ' part yang belum memiliki harga pada versi dokumen ini.'];
-        }
-    @endphp
+    @if(session('success'))
+        <div class="alert alert-success">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            {{ session('success') }}
+        </div>
+    @endif
 
-    <div id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></div>
+    @if(session('warning'))
+        <div class="alert alert-warning">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div class="alert alert-danger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="alert alert-danger">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="15" y1="9" x2="9" y2="15" />
+                <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+            <span>{{ $errors->first() }}</span>
+        </div>
+    @endif
+
+    <div class="alert alert-warning" id="unpricedTopBanner"
+        style="{{ (isset($trackingRevision) && $trackingRevision && isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? '' : 'display:none;' }}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span id="unpricedTopBannerText">
+                Terdapat {{ isset($openUnpricedParts) ? $openUnpricedParts->count() : 0 }} part yang belum memiliki harga pada versi dokumen ini.
+            </span>
+    </div>
 
     <div class="form-page">
     <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm" enctype="multipart/form-data">
@@ -917,8 +681,6 @@
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.update-unpriced-price', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
         <input type="hidden" id="deleteUnpricedPartUrl"
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.delete-unpriced-part', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
-        <input type="hidden" id="restoreUnpricedPartUrl"
-            value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.restore-unpriced-part', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
 
         <!-- Section A: Filter & Header -->
         <div class="card form-section">
@@ -1062,38 +824,15 @@
                 </div>
             </div>
             <div class="form-grid param-grid">
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label class="form-label">Period/Request Rate Wire</label>
-                    <select name="wire_rate_id" id="wireRateSelector" class="form-select">
-                        @forelse($wireRates as $rate)
-                            @php
-                                $rateLabel = $rate->period_month
-                                    ? $rate->period_month->format('M-y')
-                                    : ($rate->request_name ?: 'Request Khusus');
-                                $selectedWireRateValue = (int) old('wire_rate_id', $selectedWireRateId ?? 0);
-                            @endphp
-                            <option value="{{ $rate->id }}"
-                                data-usd="{{ (float) ($rate->usd_rate ?? 0) }}"
-                                data-jpy="{{ (float) ($rate->jpy_rate ?? 0) }}"
-                                data-lme="{{ (float) ($rate->lme_active ?? 0) }}"
-                                data-label="{{ $rateLabel }}"
-                                {{ $selectedWireRateValue === (int) $rate->id ? 'selected' : '' }}>
-                                {{ $rateLabel }}
-                            </option>
-                        @empty
-                            <option value="">Belum ada rate wire</option>
-                        @endforelse
-                    </select>
-                </div>
                 <div class="form-group">
                     <label class="form-label">USD</label>
                     <input type="number" name="exchange_rate_usd" class="form-input" id="rateUSD"
-                        value="{{ old('exchange_rate_usd', $activeWireRate?->usd_rate ?? ($costingData->exchange_rate_usd ?? 15500)) }}" step="0.01" readonly>
+                        value="{{ $costingData->exchange_rate_usd ?? 15500 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label class="form-label">JPY</label>
                     <input type="number" name="exchange_rate_jpy" class="form-input" id="rateJPY"
-                        value="{{ old('exchange_rate_jpy', $activeWireRate?->jpy_rate ?? ($costingData->exchange_rate_jpy ?? 103)) }}" step="0.01" readonly>
+                        value="{{ $costingData->exchange_rate_jpy ?? 103 }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label class="form-label">IDR</label>
@@ -1103,18 +842,8 @@
                 <div class="form-group">
                     <label class="form-label">LME Rate</label>
                     <input type="number" name="lme_rate" class="form-input" id="lmeRate"
-                        value="{{ old('lme_rate', $activeWireRate?->lme_active ?? ($costingData->lme_rate ?? '')) }}" step="0.01" placeholder="8500" readonly>
+                        value="{{ $costingData->lme_rate ?? '' }}" step="0.01" placeholder="8500">
                 </div>
-            </div>
-            <div id="wireRateSourceHint" style="margin-top: 0.5rem; font-size: 0.82rem; color: var(--slate-500);">
-                @if($activeWireRate)
-                    Sumber rate: Database Wire ({{ $activeWireRate->period_month ? $activeWireRate->period_month->format('M-Y') : ($activeWireRate->request_name ?: 'Request Khusus') }})
-                @else
-                    Sumber rate: Database Wire
-                @endif
-            </div>
-            <div style="margin-top: 0.2rem; font-size: 0.82rem; color: #b45309;">
-                Notes: Jika ingin ganti rate, ganti juga rate di Database Wire.
             </div>
         </div>
 
@@ -1202,9 +931,8 @@
                                 <td>
                                     <span class="material-row-no-cell">
                                         <input type="checkbox" class="material-row-select" title="Pilih baris">
-                                        <span class="material-row-number">{{ $row['row_no'] ?? ($index + 1) }}</span>
+                                        <span class="material-row-number">{{ $index + 1 }}</span>
                                     </span>
-                                    <input type="hidden" name="materials[{{ $index }}][row_no]" value="{{ $row['row_no'] ?? '' }}">
                                 </td>
                                 <td><input type="text" class="form-input part-no" name="materials[{{ $index }}][part_no]"
                                     value="{{ $row['part_no'] ?? '' }}" placeholder="Part No"></td>
@@ -1238,15 +966,14 @@
                                 <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
                                     <option value="N" {{ $rowCn == 'N' ? 'selected' : '' }}>N</option>
                                     <option value="C" {{ $rowCn == 'C' ? 'selected' : '' }}>C</option>
-                                    <option value="E" {{ $rowCn == 'E' ? 'selected' : '' }}>E</option>
                                 </select>
                                 </td>
                                 <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
                                     value="{{ $row['supplier'] ?? '' }}" placeholder="Supplier"></td>
                                 <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
                                     value="{{ $row['import_tax'] ?? 0 }}" step="0.01" onchange="calculateRow(this)"></td>
-                                <td class="calculated multiply-factor">1</td>
-                                <td class="calculated amount2">0</td>
+                                <td class="calculated multiply-factor">1.0000</td>
+                                <td class="calculated amount2">0.0000</td>
                                 <td class="calculated currency2">{{ $rowCurrency }}</td>
                                 <td class="calculated unit-price2">{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}</td>
                                 <td class="calculated total-price">Rp 0</td>
@@ -1278,16 +1005,15 @@
                                     <td>
                                         <span class="material-row-no-cell">
                                             <input type="checkbox" class="material-row-select" title="Pilih baris">
-                                            <span class="material-row-number">{{ $breakdown->row_no ?? ($index + 1) }}</span>
+                                            <span class="material-row-number">{{ $index + 1 }}</span>
                                         </span>
-                                        <input type="hidden" name="materials[{{ $index }}][row_no]" value="{{ $breakdown->row_no ?? '' }}">
                                     </td>
                                     <td><input type="text" class="form-input part-no" name="materials[{{ $index }}][part_no]"
                                     value="{{ $partNoDisplay }}" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[{{ $index }}][id_code]"
                                     value="{{ $breakdown->id_code ?? '' }}" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
-                                    value="{{ $breakdown->part_name ?? $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
+                                    value="{{ $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
                                     <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]"
                                             value="{{ $breakdown->qty_req }}" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
@@ -1313,7 +1039,6 @@
                                         <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
                                             <option value="N" {{ $breakdown->cn_type == 'N' ? 'selected' : '' }}>N</option>
                                             <option value="C" {{ $breakdown->cn_type == 'C' ? 'selected' : '' }}>C</option>
-                                            <option value="E" {{ $breakdown->cn_type == 'E' ? 'selected' : '' }}>E</option>
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
@@ -1321,8 +1046,8 @@
                                     <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
                                             value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
                                     </td>
-                                    <td class="calculated multiply-factor">1</td>
-                                    <td class="calculated amount2">{{ rtrim(rtrim(number_format((float) ($breakdown->amount2 ?? 0), 4, '.', ''), '0'), '.') }}</td>
+                                    <td class="calculated multiply-factor">1.0000</td>
+                                    <td class="calculated amount2">{{ number_format($breakdown->amount2 ?? 0, 4) }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
                                         <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -1348,7 +1073,6 @@
                                             <input type="checkbox" class="material-row-select" title="Pilih baris">
                                             <span class="material-row-number">{{ $i + 1 }}</span>
                                         </span>
-                                        <input type="hidden" name="materials[{{ $i }}][row_no]" value="">
                                     </td>
                                     <td><input type="text" class="form-input part-no" name="materials[{{ $i }}][part_no]" value=""
                                             placeholder="Part No"></td>
@@ -1379,15 +1103,14 @@
                                         <select class="form-select cn-type" name="materials[{{ $i }}][cn_type]" onchange="calculateRow(this)">
                                             <option value="N">N</option>
                                             <option value="C">C</option>
-                                            <option value="E">E</option>
                                         </select>
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $i }}][supplier]" value=""
                                             placeholder="Supplier"></td>
                                         <td><input type="number" class="form-input import-tax" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
                                             onchange="calculateRow(this)"></td>
-                                    <td class="calculated multiply-factor">1</td>
-                                    <td class="calculated amount2">0</td>
+                                    <td class="calculated multiply-factor">1.0000</td>
+                                    <td class="calculated amount2">0.0000</td>
                                     <td class="calculated currency2">IDR</td>
                                     <td class="calculated unit-price2">PCS</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -1441,14 +1164,16 @@
                 </div>
             </div>
 
-            <div class="material-table-container unpriced-recap-container">
-                <table class="material-table unpriced-recap-table">
+            <div class="material-table-container">
+                <table class="material-table">
                     <thead>
                         <tr>
                             <th rowspan="2">Part No</th>
                             <th rowspan="2">ID Code</th>
                             <th rowspan="2">Part Name</th>
+                            <th rowspan="2">Qty</th>
                             <th colspan="9">Price</th>
+                            <th rowspan="2">Input Harga (Manual)</th>
                             <th rowspan="2">Aksi</th>
                         </tr>
                         <tr>
@@ -1468,34 +1193,6 @@
                             @foreach($openUnpricedParts as $item)
                                 @php
                                     $matchedMaterials = collect($item->matched_materials ?? []);
-                                    $matchedWires = collect($item->matched_wires ?? []);
-
-                                    $firstMatched = $matchedMaterials->first();
-                                    $firstWire = $matchedWires->first();
-
-                                    $defaultInlinePrice = (float) ($item->manual_price ?? 0);
-                                    if ($defaultInlinePrice <= 0) {
-                                        if ($firstMatched) {
-                                            $defaultInlinePrice = (float) ($firstMatched->price ?? 0);
-                                        } elseif ($firstWire) {
-                                            $defaultInlinePrice = (float) ($firstWire->price ?? 0);
-                                        } else {
-                                            $defaultInlinePrice = (float) ($item->detected_price ?? 0);
-                                        }
-                                    }
-
-                                    $defaultInlinePurchaseUnit = $firstMatched->purchase_unit
-                                        ?? ($firstWire ? 'M' : ($item->matched_purchase_unit ?? ''));
-                                    $defaultInlineCurrency = $firstMatched->currency
-                                        ?? ($firstWire ? 'IDR' : ($item->matched_currency ?? 'IDR'));
-                                    $defaultInlineMoq = $firstMatched->moq
-                                        ?? ($firstWire ? '' : ($item->matched_moq ?? ''));
-                                    $defaultInlineCn = $firstMatched->cn
-                                        ?? ($firstWire ? 'N' : ($item->matched_cn ?? ''));
-                                    $defaultInlineMaker = $firstMatched->maker
-                                        ?? ($firstWire ? 'EWINDO/JJLAP/WILSON/NAGOYA/INDOWIRE' : ($item->matched_maker ?? ''));
-                                    $defaultInlineAddCost = $firstMatched->add_cost_import_tax
-                                        ?? ($firstWire ? 0 : ($item->matched_add_cost_import_tax ?? ''));
                                 @endphp
                                 <tr>
                                     <td>
@@ -1516,6 +1213,7 @@
                                         @endif
                                     </td>
                                     <td>{{ $item->part_name ?: '-' }}</td>
+                                    <td>{{ $item->qty }}</td>
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
@@ -1524,78 +1222,73 @@
                                                     $selectedDetectedPrice = (float) ($item->detected_price ?? 0);
                                                     $isMatchedChecked = $selectedDetectedPrice > 0 && abs($matchedPrice - $selectedDetectedPrice) < 0.0001;
                                                 @endphp
-                                                <div class="unpriced-price-option">
+                                                <div style="display: flex; align-items: center; gap: 0.4rem;">
                                                     <input type="checkbox"
                                                         class="matched-price-select"
                                                         data-part-number="{{ $item->part_number }}"
                                                         data-price="{{ $matchedPrice }}"
                                                         data-currency="{{ $matched->currency ?? '' }}"
-                                                        data-purchase-unit="{{ $matched->purchase_unit ?? '' }}"
-                                                        data-moq="{{ $matched->moq ?? '' }}"
-                                                        data-cn="{{ $matched->cn ?? '' }}"
-                                                        data-maker="{{ $matched->maker ?? '' }}"
-                                                        data-add-cost-import-tax="{{ $matched->add_cost_import_tax ?? '' }}"
                                                         {{ $isMatchedChecked ? 'checked' : '' }}>
-                                                    <span>{{ rtrim(rtrim(number_format($matchedPrice, 4, '.', ''), '0'), '.') }}</span>
-                                                </div>
-                                            @endforeach
-                                        @elseif($matchedWires->isNotEmpty())
-                                            @foreach($matchedWires as $wire)
-                                                @php
-                                                    $wirePrice = (float) ($wire->price ?? 0);
-                                                    $selectedDetectedPrice = (float) ($item->detected_price ?? 0);
-                                                    $isWireChecked = $selectedDetectedPrice > 0 && abs($wirePrice - $selectedDetectedPrice) < 0.0001;
-                                                @endphp
-                                                <div class="unpriced-price-option">
-                                                    <input type="checkbox"
-                                                        class="matched-price-select"
-                                                        data-part-number="{{ $item->part_number }}"
-                                                        data-price="{{ $wirePrice }}"
-                                                        data-currency="IDR"
-                                                        data-purchase-unit="M"
-                                                        data-moq=""
-                                                        data-cn="N"
-                                                        data-maker="EWINDO/JJLAP/WILSON/NAGOYA/INDOWIRE"
-                                                        data-add-cost-import-tax="0"
-                                                        {{ $isWireChecked ? 'checked' : '' }}>
-                                                    <span style="color: #2563eb; font-weight: 500;">{{ rtrim(rtrim(number_format($wirePrice, 4, '.', ''), '0'), '.') }}</span>
-                                                    <span style="font-size: 0.75rem; color: #64748b;">(Wire)</span>
+                                                    <span>{{ number_format($matchedPrice, 4) }}</span>
                                                 </div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price) && $item->matched_price !== null ? rtrim(rtrim(number_format((float) $item->matched_price, 4, '.', ''), '0'), '.') : rtrim(rtrim(number_format((float) ($item->detected_price ?? 0), 4, '.', ''), '0'), '.') }}
+                                            {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4) : number_format((float) ($item->detected_price ?? 0), 4) }}
                                         @endif
-                                        <div class="unpriced-inline-editor">
-                                            <input type="number" step="0.0001" class="form-input unpriced-inline-price" value="{{ $defaultInlinePrice > 0 ? rtrim(rtrim(number_format((float) $defaultInlinePrice, 4, '.', ''), '0'), '.') : '' }}" placeholder="Price manual">
-                                        </div>
                                     </td>
                                     <td>
-                                        <input type="text" class="form-input unpriced-inline-purchase-unit" value="{{ $defaultInlinePurchaseUnit }}" placeholder="Purchase Unit">
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->purchase_unit ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_purchase_unit ?: '-' }}
+                                        @endif
                                     </td>
                                     <td>
-                                        <select class="form-select unpriced-inline-currency">
-                                            <option value="IDR" {{ strtoupper((string) $defaultInlineCurrency) === 'IDR' ? 'selected' : '' }}>IDR</option>
-                                            <option value="USD" {{ strtoupper((string) $defaultInlineCurrency) === 'USD' ? 'selected' : '' }}>USD</option>
-                                            <option value="JPY" {{ strtoupper((string) $defaultInlineCurrency) === 'JPY' ? 'selected' : '' }}>JPY</option>
-                                        </select>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->currency ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_currency ?: '-' }}
+                                        @endif
                                     </td>
                                     <td>
-                                        <input type="text" class="form-input unpriced-inline-moq" value="{{ $defaultInlineMoq !== '' ? $defaultInlineMoq : '-' }}" placeholder="MOQ">
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? number_format((float) $matched->moq, 2) : '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? number_format((float) $item->matched_moq, 2) : '-' }}
+                                        @endif
                                     </td>
                                     <td>
-                                        <select class="form-select unpriced-inline-cn">
-                                            @php $inlineCn = strtoupper(trim((string) $defaultInlineCn)); @endphp
-                                            <option value="" {{ $inlineCn === '' || $inlineCn === '-' ? 'selected' : '' }}>-</option>
-                                            <option value="N" {{ $inlineCn === 'N' ? 'selected' : '' }}>N</option>
-                                            <option value="C" {{ $inlineCn === 'C' ? 'selected' : '' }}>C</option>
-                                            <option value="E" {{ $inlineCn === 'E' ? 'selected' : '' }}>E</option>
-                                        </select>
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->cn ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_cn ?: '-' }}
+                                        @endif
                                     </td>
                                     <td>
-                                        <input type="text" class="form-input unpriced-inline-maker" value="{{ $defaultInlineMaker }}" placeholder="Maker">
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ $matched->maker ?: '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ $item->matched_maker ?: '-' }}
+                                        @endif
                                     </td>
                                     <td>
-                                        <input type="number" step="0.0001" class="form-input unpriced-inline-add-cost" value="{{ $defaultInlineAddCost !== '' ? rtrim(rtrim(number_format((float) $defaultInlineAddCost, 4, '.', ''), '0'), '.') : '' }}" placeholder="Add Cost (%)">
+                                        @if($matchedMaterials->isNotEmpty())
+                                            @foreach($matchedMaterials as $matched)
+                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? number_format((float) $matched->add_cost_import_tax, 2) : '-' }}</div>
+                                            @endforeach
+                                        @else
+                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? number_format((float) $item->matched_add_cost_import_tax, 2) : '-' }}
+                                        @endif
                                     </td>
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
@@ -1609,27 +1302,31 @@
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? rtrim(rtrim(number_format((float) $matched->price_before, 4, '.', ''), '0'), '.') : '-' }}</div>
+                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? number_format((float) $matched->price_before, 2) : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? rtrim(rtrim(number_format((float) $item->matched_price_before, 4, '.', ''), '0'), '.') : '-' }}
+                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? number_format((float) $item->matched_price_before, 2) : '-' }}
                                         @endif
                                     </td>
                                     <td>
-                                        <div class="unpriced-action-stack">
-                                            <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="{{ $item->part_number }}">
-                                                Tambah
-                                            </button>
-                                            <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="{{ $item->part_number }}">
-                                                Hapus
-                                            </button>
-                                        </div>
+                                        <input type="number" step="0.0001" class="form-input unpriced-manual-price"
+                                            name="manual_unpriced_prices[{{ $item->part_number }}]"
+                                            data-part-number="{{ $item->part_number }}"
+                                            value="{{ $item->manual_price ?? '' }}" placeholder="Isi harga jika sudah ada">
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="{{ $item->part_number }}">
+                                            Tambah
+                                        </button>
+                                        <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="{{ $item->part_number }}">
+                                            Hapus
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach
                         @else
                             <tr>
-                                <td colspan="13" style="text-align: center; color: var(--slate-500);">
+                                <td colspan="15" style="text-align: center; color: var(--slate-500);">
                                     Belum ada part tanpa harga untuk versi dokumen ini.
                                 </td>
                             </tr>
@@ -1651,27 +1348,6 @@
                     <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="cycle_time" data-section="cycle_time" formnovalidate>
                         Update
                     </button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="cycleUndoBtn" onclick="undoCycleTimeTable()" disabled aria-label="Undo" title="Undo">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="9 14 4 9 9 4"></polyline>
-                            <path d="M20 20a8 8 0 0 0-8-8H4"></path>
-                        </svg>
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="cycleRedoBtn" onclick="redoCycleTimeTable()" disabled aria-label="Redo" title="Redo">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="15 14 20 9 15 4"></polyline>
-                            <path d="M4 20a8 8 0 0 1 8-8h8"></path>
-                        </svg>
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" id="cycleDeleteSelectedBtn" onclick="deleteSelectedCycleRows()" disabled>
-                        Hapus Terpilih
-                    </button>
-                    <a href="{{ route('costing.template-cycle-time', absolute: false) }}" class="btn btn-secondary btn-sm">
-                        Download Template
-                    </a>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="triggerCycleTimeImport()">
-                        Import Cycle Time
-                    </button>
                     <button type="button" class="btn btn-secondary" onclick="addCycleTimeRow()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <line x1="12" y1="5" x2="12" y2="19" />
@@ -1686,12 +1362,7 @@
                 <table class="cycle-table" id="cycleTimeTable">
                     <thead>
                         <tr>
-                            <th>
-                                <span class="cycle-row-no-cell">
-                                    <input type="checkbox" id="cycleSelectAllRows" title="Pilih semua baris">
-                                    <span>No</span>
-                                </span>
-                            </th>
+                            <th>NO</th>
                             <th>PROCESS</th>
                             <th>QTY</th>
                             <th>TIME (HOUR)</th>
@@ -1699,7 +1370,6 @@
                             <th>TIME (SEC) / 1 Qty</th>
                             <th>Cost / SEC</th>
                             <th>Cost / Unit</th>
-                            <th>Area of Process</th>
                             <th>Aksi</th>
                         </tr>
                     </thead>
@@ -1724,27 +1394,8 @@
                         @endphp
                         @if(count($cycleTimes) > 0)
                             @foreach($cycleTimes as $index => $cycle)
-                                @php
-                                    $cycleQtyValue = isset($cycle['qty']) && $cycle['qty'] !== '' ? (float) $cycle['qty'] : 0;
-                                    $cycleHourValue = isset($cycle['time_hour']) && $cycle['time_hour'] !== '' ? (float) $cycle['time_hour'] : 0;
-                                    $cycleSecValue = isset($cycle['time_sec']) && $cycle['time_sec'] !== ''
-                                        ? (float) $cycle['time_sec']
-                                        : ($cycleHourValue > 0 ? ($cycleHourValue * 3600) : 0);
-                                    $cycleSecPerQtyValue = isset($cycle['time_sec_per_qty']) && $cycle['time_sec_per_qty'] !== ''
-                                        ? (float) $cycle['time_sec_per_qty']
-                                        : ($cycleQtyValue > 0 ? ($cycleSecValue / $cycleQtyValue) : 0);
-                                    $cycleCostPerSecValue = isset($cycle['cost_per_sec']) && $cycle['cost_per_sec'] !== '' ? (float) $cycle['cost_per_sec'] : 10.33;
-                                    $cycleCostPerUnitValue = isset($cycle['cost_per_unit']) && $cycle['cost_per_unit'] !== ''
-                                        ? (float) $cycle['cost_per_unit']
-                                        : ($cycleSecValue > 0 ? ($cycleSecValue * $cycleCostPerSecValue) : 0);
-                                @endphp
                                 <tr data-cycle-row="{{ $index }}">
-                                    <td>
-                                        <span class="cycle-row-no-cell">
-                                            <input type="checkbox" class="cycle-row-select" title="Pilih baris">
-                                            <span class="cycle-row-number">{{ $index + 1 }}</span>
-                                        </span>
-                                    </td>
+                                    <td>{{ $index + 1 }}</td>
                                     <td>
                                         <select class="form-select ct-process" name="cycle_times[{{ $index }}][process]">
                                             <option value="">-- Pilih Process --</option>
@@ -1771,29 +1422,22 @@
                                     <td>
                                         <input type="number" class="form-input ct-sec"
                                             name="cycle_times[{{ $index }}][time_sec]"
-                                            value="{{ $cycleSecValue > 0 ? round($cycleSecValue) : '' }}" step="1" readonly onchange="calculateCycleRow(this)">
+                                            value="{{ isset($cycle['time_sec']) && $cycle['time_sec'] !== '' ? round((float) $cycle['time_sec']) : '' }}" step="1" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-sec-per"
                                             name="cycle_times[{{ $index }}][time_sec_per_qty]"
-                                            value="{{ $cycleSecPerQtyValue > 0 ? round($cycleSecPerQtyValue) : '' }}" step="1" readonly onchange="calculateCycleRow(this)">
+                                            value="{{ isset($cycle['time_sec_per_qty']) && $cycle['time_sec_per_qty'] !== '' ? round((float) $cycle['time_sec_per_qty']) : '' }}" step="1" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-sec"
                                             name="cycle_times[{{ $index }}][cost_per_sec]"
-                                            value="{{ $cycleCostPerSecValue }}" step="0.0001" onchange="calculateCycleRow(this)">
+                                            value="{{ $cycle['cost_per_sec'] ?? '10.33' }}" step="0.0001" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-unit"
                                             name="cycle_times[{{ $index }}][cost_per_unit]"
-                                            value="{{ $cycleCostPerUnitValue > 0 ? round($cycleCostPerUnitValue) : '' }}" step="1" readonly onchange="calculateCycleRow(this)">
-                                    </td>
-                                    <td>
-                                        <select class="form-select ct-area-of-process" name="cycle_times[{{ $index }}][area_of_process]">
-                                            <option value="">-- Pilih Area --</option>
-                                            <option value="PP - Preparation" {{ (($cycle['area_of_process'] ?? '') === 'PP - Preparation') ? 'selected' : '' }}>PP - Preparation</option>
-                                            <option value="FA - Final Assy" {{ (($cycle['area_of_process'] ?? '') === 'FA - Final Assy') ? 'selected' : '' }}>FA - Final Assy</option>
-                                        </select>
+                                            value="{{ isset($cycle['cost_per_unit']) && $cycle['cost_per_unit'] !== '' ? round((float) $cycle['cost_per_unit']) : '' }}" step="1" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeCycleTimeRow(this)"
@@ -1811,12 +1455,7 @@
                         @else
                             @for($i = 0; $i < 5; $i++)
                                 <tr data-cycle-row="{{ $i }}">
-                                    <td>
-                                        <span class="cycle-row-no-cell">
-                                            <input type="checkbox" class="cycle-row-select" title="Pilih baris">
-                                            <span class="cycle-row-number">{{ $i + 1 }}</span>
-                                        </span>
-                                    </td>
+                                    <td>{{ $i + 1 }}</td>
                                     <td>
                                         <select class="form-select ct-process" name="cycle_times[{{ $i }}][process]">
                                             <option value="">-- Pilih Process --</option>
@@ -1835,11 +1474,11 @@
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-sec"
-                                            name="cycle_times[{{ $i }}][time_sec]" value="" step="1" readonly onchange="calculateCycleRow(this)">
+                                            name="cycle_times[{{ $i }}][time_sec]" value="" step="1" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-sec-per"
-                                            name="cycle_times[{{ $i }}][time_sec_per_qty]" value="" step="1" readonly onchange="calculateCycleRow(this)">
+                                            name="cycle_times[{{ $i }}][time_sec_per_qty]" value="" step="1" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-sec"
@@ -1847,14 +1486,7 @@
                                     </td>
                                     <td>
                                         <input type="number" class="form-input ct-cost-unit"
-                                            name="cycle_times[{{ $i }}][cost_per_unit]" value="" step="1" readonly onchange="calculateCycleRow(this)">
-                                    </td>
-                                    <td>
-                                        <select class="form-select ct-area-of-process" name="cycle_times[{{ $i }}][area_of_process]">
-                                            <option value="">-- Pilih Area --</option>
-                                            <option value="PP - Preparation">PP - Preparation</option>
-                                            <option value="FA - Final Assy">FA - Final Assy</option>
-                                        </select>
+                                            name="cycle_times[{{ $i }}][cost_per_unit]" value="" step="1" onchange="calculateCycleRow(this)">
                                     </td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeCycleTimeRow(this)"
@@ -1873,14 +1505,12 @@
                     </tbody>
                     <tfoot>
                         <tr style="background: var(--slate-700);">
-                            <td colspan="3" style="text-align: right; font-weight: 700; color: #f8fafc; background: #334155;">Total</td>
-                            <td class="calculated" id="cycleTotalHour" style="font-weight: 800; color: #1e293b; background: #fbbf24;">0</td>
-                            <td class="calculated" id="cycleTotalSec" style="font-weight: 800; color: #0f172a; background: #67e8f9;">0</td>
-                            <td style="background: #334155;"></td>
-                            <td style="background: #334155;"></td>
-                            <td class="calculated" id="cycleTotalCostUnit" style="font-weight: 800; color: #052e16; background: #a3e635;">0</td>
-                            <td style="background: #334155;"></td>
-                            <td style="background: #334155;"></td>
+                            <td colspan="4" style="text-align: right; font-weight: 600;">Total</td>
+                            <td class="calculated" id="cycleTotalSec" style="font-weight: 700; color: var(--blue-300);">0</td>
+                            <td></td>
+                            <td></td>
+                            <td class="calculated" id="cycleTotalCostUnit" style="font-weight: 700; color: var(--blue-300);">0</td>
+                            <td></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1905,13 +1535,13 @@
                 <div class="form-group">
                     <label class="form-label">Total Material Cost (IDR)</label>
                     <input type="number" name="material_cost" class="form-input" id="materialCost"
-                        value="{{ $costingData->material_cost ?? 0 }}" placeholder="0"
+                        value="{{ $costingData->material_cost ?? '' }}" required placeholder="0"
                         readonly>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Process Cost (IDR)</label>
                     <input type="number" name="labor_cost" class="form-input" id="laborCost"
-                        value="{{ $costingData->labor_cost ?? 0 }}" placeholder="0"
+                        value="{{ $costingData->labor_cost ?? '' }}" required placeholder="0"
                         readonly>
                 </div>
                 <div class="form-group">
@@ -1934,43 +1564,23 @@
             <div class="calc-box" style="margin-top: 1.5rem;">
                 <div class="calc-item">
                     <span class="calc-label">Total Material Cost</span>
-                    <div class="calc-value-with-percentage">
-                        <span class="calc-value" id="calcTotalMaterialCost">Rp 0</span>
-                        <span class="separator">|</span>
-                        <span class="calc-percentage" id="calcTotalMaterialCostPercentage">0%</span>
-                    </div>
+                    <span class="calc-value" id="calcTotalMaterialCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
                     <span class="calc-label">Process Cost</span>
-                    <div class="calc-value-with-percentage">
-                        <span class="calc-value" id="calcProcessCost">Rp 0</span>
-                        <span class="separator">|</span>
-                        <span class="calc-percentage" id="calcProcessCostPercentage">0%</span>
-                    </div>
+                    <span class="calc-value" id="calcProcessCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
                     <span class="calc-label">Depresiasi Tooling Cost</span>
-                    <div class="calc-value-with-percentage">
-                        <span class="calc-value" id="calcToolingCost">Rp 0</span>
-                        <span class="separator">|</span>
-                        <span class="calc-percentage" id="calcToolingCostPercentage">0%</span>
-                    </div>
+                    <span class="calc-value" id="calcToolingCost">Rp 0</span>
                 </div>
                 <div class="calc-item">
                     <span class="calc-label">Administrasi Cost</span>
-                    <div class="calc-value-with-percentage">
-                        <span class="calc-value" id="calcAdministrasiCost">Rp 0</span>
-                        <span class="separator">|</span>
-                        <span class="calc-percentage" id="calcAdministrasiCostPercentage">0%</span>
-                    </div>
+                    <span class="calc-value" id="calcAdministrasiCost">Rp 0</span>
                 </div>
-                <div class="calc-item" style="border-top: 2px solid #e2e8f0; padding-top: 1rem; margin-top: 0.5rem; font-weight: 600;">
+                <div class="calc-item">
                     <span class="calc-label">COGM</span>
-                    <div class="calc-value-with-percentage">
-                        <span class="calc-value" id="calcCogsTotal">Rp 0</span>
-                        <span class="separator">|</span>
-                        <span class="calc-percentage" id="calcCogsPercentage">100%</span>
-                    </div>
+                    <span class="calc-value" id="calcCogsTotal">Rp 0</span>
                 </div>
             </div>
         </div>
@@ -2008,39 +1618,6 @@
         <input type="file" name="import_partlist_file" id="importPartlistFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitPartlistImport(); }">
     </form>
 
-    <form action="{{ route('costing.import-cycle-time', absolute: false) }}" method="POST" id="cycleTimeImportForm" enctype="multipart/form-data" style="display:none;">
-        @csrf
-        @if(isset($costingData) && $costingData)
-            <input type="hidden" name="costing_data_id" value="{{ $costingData->id }}">
-        @endif
-        @if(isset($trackingRevisionId) && $trackingRevisionId)
-            <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
-        @endif
-        <input type="file" name="import_cycle_time_file" id="importCycleTimeFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitCycleTimeImport(); }">
-    </form>
-
-    <div id="cycleTimeDeleteConfirmModal" class="confirm-modal is-hidden" aria-hidden="true">
-        <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="cycleTimeDeleteConfirmTitle">
-            <div class="confirm-modal-head">
-                <span class="confirm-modal-icon">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
-                        <line x1="12" y1="9" x2="12" y2="13" />
-                        <line x1="12" y1="17" x2="12.01" y2="17" />
-                    </svg>
-                </span>
-                <h3 id="cycleTimeDeleteConfirmTitle" class="confirm-modal-title">Konfirmasi Hapus Baris</h3>
-            </div>
-            <div class="confirm-modal-body">
-                Yakin ingin menghapus baris Cycle Time yang dipilih?
-            </div>
-            <div class="confirm-modal-actions">
-                <button type="button" class="btn btn-secondary" id="cycleTimeDeleteCancelBtn">Batal</button>
-                <button type="button" class="btn btn-primary" id="cycleTimeDeleteOkBtn">Ya, Hapus</button>
-            </div>
-        </div>
-    </div>
-
     <div id="partlistImportConfirmModal" class="confirm-modal is-hidden" aria-hidden="true">
         <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="partlistImportConfirmTitle">
             <div class="confirm-modal-head">
@@ -2074,10 +1651,6 @@
         let materialRedoHistory = [];
         const materialUndoLimit = 50;
         let materialHistoryApplying = false;
-        let cycleUndoHistory = [];
-        let cycleRedoHistory = [];
-        const cycleUndoLimit = 50;
-        let cycleHistoryApplying = false;
         const materialFilterState = {};
         const materialFilterableColumns = [1, 2, 3, 5, 6, 9, 11, 12];
         let materialFilterPopup = null;
@@ -2095,48 +1668,7 @@
         });
         const cycleProcessOptions = @json(($cycleTimeTemplates ?? collect())->pluck('process')->values());
         const hasServerUnpricedData = {{ (isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? 'true' : 'false' }};
-        const initialToastNotifications = @json($toastNotifications);
         const unpricedSyncTimers = {};
-
-        function showPopupNotification(message, type = 'success', timeout = 4500) {
-            const stack = document.getElementById('toastStack');
-            if (!stack || !message) return;
-
-            const safeType = ['success', 'warning', 'error'].includes(type) ? type : 'success';
-            const toast = document.createElement('div');
-            toast.className = `toast-notification ${safeType}`;
-            const messageNode = document.createElement('span');
-            messageNode.textContent = String(message);
-
-            const closeButton = document.createElement('button');
-            closeButton.type = 'button';
-            closeButton.className = 'toast-close';
-            closeButton.setAttribute('aria-label', 'Tutup');
-            closeButton.textContent = 'x';
-
-            toast.appendChild(messageNode);
-            toast.appendChild(closeButton);
-
-            const removeToast = () => {
-                toast.classList.add('hide');
-                window.setTimeout(() => {
-                    if (toast.parentNode) {
-                        toast.parentNode.removeChild(toast);
-                    }
-                }, 220);
-            };
-
-            closeButton.addEventListener('click', removeToast);
-            stack.appendChild(toast);
-
-            window.requestAnimationFrame(() => {
-                toast.classList.add('show');
-            });
-
-            if (timeout > 0) {
-                window.setTimeout(removeToast, timeout);
-            }
-        }
 
         // Format number as Rupiah
         function formatRupiah(number) {
@@ -2149,16 +1681,7 @@
         }
 
         function formatWholeNumber(number) {
-            return new Intl.NumberFormat('id-ID', {
-                maximumFractionDigits: 0
-            }).format(Math.round(Number(number) || 0));
-        }
-
-        function formatDecimalNumber(number, maximumFractionDigits = 4) {
-            return new Intl.NumberFormat('id-ID', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits
-            }).format(Number(number) || 0);
+            return String(Math.round(Number(number) || 0));
         }
 
         function parsePositiveInteger(value) {
@@ -2253,19 +1776,6 @@
             return parseFloat(str) || 0;
         }
 
-        function formatCompactNumber(value, decimals = 4) {
-            const numeric = Number(value || 0);
-            if (!Number.isFinite(numeric)) {
-                return '0';
-            }
-
-            return numeric.toLocaleString('en-US', {
-                minimumFractionDigits: 0,
-                maximumFractionDigits: decimals,
-                useGrouping: false,
-            });
-        }
-
         function findMaterialMasterForRow(row) {
             if (!row) return null;
 
@@ -2292,10 +1802,15 @@
             const partNameInput = row.querySelector('.part-name');
             const unitInput = row.querySelector('.unit');
             const supplierInput = row.querySelector('.supplier');
+            const amount1Input = row.querySelector('.amount1');
             const qtyMoqInput = row.querySelector('.qty-moq');
             const importTaxInput = row.querySelector('.import-tax');
             const currencySelect = row.querySelector('.currency');
             const cnTypeSelect = row.querySelector('.cn-type');
+
+            if (partNameInput && String(partNameInput.value || '').trim() === '') {
+                partNameInput.value = String(master.material_description || '').toUpperCase();
+            }
 
             if (unitInput && String(unitInput.value || '').trim() === '') {
                 unitInput.value = String(master.base_uom || 'PCS').toUpperCase();
@@ -2332,6 +1847,14 @@
                 importTaxInput.value = String(master.add_cost_import_tax || 0);
             }
 
+            if (amount1Input) {
+                const currentAmount1 = parseInputNumber(amount1Input.value || 0);
+                const masterPrice = Number(master.price || 0);
+                if (currentAmount1 <= 0 && masterPrice > 0) {
+                    amount1Input.value = String(masterPrice);
+                }
+            }
+
             return true;
         }
 
@@ -2344,15 +1867,17 @@
 
             // 1. Calculate and set Multiply Factor (S4)
             const multiplyFactor = calculateMultiplyFactor(row);
-            row.querySelector('.multiply-factor').textContent = formatCompactNumber(multiplyFactor, 4);
+            row.querySelector('.multiply-factor').textContent = multiplyFactor.toFixed(4);
 
             // GET INPUTS dengan Mapping Baru:
             // Amount 1 = Harga (Price Base)
             const priceInput = row.querySelector('.amount1').value;
-            const priceBase = parseFloat(priceInput) || 0; // Ini L4
+            const priceBase = parseInputNumber(priceInput); // Ini L4
 
-            // Unit Price (Basis) dipakai sebagai acuan divisor Amount 2 (sesuai rumus user)
-            const basisUom = (row.querySelector('.unit-price-basis').value || '').trim().toUpperCase(); // Ini M4 (untuk divisor)
+            // Unit Price Basis = Satuan/UOM (Unit)
+            // Ambil dari input atau textContent tergantung implementasi (sekarang input text)
+            // Kita ambil value karena ini input text
+            const uom = (row.querySelector('.unit').value || '').trim().toUpperCase(); // Ini M4 (untuk divisor)
 
             const importTax = parseFloat(row.querySelector('.import-tax').value) || 0; // R4
 
@@ -2368,10 +1893,12 @@
             // Numerator = Multiply Factor * Base
             const numerator = multiplyFactor * base;
 
-            // Unit Divisor sesuai rumus Amount 2:
-            // IF(OR(Unit Price (Basis)="METER", "M", "MTR"), 1000, 1)
+            // Unit Divisor: 1000 if UOM is METER/M/MTR/MM (User minta MM divisor 1000 di multiply factor, mungkin di sini juga?)
+            // Mengikuti prompt: "IF(OR(M4="METER", M4="M", M4="MTR"), 1000, 1)"
+            // Kita tambahkan "MM" juga untuk konsistensi dengan multiply factor jika perlu, tapi ikuti prompt asli dulu.
+            // Prompt Amount 2 bilang: "METER", "M", "MTR".
             let unitDivisor = 1;
-            if (basisUom === 'METER' || basisUom === 'M' || basisUom === 'MTR') {
+            if (uom === 'METER' || uom === 'M' || uom === 'MTR' || uom === 'MM') {
                 unitDivisor = 1000;
             }
 
@@ -2380,7 +1907,7 @@
 
             // Set Amount 2 value to text
             const amount2Element = row.querySelector('.amount2');
-            amount2Element.textContent = formatCompactNumber(amount2, 4);
+            amount2Element.textContent = amount2.toFixed(4);
 
             // 3. Calculate Total Price
             // Total = Qty * Amount 2 * Exchange Rate
@@ -2391,8 +1918,10 @@
             // Sync Currency 2 with Currency
             row.querySelector('.currency2').textContent = currency;
 
-            // Sync Unit Price 2 with Unit Price (Basis)
-            row.querySelector('.unit-price2').textContent = basisUom;
+            // Sync Unit Price 2 with UOM (Unit Price Basis)
+            // Request terakhir "Unit Price 2 diambil dari unit". 
+            // Sekarang "unit" kita ada di kolom "Unit Price Basis".
+            row.querySelector('.unit-price2').textContent = uom; // Note: classnya mungkin typo di html saya sebelumnya? Cek di replace sebelumnya saya pakai .unit-price2
 
             // Total 
             const total = qty * amount2 * exchangeRate;
@@ -2452,12 +1981,70 @@
                 bindUnpricedAddPriceButtons();
                 return;
             }
-            const banner = document.getElementById('unpricedTopBanner');
-            if (banner) {
-                banner.style.display = 'none';
+
+            const partMap = new Map();
+            const rows = document.querySelectorAll('#materialTableBody tr');
+
+            rows.forEach((row) => {
+                const partNo = (row.querySelector('.part-no')?.value || '').trim();
+                if (!partNo) return;
+
+                const partName = (row.querySelector('.part-name')?.value || '').trim();
+                const qty = parseFloat(row.querySelector('.qty-req')?.value) || 0;
+                const amount1Price = parseInputNumber(row.querySelector('.amount1')?.value || 0);
+
+                // Rule: jika Amount 1 terisi, part dianggap sudah punya harga.
+                if (amount1Price > 0) {
+                    return;
+                }
+
+                const key = partNo.toLowerCase();
+                if (!partMap.has(key)) {
+                    partMap.set(key, {
+                        partNo,
+                        partName,
+                        qty: 0,
+                    });
+                }
+
+                partMap.get(key).qty += qty;
+            });
+
+            if (partMap.size === 0) {
+                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+            } else {
+                tbody.innerHTML = Array.from(partMap.values()).map((item) => `
+                    <tr>
+                        <td>${item.partNo}</td>
+                        <td>-</td>
+                        <td>${item.partName || '-'}</td>
+                        <td>${item.qty.toFixed(4)}</td>
+                        <td>0</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td><input type="number" step="0.0001" class="form-input unpriced-manual-price" data-part-number="${item.partNo}" name="manual_unpriced_prices[${item.partNo}]" placeholder="Isi harga jika sudah ada"></td>
+                        <td>
+                            <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="${item.partNo}">Tambah</button>
+                            <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="${item.partNo}">Hapus</button>
+                        </td>
+                    </tr>
+                `).join('');
             }
 
-            tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--slate-500);">Rekapan part tanpa harga akan muncul setelah tombol Update diklik.</td></tr>';
+            const banner = document.getElementById('unpricedTopBanner');
+            const bannerText = document.getElementById('unpricedTopBannerText');
+            if (banner) {
+                banner.style.display = partMap.size > 0 ? 'flex' : 'none';
+            }
+            if (bannerText) {
+                bannerText.textContent = `Terdapat ${partMap.size} part yang belum memiliki harga pada versi dokumen ini.`;
+            }
 
             bindUnpricedManualPriceInputs();
             bindUnpricedDeleteButtons();
@@ -2496,55 +2083,6 @@
                                 sibling.checked = false;
                             }
                         });
-
-                        const row = this.closest('tr');
-                        if (row instanceof HTMLTableRowElement) {
-                            const priceInput = row.querySelector('.unpriced-inline-price');
-                            const purchaseUnitInput = row.querySelector('.unpriced-inline-purchase-unit');
-                            const currencySelect = row.querySelector('.unpriced-inline-currency');
-                            const moqInput = row.querySelector('.unpriced-inline-moq');
-                            const cnSelect = row.querySelector('.unpriced-inline-cn');
-                            const makerInput = row.querySelector('.unpriced-inline-maker');
-                            const addCostInput = row.querySelector('.unpriced-inline-add-cost');
-
-                            if (priceInput instanceof HTMLInputElement) {
-                                priceInput.value = this.dataset.price || '';
-                            }
-
-                            if (purchaseUnitInput instanceof HTMLInputElement) {
-                                purchaseUnitInput.value = this.dataset.purchaseUnit || '';
-                            }
-
-                            if (currencySelect instanceof HTMLSelectElement) {
-                                const targetCurrency = (this.dataset.currency || '').toUpperCase();
-                                const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === targetCurrency);
-                                if (hasOption) {
-                                    currencySelect.value = targetCurrency;
-                                }
-                            }
-
-                            if (moqInput instanceof HTMLInputElement) {
-                                moqInput.value = this.dataset.moq !== '' ? (this.dataset.moq || '') : '-';
-                            }
-
-                            if (cnSelect instanceof HTMLSelectElement) {
-                                const targetCn = (this.dataset.cn || '').toUpperCase();
-                                const hasCnOption = Array.from(cnSelect.options).some((opt) => opt.value === targetCn);
-                                if (hasCnOption) {
-                                    cnSelect.value = targetCn;
-                                } else {
-                                    cnSelect.value = '';
-                                }
-                            }
-
-                            if (makerInput instanceof HTMLInputElement) {
-                                makerInput.value = this.dataset.maker || '';
-                            }
-
-                            if (addCostInput instanceof HTMLInputElement) {
-                                addCostInput.value = this.dataset.addCostImportTax || '';
-                            }
-                        }
                     }
                 });
             });
@@ -2574,58 +2112,15 @@
                         return;
                     }
 
-                    const inlinePriceInput = row.querySelector('.unpriced-inline-price');
-                    const inlinePurchaseUnitInput = row.querySelector('.unpriced-inline-purchase-unit');
-                    const inlineCurrencySelect = row.querySelector('.unpriced-inline-currency');
-                    const inlineMoqInput = row.querySelector('.unpriced-inline-moq');
-                    const inlineCnSelect = row.querySelector('.unpriced-inline-cn');
-                    const inlineMakerInput = row.querySelector('.unpriced-inline-maker');
-                    const inlineAddCostInput = row.querySelector('.unpriced-inline-add-cost');
-
-                    const inlinePrice = inlinePriceInput instanceof HTMLInputElement
-                        ? (parseFloat(inlinePriceInput.value || '0') || 0)
-                        : 0;
-                    const inlineCurrency = inlineCurrencySelect instanceof HTMLSelectElement
-                        ? (inlineCurrencySelect.value || '')
-                        : '';
-                    const inlineMoqValue = inlineMoqInput instanceof HTMLInputElement
-                        ? ((inlineMoqInput.value || '').trim())
-                        : '';
-                    const inlineMeta = {
-                        purchaseUnit: inlinePurchaseUnitInput instanceof HTMLInputElement ? (inlinePurchaseUnitInput.value || '') : '',
-                        currency: inlineCurrency,
-                        moq: inlineMoqValue === '-' ? '' : inlineMoqValue,
-                        cn: inlineCnSelect instanceof HTMLSelectElement ? (inlineCnSelect.value || '') : '',
-                        maker: inlineMakerInput instanceof HTMLInputElement ? (inlineMakerInput.value || '') : '',
-                        addCostImportTax: inlineAddCostInput instanceof HTMLInputElement ? (inlineAddCostInput.value || '') : '',
-                    };
-
-                    if (inlinePrice > 0) {
-                        applySelectedMatchedPrice(partNumber, inlinePrice, inlineCurrency, {
-                            selectedMeta: inlineMeta,
-                        });
-                        return;
-                    }
-
                     const selectedOption = row.querySelector('.matched-price-select:checked');
-                    if (selectedOption instanceof HTMLInputElement) {
-                        const selectedPrice = parseFloat(selectedOption.dataset.price || '0') || 0;
-                        const selectedCurrency = selectedOption.dataset.currency || '';
-                        const selectedMeta = {
-                            purchaseUnit: selectedOption.dataset.purchaseUnit || '',
-                            currency: selectedOption.dataset.currency || '',
-                            moq: selectedOption.dataset.moq || '',
-                            cn: selectedOption.dataset.cn || '',
-                            maker: selectedOption.dataset.maker || '',
-                            addCostImportTax: selectedOption.dataset.addCostImportTax || '',
-                        };
-                        applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, {
-                            selectedMeta,
-                        });
+                    if (!(selectedOption instanceof HTMLInputElement)) {
+                        window.alert('Pilih salah satu harga terlebih dahulu.');
                         return;
                     }
 
-                    resolveUnpricedPriceFromDatabase(partNumber, this);
+                    const selectedPrice = parseFloat(selectedOption.dataset.price || '0') || 0;
+                    const selectedCurrency = selectedOption.dataset.currency || '';
+                    applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency);
                 });
             });
         }
@@ -2634,75 +2129,7 @@
             return String(value || '').trim().toLowerCase();
         }
 
-        function recordUnpricedApplyHistory(partNumber, affectedRows, selectedPrice, selectedCurrency) {
-            if (!Array.isArray(affectedRows) || affectedRows.length === 0) {
-                return;
-            }
-
-            pushMaterialHistoryAction({
-                type: 'unpriced_apply',
-                partNumber,
-                selectedPrice,
-                selectedCurrency,
-                affectedRows,
-            });
-        }
-
-        function restoreUnpricedPartOnServer(partNumber) {
-            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
-            const url = document.getElementById('restoreUnpricedPartUrl')?.value || '';
-
-            if (!trackingRevisionId || !url) {
-                return Promise.resolve(null);
-            }
-
-            return fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    part_number: partNumber
-                })
-            })
-                .then((response) => response.json())
-                .catch(() => null);
-        }
-
-        function removeUnpricedRecapRow(partNumber, openCount = null) {
-            const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
-                ? CSS.escape(partNumber)
-                : partNumber.replace(/([\[\]\.\:\#"'])/g, '\\$1');
-
-            const row = document.querySelector(`#unpricedRecapBody .unpriced-add-price-btn[data-part-number="${escapedPart}"]`)?.closest('tr');
-            if (row) {
-                row.remove();
-            }
-
-            const tbody = document.getElementById('unpricedRecapBody');
-            if (tbody && tbody.children.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
-            }
-
-            const banner = document.getElementById('unpricedTopBanner');
-            const bannerText = document.getElementById('unpricedTopBannerText');
-            const visibleRows = tbody ? tbody.querySelectorAll('.unpriced-add-price-btn').length : 0;
-            const safeOpenCount = openCount === null ? visibleRows : Number(openCount || 0);
-
-            if (banner) {
-                banner.style.display = safeOpenCount > 0 ? 'flex' : 'none';
-            }
-
-            if (bannerText) {
-                bannerText.textContent = `Terdapat ${safeOpenCount} part yang belum memiliki harga pada versi dokumen ini.`;
-            }
-        }
-
-        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, options = {}) {
-            const skipServerSync = options && options.skipServerSync === true;
-            const selectedMeta = options && options.selectedMeta ? options.selectedMeta : {};
+        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency) {
             const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
                 ? CSS.escape(partNumber)
                 : partNumber.replace(/([\\[\\]\\.\\:\\#\"'])/g, '\\\\$1');
@@ -2714,18 +2141,11 @@
 
             const targetKey = normalizePartKey(partNumber);
             let updatedRows = 0;
-            const affectedRows = [];
 
             document.querySelectorAll('#materialTableBody tr').forEach((row) => {
                 const partInput = row.querySelector('.part-no');
                 const amountInput = row.querySelector('.amount1');
-                const unitPriceBasisInput = row.querySelector('.unit-price-basis');
                 const currencySelect = row.querySelector('.currency');
-                const unitInput = row.querySelector('.unit');
-                const qtyMoqInput = row.querySelector('.qty-moq');
-                const cnTypeSelect = row.querySelector('.cn-type');
-                const supplierInput = row.querySelector('.supplier');
-                const importTaxInput = row.querySelector('.import-tax');
 
                 if (!(partInput instanceof HTMLInputElement) || !(amountInput instanceof HTMLInputElement)) {
                     return;
@@ -2735,86 +2155,7 @@
                     return;
                 }
 
-                const newAmountValue = selectedPrice > 0 ? String(selectedPrice) : '0';
-                const currentAmountValue = amountInput.value ?? '';
-                const currentCurrencyValue = currencySelect instanceof HTMLSelectElement ? (currencySelect.value ?? '') : '';
-                let newCurrencyValue = currentCurrencyValue;
-                const currentBasisValue = unitPriceBasisInput instanceof HTMLInputElement ? (unitPriceBasisInput.value ?? '') : '';
-                const currentUnitValue = unitInput instanceof HTMLInputElement ? (unitInput.value ?? '') : '';
-                const currentMoqValue = qtyMoqInput instanceof HTMLInputElement ? (qtyMoqInput.value ?? '') : '';
-                const currentCnValue = cnTypeSelect instanceof HTMLSelectElement ? (cnTypeSelect.value ?? '') : '';
-                const currentSupplierValue = supplierInput instanceof HTMLInputElement ? (supplierInput.value ?? '') : '';
-                const currentImportTaxValue = importTaxInput instanceof HTMLInputElement ? (importTaxInput.value ?? '') : '';
-                let newBasisValue = currentBasisValue;
-                let newUnitValue = currentUnitValue;
-                let newMoqValue = currentMoqValue;
-                let newCnValue = currentCnValue;
-                let newSupplierValue = currentSupplierValue;
-                let newImportTaxValue = currentImportTaxValue;
-
-                if (currencySelect instanceof HTMLSelectElement && selectedCurrency) {
-                    const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === selectedCurrency);
-                    if (hasOption) {
-                        newCurrencyValue = selectedCurrency;
-                    }
-                }
-
-                if (unitInput instanceof HTMLInputElement && selectedMeta.purchaseUnit) {
-                    newUnitValue = String(selectedMeta.purchaseUnit);
-                }
-
-                if (unitPriceBasisInput instanceof HTMLInputElement && selectedMeta.purchaseUnit) {
-                    newBasisValue = String(selectedMeta.purchaseUnit);
-                }
-
-                if (qtyMoqInput instanceof HTMLInputElement && selectedMeta.moq !== '') {
-                    newMoqValue = String(selectedMeta.moq);
-                }
-
-                if (cnTypeSelect instanceof HTMLSelectElement && selectedMeta.cn) {
-                    const targetCn = String(selectedMeta.cn).toUpperCase();
-                    const hasCnOption = Array.from(cnTypeSelect.options).some((opt) => opt.value === targetCn);
-                    if (hasCnOption) {
-                        newCnValue = targetCn;
-                    }
-                }
-
-                if (supplierInput instanceof HTMLInputElement && selectedMeta.maker) {
-                    newSupplierValue = String(selectedMeta.maker);
-                }
-
-                if (importTaxInput instanceof HTMLInputElement && selectedMeta.addCostImportTax !== '') {
-                    newImportTaxValue = String(selectedMeta.addCostImportTax);
-                }
-
-                affectedRows.push({
-                    amountName: amountInput.name,
-                    oldAmount: currentAmountValue,
-                    newAmount: newAmountValue,
-                    currencyName: currencySelect instanceof HTMLSelectElement ? currencySelect.name : '',
-                    oldCurrency: currentCurrencyValue,
-                    newCurrency: newCurrencyValue,
-                    basisName: unitPriceBasisInput instanceof HTMLInputElement ? unitPriceBasisInput.name : '',
-                    oldBasis: currentBasisValue,
-                    newBasis: newBasisValue,
-                    unitName: unitInput instanceof HTMLInputElement ? unitInput.name : '',
-                    oldUnit: currentUnitValue,
-                    newUnit: newUnitValue,
-                    moqName: qtyMoqInput instanceof HTMLInputElement ? qtyMoqInput.name : '',
-                    oldMoq: currentMoqValue,
-                    newMoq: newMoqValue,
-                    cnName: cnTypeSelect instanceof HTMLSelectElement ? cnTypeSelect.name : '',
-                    oldCn: currentCnValue,
-                    newCn: newCnValue,
-                    supplierName: supplierInput instanceof HTMLInputElement ? supplierInput.name : '',
-                    oldSupplier: currentSupplierValue,
-                    newSupplier: newSupplierValue,
-                    importTaxName: importTaxInput instanceof HTMLInputElement ? importTaxInput.name : '',
-                    oldImportTax: currentImportTaxValue,
-                    newImportTax: newImportTaxValue,
-                });
-
-                amountInput.value = newAmountValue;
+                amountInput.value = selectedPrice > 0 ? String(selectedPrice) : '0';
 
                 if (currencySelect instanceof HTMLSelectElement && selectedCurrency) {
                     const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === selectedCurrency);
@@ -2823,136 +2164,16 @@
                     }
                 }
 
-                if (unitPriceBasisInput instanceof HTMLInputElement && newBasisValue !== currentBasisValue) {
-                    unitPriceBasisInput.value = newBasisValue;
-                }
-
-                if (unitInput instanceof HTMLInputElement && newUnitValue !== currentUnitValue) {
-                    unitInput.value = newUnitValue;
-                }
-
-                if (qtyMoqInput instanceof HTMLInputElement && newMoqValue !== currentMoqValue) {
-                    qtyMoqInput.value = newMoqValue;
-                }
-
-                if (cnTypeSelect instanceof HTMLSelectElement && newCnValue !== currentCnValue) {
-                    cnTypeSelect.value = newCnValue;
-                }
-
-                if (supplierInput instanceof HTMLInputElement && newSupplierValue !== currentSupplierValue) {
-                    supplierInput.value = newSupplierValue;
-                }
-
-                if (importTaxInput instanceof HTMLInputElement && newImportTaxValue !== currentImportTaxValue) {
-                    importTaxInput.value = newImportTaxValue;
-                }
-
                 calculateRow(amountInput);
                 updatedRows += 1;
             });
 
             calculateTableTotal();
-            if (updatedRows <= 0) {
-                return { updatedRows: 0, affectedRows: [] };
+            syncManualPriceToServer(partNumber, selectedPrice);
+
+            if (updatedRows > 0) {
+                submitMaterialSection();
             }
-
-            if (skipServerSync) {
-                return { updatedRows, affectedRows };
-            }
-
-            return syncManualPriceToServer(partNumber, selectedPrice)
-                .then((data) => {
-                    if (!data || data.ok !== true) {
-                        return { updatedRows, affectedRows };
-                    }
-
-                    removeUnpricedRecapRow(partNumber, data.open_unpriced_count);
-                    recordUnpricedApplyHistory(partNumber, affectedRows, selectedPrice, selectedCurrency);
-                    return { updatedRows, affectedRows };
-                })
-                .catch(() => {
-                    // Silent fail: user can still save material section manually.
-                    return { updatedRows, affectedRows };
-                });
-        }
-
-        function resolveUnpricedPriceFromDatabase(partNumber, button) {
-            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
-            const url = document.getElementById('updateUnpricedPriceUrl')?.value || '';
-
-            if (!trackingRevisionId || !url) {
-                return;
-            }
-
-            if (button instanceof HTMLButtonElement) {
-                button.disabled = true;
-            }
-
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    part_number: partNumber,
-                    use_database_lookup: true
-                })
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    if (!data || data.ok !== true) {
-                        openAppNotify('Harga part tidak ditemukan di database part.');
-                        return;
-                    }
-
-                    const selectedPrice = Number(data.applied_price || 0);
-                    const selectedCurrency = data.applied_currency || '';
-                    const selectedMeta = {
-                        purchaseUnit: data.applied_purchase_unit || '',
-                        currency: data.applied_currency || '',
-                        moq: data.applied_moq ?? '',
-                        cn: data.applied_cn || '',
-                        maker: data.applied_maker || '',
-                        addCostImportTax: data.applied_add_cost_import_tax ?? '',
-                    };
-
-                    if (selectedPrice <= 0) {
-                        openAppNotify('Harga part tidak ditemukan di database part.');
-                        return;
-                    }
-
-                    const result = applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, {
-                        skipServerSync: true,
-                        selectedMeta,
-                    });
-
-                    removeUnpricedRecapRow(partNumber, data.open_unpriced_count);
-                    if (result && Array.isArray(result.affectedRows) && result.affectedRows.length > 0) {
-                        recordUnpricedApplyHistory(partNumber, result.affectedRows, selectedPrice, selectedCurrency);
-                    }
-
-                    const banner = document.getElementById('unpricedTopBanner');
-                    const bannerText = document.getElementById('unpricedTopBannerText');
-                    const openCount = Number(data.open_unpriced_count || 0);
-
-                    if (banner) {
-                        banner.style.display = openCount > 0 ? 'flex' : 'none';
-                    }
-
-                    if (bannerText) {
-                        bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
-                    }
-                })
-                .catch(() => {
-                    openAppNotify('Gagal mengambil harga dari database part.');
-                })
-                .finally(() => {
-                    if (button instanceof HTMLButtonElement) {
-                        button.disabled = false;
-                    }
-                });
         }
 
         function bindUnpricedManualPriceInputs() {
@@ -2976,30 +2197,6 @@
                     }, 450);
                 });
             });
-
-            const inlinePriceInputs = document.querySelectorAll('.unpriced-inline-price');
-            inlinePriceInputs.forEach((input) => {
-                if (!(input instanceof HTMLInputElement)) {
-                    return;
-                }
-
-                if (input.dataset.boundInlinePrice === '1') {
-                    return;
-                }
-
-                input.dataset.boundInlinePrice = '1';
-                input.addEventListener('input', function () {
-                    const row = this.closest('tr');
-                    if (!(row instanceof HTMLTableRowElement)) {
-                        return;
-                    }
-
-                    const manualInput = row.querySelector('.unpriced-manual-price');
-                    if (manualInput instanceof HTMLInputElement) {
-                        manualInput.value = this.value;
-                    }
-                });
-            });
         }
 
         function bindUnpricedDeleteButtons() {
@@ -3014,9 +2211,12 @@
                     const partNumber = this.dataset.partNumber || '';
                     if (!partNumber) return;
 
-                    openAppConfirm(`Hapus part tanpa harga "${partNumber}"?`, function () {
-                        deleteUnpricedPart(partNumber);
-                    });
+                    const confirmed = window.confirm(`Hapus part tanpa harga "${partNumber}"?`);
+                    if (!confirmed) {
+                        return;
+                    }
+
+                    deleteUnpricedPart(partNumber);
                 });
             });
         }
@@ -3026,10 +2226,10 @@
             const url = document.getElementById('updateUnpricedPriceUrl')?.value || '';
 
             if (!trackingRevisionId || !url) {
-                return Promise.resolve(null);
+                return;
             }
 
-            return fetch(url, {
+            fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -3044,7 +2244,7 @@
                 .then((response) => response.json())
                 .then((data) => {
                     if (!data || data.ok !== true) {
-                        return data;
+                        return;
                     }
 
                     const banner = document.getElementById('unpricedTopBanner');
@@ -3058,12 +2258,9 @@
                     if (bannerText) {
                         bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
                     }
-
-                    return data;
                 })
                 .catch(() => {
                     // Silent fail: user can still save form as fallback.
-                    return null;
                 });
         }
 
@@ -3099,7 +2296,7 @@
 
                     const tbody = document.getElementById('unpricedRecapBody');
                     if (tbody && tbody.children.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
                     }
 
                     const banner = document.getElementById('unpricedTopBanner');
@@ -3135,18 +2332,6 @@
             document.getElementById('calcAdministrasiCost').textContent = formatRupiah(scrapCost);
             document.getElementById('calcCogsTotal').textContent = formatRupiah(cogmTotal);
 
-            // Calculate percentages
-            const calculatePercentage = (value, total) => {
-                if (total <= 0) return '0%';
-                return ((value / total) * 100).toFixed(2) + '%';
-            };
-
-            document.getElementById('calcTotalMaterialCostPercentage').textContent = calculatePercentage(materialCost, cogmTotal);
-            document.getElementById('calcProcessCostPercentage').textContent = calculatePercentage(laborCost, cogmTotal);
-            document.getElementById('calcToolingCostPercentage').textContent = calculatePercentage(overheadCost, cogmTotal);
-            document.getElementById('calcAdministrasiCostPercentage').textContent = calculatePercentage(scrapCost, cogmTotal);
-            document.getElementById('calcCogsPercentage').textContent = '100%';
-
             // Revalidate material cost
             if (recalculateMaterialTable) {
                 calculateTableTotal(false);
@@ -3175,7 +2360,7 @@
             newRow.setAttribute('data-row', rowCounter);
 
             newRow.innerHTML = `
-                                    <td><span class="material-row-no-cell"><input type="checkbox" class="material-row-select" title="Pilih baris"><span class="material-row-number">${rowCounter + 1}</span></span><input type="hidden" name="materials[${rowCounter}][row_no]" value=""></td>
+                                    <td><span class="material-row-no-cell"><input type="checkbox" class="material-row-select" title="Pilih baris"><span class="material-row-number">${rowCounter + 1}</span></span></td>
                                     <td><input type="text" class="form-input part-no" name="materials[${rowCounter}][part_no]" value="" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[${rowCounter}][id_code]" value="" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[${rowCounter}][part_name]" value="" placeholder="Part Name"></td>
@@ -3186,11 +2371,11 @@
                                     <td><input type="text" class="form-input unit-price-basis" name="materials[${rowCounter}][unit_price_basis]" value="" placeholder="Unit Price" onchange="calculateRow(this)"></td>
                                     <td><select class="form-select currency" name="materials[${rowCounter}][currency]" onchange="calculateRow(this)"><option value="IDR">IDR</option><option value="USD">USD</option><option value="JPY">JPY</option></select></td>
                                     <td><input type="number" class="form-input w-28 qty-moq" name="materials[${rowCounter}][qty_moq]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
-                                    <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option><option value="E">E</option></select></td>
+                                    <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
                                     <td><input type="text" class="form-input supplier" name="materials[${rowCounter}][supplier]" value="" placeholder="Supplier"></td>
                                     <td><input type="number" class="form-input import-tax" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
-                                    <td class="calculated multiply-factor">1</td>
-                        <td class="calculated amount2">0</td>
+                                    <td class="calculated multiply-factor">1.0000</td>
+                        <td class="calculated amount2">0.0000</td>
                         <td class="calculated currency2">IDR</td>
                         <td class="calculated unit-price2">PCS</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -3236,14 +2421,10 @@
             const rows = document.querySelectorAll('#materialTableBody tr');
             rows.forEach((row, index) => {
                 const numberEl = row.querySelector('.material-row-number');
-                const rowNoInput = row.querySelector('input[type="hidden"][name$="[row_no]"]');
-                const importedRowNo = rowNoInput ? String(rowNoInput.value || '').trim() : '';
-                const displayNumber = importedRowNo !== '' ? importedRowNo : String(index + 1);
-
                 if (numberEl) {
-                    numberEl.textContent = displayNumber;
+                    numberEl.textContent = String(index + 1);
                 } else if (row.cells[0]) {
-                    row.cells[0].textContent = displayNumber;
+                    row.cells[0].textContent = index + 1;
                 }
             });
 
@@ -3452,88 +2633,6 @@
             } else if (action.type === 'snapshot') {
                 const snapshot = direction === 'undo' ? action.before : action.after;
                 restoreMaterialSnapshot(snapshot);
-            } else if (action.type === 'unpriced_apply') {
-                const rows = Array.isArray(action.affectedRows) ? action.affectedRows : [];
-
-                rows.forEach((rowAction) => {
-                    if (!rowAction) {
-                        return;
-                    }
-
-                    if (rowAction.amountName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.amountName,
-                            direction === 'undo' ? rowAction.oldAmount : rowAction.newAmount
-                        );
-                    }
-
-                    if (rowAction.currencyName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.currencyName,
-                            direction === 'undo' ? rowAction.oldCurrency : rowAction.newCurrency
-                        );
-                    }
-
-                    if (rowAction.basisName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.basisName,
-                            direction === 'undo' ? rowAction.oldBasis : rowAction.newBasis
-                        );
-                    }
-
-                    if (rowAction.unitName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.unitName,
-                            direction === 'undo' ? rowAction.oldUnit : rowAction.newUnit
-                        );
-                    }
-
-                    if (rowAction.moqName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.moqName,
-                            direction === 'undo' ? rowAction.oldMoq : rowAction.newMoq
-                        );
-                    }
-
-                    if (rowAction.cnName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.cnName,
-                            direction === 'undo' ? rowAction.oldCn : rowAction.newCn
-                        );
-                    }
-
-                    if (rowAction.supplierName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.supplierName,
-                            direction === 'undo' ? rowAction.oldSupplier : rowAction.newSupplier
-                        );
-                    }
-
-                    if (rowAction.importTaxName) {
-                        applyMaterialFieldValueByName(
-                            rowAction.importTaxName,
-                            direction === 'undo' ? rowAction.oldImportTax : rowAction.newImportTax
-                        );
-                    }
-                });
-
-                if (direction === 'undo') {
-                    restoreUnpricedPartOnServer(action.partNumber).then((data) => {
-                        if (!data || data.ok !== true) {
-                            return;
-                        }
-
-                        window.location.reload();
-                    });
-                } else {
-                    syncManualPriceToServer(action.partNumber, action.selectedPrice).then((data) => {
-                        if (!data || data.ok !== true) {
-                            return;
-                        }
-
-                        removeUnpricedRecapRow(action.partNumber, data.open_unpriced_count);
-                    });
-                }
             }
 
             materialHistoryApplying = false;
@@ -4171,37 +3270,19 @@
                 moveMaterialFocusByArrow(target, event.key);
             });
 
-            bindMaterialSelectAllRows();
-        }
-
-        function applyMaterialSelectAllRows(checked) {
-            const rowCheckboxes = Array.from(document.querySelectorAll('#materialTableBody .material-row-select'));
-            rowCheckboxes.forEach((cb) => {
-                if (cb instanceof HTMLInputElement) {
-                    cb.checked = !!checked;
-                }
-            });
-
-            const master = document.getElementById('materialSelectAllRows');
-            if (master instanceof HTMLInputElement) {
-                master.checked = !!checked;
-                master.indeterminate = false;
-            }
-
-            updateMaterialSelectAllRowsState();
-        }
-
-        function bindMaterialSelectAllRows() {
             const masterSelectAll = document.getElementById('materialSelectAllRows');
-            if (!(masterSelectAll instanceof HTMLInputElement) || masterSelectAll.dataset.boundSelectAll === '1') {
-                return;
+            if (masterSelectAll && masterSelectAll.dataset.boundSelectAll !== '1') {
+                masterSelectAll.dataset.boundSelectAll = '1';
+                masterSelectAll.addEventListener('change', function () {
+                    const checked = !!this.checked;
+                    document.querySelectorAll('#materialTableBody .material-row-select').forEach((cb) => {
+                        if (cb instanceof HTMLInputElement) {
+                            cb.checked = checked;
+                        }
+                    });
+                    updateMaterialSelectAllRowsState();
+                });
             }
-
-            masterSelectAll.dataset.boundSelectAll = '1';
-
-            masterSelectAll.addEventListener('change', function () {
-                applyMaterialSelectAllRows(this.checked);
-            });
         }
 
         function calculateCycleRow(element) {
@@ -4241,23 +3322,17 @@
         }
 
         function calculateCycleTotals() {
-            let totalHour = 0;
             let totalSec = 0;
             let totalCostUnit = 0;
             const rows = document.querySelectorAll('#cycleTimeTableBody tr');
 
             rows.forEach((row) => {
-                totalHour += parseFloat(row.querySelector('.ct-hour')?.value) || 0;
                 totalSec += parseFloat(row.querySelector('.ct-sec')?.value) || 0;
                 totalCostUnit += parseFloat(row.querySelector('.ct-cost-unit')?.value) || 0;
             });
 
-            const totalHourEl = document.getElementById('cycleTotalHour');
             const totalSecEl = document.getElementById('cycleTotalSec');
             const totalCostUnitEl = document.getElementById('cycleTotalCostUnit');
-            if (totalHourEl) {
-                totalHourEl.textContent = formatDecimalNumber(totalHour, 4);
-            }
             if (totalSecEl) {
                 totalSecEl.textContent = formatWholeNumber(totalSec);
             }
@@ -4274,447 +3349,7 @@
             calculateTotals(false);
         }
 
-        function refreshCycleTimeCalculations() {
-            const rows = Array.from(document.querySelectorAll('#cycleTimeTableBody tr'));
-            rows.forEach((row) => {
-                const input = row.querySelector('.ct-hour') || row.querySelector('.ct-sec') || row.querySelector('.ct-cost-sec');
-                if (input) {
-                    calculateCycleRow(input);
-                }
-            });
-
-            calculateCycleTotals();
-        }
-
-        function getCycleStateSnapshot() {
-            const tbody = document.getElementById('cycleTimeTableBody');
-            if (!tbody) {
-                return null;
-            }
-
-            const clone = tbody.cloneNode(true);
-            const liveControls = Array.from(tbody.querySelectorAll('input, select, textarea'));
-            const cloneControls = Array.from(clone.querySelectorAll('input, select, textarea'));
-
-            cloneControls.forEach((control, index) => {
-                const liveControl = liveControls[index];
-                if (!liveControl) {
-                    return;
-                }
-
-                if (control instanceof HTMLInputElement) {
-                    control.value = liveControl.value;
-                    if (control.type === 'checkbox' || control.type === 'radio') {
-                        control.checked = liveControl.checked;
-                    }
-                } else if (control instanceof HTMLSelectElement) {
-                    control.value = liveControl.value;
-                    Array.from(control.options).forEach((option) => {
-                        option.selected = option.value === liveControl.value;
-                    });
-                } else if (control instanceof HTMLTextAreaElement) {
-                    control.value = liveControl.value;
-                    control.textContent = liveControl.value;
-                }
-            });
-
-            return {
-                html: clone.innerHTML,
-                rowCounter: cycleRowCounter,
-            };
-        }
-
-        function updateCycleUndoButtonState() {
-            const undoBtn = document.getElementById('cycleUndoBtn');
-            const redoBtn = document.getElementById('cycleRedoBtn');
-            if (!undoBtn) return;
-            undoBtn.disabled = cycleUndoHistory.length === 0;
-            if (redoBtn) {
-                redoBtn.disabled = cycleRedoHistory.length === 0;
-            }
-        }
-
-        function pushCycleHistoryAction(action) {
-            if (!action || cycleHistoryApplying) {
-                return;
-            }
-
-            cycleUndoHistory.push(action);
-            if (cycleUndoHistory.length > cycleUndoLimit) {
-                cycleUndoHistory.shift();
-            }
-
-            cycleRedoHistory = [];
-            updateCycleUndoButtonState();
-        }
-
-        function commitActiveCycleFieldChange(control = null) {
-            const active = control instanceof HTMLElement ? control : document.activeElement;
-            if (!(active instanceof HTMLElement)) {
-                return;
-            }
-
-            if (!active.matches('#cycleTimeTableBody input.form-input, #cycleTimeTableBody select.form-select')) {
-                return;
-            }
-
-            const previousValue = active.dataset.undoValue ?? '';
-            const currentValue = active.value ?? '';
-            if (previousValue === currentValue) {
-                return;
-            }
-
-            pushCycleHistoryAction({
-                type: 'field',
-                name: active.name,
-                oldValue: previousValue,
-                newValue: currentValue,
-            });
-
-            active.dataset.undoValue = currentValue;
-        }
-
-        function applyCycleFieldValueByName(name, value) {
-            if (!name) {
-                return;
-            }
-
-            const escapedName = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
-                ? CSS.escape(name)
-                : name.replace(/([\[\]\.:#])/g, '\\$1');
-
-            const target = document.querySelector(`#cycleTimeTableBody [name="${escapedName}"]`);
-            if (!(target instanceof HTMLElement)) {
-                return;
-            }
-
-            target.value = value ?? '';
-            target.dataset.undoValue = target.value ?? '';
-
-            const shouldRecalculate = target.matches('.ct-qty, .ct-hour, .ct-sec, .ct-cost-sec');
-            if (shouldRecalculate) {
-                calculateCycleRow(target);
-            } else {
-                calculateCycleTotals();
-            }
-
-            updateCycleSelectAllRowsState();
-
-            const focused = document.activeElement;
-            if (focused instanceof HTMLElement && focused.matches('#cycleTimeTableBody input.form-input, #cycleTimeTableBody select.form-select')) {
-                focused.dataset.undoValue = focused.value ?? '';
-            }
-        }
-
-        function markCycleControlsUndoBase() {
-            const controls = document.querySelectorAll('#cycleTimeTableBody input.form-input, #cycleTimeTableBody select.form-select');
-            controls.forEach((control) => {
-                control.dataset.undoValue = control.value ?? '';
-            });
-        }
-
-        function clearCycleSelectionState() {
-            const rowCheckboxes = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select'));
-            rowCheckboxes.forEach((cb) => {
-                if (cb instanceof HTMLInputElement) {
-                    cb.checked = false;
-                }
-            });
-
-            const master = document.getElementById('cycleSelectAllRows');
-            if (master instanceof HTMLInputElement) {
-                master.checked = false;
-                master.indeterminate = false;
-            }
-
-            updateCycleDeleteSelectedButtonState();
-        }
-
-        function restoreCycleSnapshot(snapshot) {
-            if (!snapshot) {
-                return;
-            }
-
-            const tbody = document.getElementById('cycleTimeTableBody');
-            if (!tbody) {
-                return;
-            }
-
-            tbody.innerHTML = snapshot.html;
-            cycleRowCounter = snapshot.rowCounter;
-
-            renumberCycleRows();
-            clearCycleSelectionState();
-            markCycleControlsUndoBase();
-            refreshCycleTimeCalculations();
-            updateCycleSelectAllRowsState();
-        }
-
-        function applyCycleAction(action, direction) {
-            if (!action) {
-                return;
-            }
-
-            cycleHistoryApplying = true;
-
-            if (action.type === 'field') {
-                const targetValue = direction === 'undo' ? action.oldValue : action.newValue;
-                applyCycleFieldValueByName(action.name, targetValue);
-            } else if (action.type === 'snapshot') {
-                const snapshot = direction === 'undo' ? action.before : action.after;
-                restoreCycleSnapshot(snapshot);
-            }
-
-            cycleHistoryApplying = false;
-            markCycleControlsUndoBase();
-            updateCycleUndoButtonState();
-        }
-
-        function undoCycleTimeTable() {
-            commitActiveCycleFieldChange();
-
-            if (cycleUndoHistory.length === 0) {
-                return;
-            }
-
-            const action = cycleUndoHistory.pop();
-            if (!action) {
-                updateCycleUndoButtonState();
-                return;
-            }
-
-            applyCycleAction(action, 'undo');
-
-            cycleRedoHistory.push(action);
-            if (cycleRedoHistory.length > cycleUndoLimit) {
-                cycleRedoHistory.shift();
-            }
-
-            updateCycleUndoButtonState();
-        }
-
-        function redoCycleTimeTable() {
-            if (cycleRedoHistory.length === 0) {
-                return;
-            }
-
-            const next = cycleRedoHistory.pop();
-            if (!next) {
-                updateCycleUndoButtonState();
-                return;
-            }
-
-            applyCycleAction(next, 'redo');
-
-            cycleUndoHistory.push(next);
-            if (cycleUndoHistory.length > cycleUndoLimit) {
-                cycleUndoHistory.shift();
-            }
-
-            updateCycleUndoButtonState();
-        }
-
-        function applyCycleSelectAllRows(checked) {
-            const rowCheckboxes = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select'));
-            rowCheckboxes.forEach((cb) => {
-                if (cb instanceof HTMLInputElement) {
-                    cb.checked = !!checked;
-                }
-            });
-
-            const master = document.getElementById('cycleSelectAllRows');
-            if (master instanceof HTMLInputElement) {
-                master.checked = !!checked;
-                master.indeterminate = false;
-            }
-        }
-
-        function updateCycleSelectAllRowsState() {
-            const master = document.getElementById('cycleSelectAllRows');
-            if (!(master instanceof HTMLInputElement)) {
-                return;
-            }
-
-            const rowCheckboxes = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select'));
-            if (rowCheckboxes.length === 0) {
-                master.checked = false;
-                master.indeterminate = false;
-                return;
-            }
-
-            const checkedCount = rowCheckboxes.filter((cb) => cb instanceof HTMLInputElement && cb.checked).length;
-            master.checked = checkedCount === rowCheckboxes.length;
-            master.indeterminate = checkedCount > 0 && checkedCount < rowCheckboxes.length;
-
-            updateCycleDeleteSelectedButtonState();
-        }
-
-        function updateCycleDeleteSelectedButtonState() {
-            const deleteBtn = document.getElementById('cycleDeleteSelectedBtn');
-            if (!deleteBtn) {
-                return;
-            }
-
-            const hasSelectedRows = document.querySelector('#cycleTimeTableBody .cycle-row-select:checked') !== null;
-            deleteBtn.disabled = !hasSelectedRows;
-        }
-
-        function bindCycleSelectAllRows() {
-            const masterSelectAll = document.getElementById('cycleSelectAllRows');
-            if (!(masterSelectAll instanceof HTMLInputElement) || masterSelectAll.dataset.boundSelectAll === '1') {
-                return;
-            }
-
-            masterSelectAll.dataset.boundSelectAll = '1';
-            masterSelectAll.addEventListener('change', function () {
-                applyCycleSelectAllRows(this.checked);
-                updateCycleDeleteSelectedButtonState();
-            });
-        }
-
-        function getCycleEditableCells(row) {
-            return Array.from(row.querySelectorAll('input.form-input, select.form-select'));
-        }
-
-        function moveCycleFocusLinear(currentElement, step) {
-            const currentRow = currentElement.closest('tr');
-            if (!currentRow) return;
-
-            const rows = Array.from(document.querySelectorAll('#cycleTimeTableBody tr'));
-            const currentRowIndex = rows.indexOf(currentRow);
-            if (currentRowIndex < 0) return;
-
-            const currentCells = getCycleEditableCells(currentRow);
-            const currentCellIndex = currentCells.indexOf(currentElement);
-            if (currentCellIndex < 0) return;
-
-            let nextRowIndex = currentRowIndex;
-            let nextCellIndex = currentCellIndex + step;
-
-            if (nextCellIndex >= currentCells.length) {
-                nextRowIndex += 1;
-                if (nextRowIndex >= rows.length) {
-                    return;
-                }
-                nextCellIndex = 0;
-            } else if (nextCellIndex < 0) {
-                nextRowIndex -= 1;
-                if (nextRowIndex < 0) {
-                    return;
-                }
-                const prevCells = getCycleEditableCells(rows[nextRowIndex]);
-                nextCellIndex = Math.max(prevCells.length - 1, 0);
-            }
-
-            const nextCells = getCycleEditableCells(rows[nextRowIndex]);
-            if (!nextCells.length) return;
-
-            const target = nextCells[Math.min(nextCellIndex, nextCells.length - 1)];
-            if (!target) return;
-
-            target.focus();
-            if (target.tagName === 'INPUT') {
-                target.select();
-            }
-        }
-
-        function moveCycleFocusVertical(currentElement, step) {
-            const currentRow = currentElement.closest('tr');
-            if (!currentRow) return;
-
-            const rows = Array.from(document.querySelectorAll('#cycleTimeTableBody tr'));
-            const currentRowIndex = rows.indexOf(currentRow);
-            if (currentRowIndex < 0) return;
-
-            const currentCells = getCycleEditableCells(currentRow);
-            const currentCellIndex = currentCells.indexOf(currentElement);
-            if (currentCellIndex < 0) return;
-
-            const nextRowIndex = currentRowIndex + step;
-            if (nextRowIndex < 0 || nextRowIndex >= rows.length) {
-                return;
-            }
-
-            const nextCells = getCycleEditableCells(rows[nextRowIndex]);
-            if (!nextCells.length) return;
-
-            const target = nextCells[Math.min(currentCellIndex, nextCells.length - 1)];
-            if (!target) return;
-
-            target.focus();
-            if (target.tagName === 'INPUT') {
-                target.select();
-            }
-        }
-
-        function bindCycleTableBehaviors() {
-            const cycleBody = document.getElementById('cycleTimeTableBody');
-            if (!cycleBody || cycleBody.dataset.boundBehavior === '1') {
-                return;
-            }
-
-            cycleBody.dataset.boundBehavior = '1';
-
-            cycleBody.addEventListener('focusin', function (event) {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-
-                if (!target.matches('input.form-input, select.form-select')) {
-                    return;
-                }
-
-                target.dataset.undoValue = target.value ?? '';
-            });
-
-            cycleBody.addEventListener('change', function (event) {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-
-                if (target.matches('.cycle-row-select')) {
-                    updateCycleSelectAllRowsState();
-                    updateCycleDeleteSelectedButtonState();
-                    return;
-                }
-
-                if (!target.matches('input.form-input, select.form-select')) {
-                    return;
-                }
-
-                commitActiveCycleFieldChange(target);
-            });
-
-            cycleBody.addEventListener('keydown', function (event) {
-                const target = event.target;
-                if (!(target instanceof HTMLElement)) {
-                    return;
-                }
-
-                if (!target.matches('input.form-input, select.form-select')) {
-                    return;
-                }
-
-                if (event.key === 'ArrowRight') {
-                    event.preventDefault();
-                    moveCycleFocusLinear(target, 1);
-                } else if (event.key === 'ArrowLeft') {
-                    event.preventDefault();
-                    moveCycleFocusLinear(target, -1);
-                } else if (event.key === 'ArrowDown') {
-                    event.preventDefault();
-                    moveCycleFocusVertical(target, 1);
-                } else if (event.key === 'ArrowUp') {
-                    event.preventDefault();
-                    moveCycleFocusVertical(target, -1);
-                }
-            });
-        }
-
         function addCycleTimeRow() {
-            const beforeSnapshot = getCycleStateSnapshot();
             const tbody = document.getElementById('cycleTimeTableBody');
             const newRow = document.createElement('tr');
             newRow.setAttribute('data-cycle-row', cycleRowCounter);
@@ -4734,105 +3369,34 @@
                 .join('');
 
             newRow.innerHTML = `
-                <td>
-                    <span class="cycle-row-no-cell">
-                        <input type="checkbox" class="cycle-row-select" title="Pilih baris">
-                        <span class="cycle-row-number">${cycleRowCounter + 1}</span>
-                    </span>
-                </td>
+                <td>${cycleRowCounter + 1}</td>
                 <td><select class="form-select ct-process" name="cycle_times[${cycleRowCounter}][process]">${processOptionsHtml}</select></td>
                 <td><input type="number" class="form-input ct-qty" name="cycle_times[${cycleRowCounter}][qty]" value="" step="0.0001" onchange="calculateCycleRow(this)"></td>
                 <td><input type="number" class="form-input ct-hour" name="cycle_times[${cycleRowCounter}][time_hour]" value="" step="0.0001" onchange="calculateCycleRow(this)"></td>
-                <td><input type="number" class="form-input ct-sec" name="cycle_times[${cycleRowCounter}][time_sec]" value="" step="1" readonly onchange="calculateCycleRow(this)"></td>
-                <td><input type="number" class="form-input ct-sec-per" name="cycle_times[${cycleRowCounter}][time_sec_per_qty]" value="" step="1" readonly onchange="calculateCycleRow(this)"></td>
+                <td><input type="number" class="form-input ct-sec" name="cycle_times[${cycleRowCounter}][time_sec]" value="" step="1" onchange="calculateCycleRow(this)"></td>
+                <td><input type="number" class="form-input ct-sec-per" name="cycle_times[${cycleRowCounter}][time_sec_per_qty]" value="" step="1" onchange="calculateCycleRow(this)"></td>
                 <td><input type="number" class="form-input ct-cost-sec" name="cycle_times[${cycleRowCounter}][cost_per_sec]" value="10.33" step="0.0001" onchange="calculateCycleRow(this)"></td>
-                <td><input type="number" class="form-input ct-cost-unit" name="cycle_times[${cycleRowCounter}][cost_per_unit]" value="" step="1" readonly onchange="calculateCycleRow(this)"></td>
-                <td>
-                    <select class="form-select ct-area-of-process" name="cycle_times[${cycleRowCounter}][area_of_process]">
-                        <option value="">-- Pilih Area --</option>
-                        <option value="PP - Preparation">PP - Preparation</option>
-                        <option value="FA - Final Assy">FA - Final Assy</option>
-                    </select>
-                </td>
+                <td><input type="number" class="form-input ct-cost-unit" name="cycle_times[${cycleRowCounter}][cost_per_unit]" value="" step="1" onchange="calculateCycleRow(this)"></td>
                 <td><button type="button" class="btn btn-secondary" onclick="removeCycleTimeRow(this)" style="padding: 0.5rem;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></td>
             `;
 
             tbody.appendChild(newRow);
             cycleRowCounter++;
             renumberCycleRows();
-
-            const afterSnapshot = getCycleStateSnapshot();
-            pushCycleHistoryAction({
-                type: 'snapshot',
-                before: beforeSnapshot,
-                after: afterSnapshot,
-            });
-            updateCycleDeleteSelectedButtonState();
-            updateCycleUndoButtonState();
-            refreshCycleTimeCalculations();
         }
 
         function removeCycleTimeRow(button) {
-            const beforeSnapshot = getCycleStateSnapshot();
             const row = button.closest('tr');
             row.remove();
             renumberCycleRows();
-            refreshCycleTimeCalculations();
-
-            const afterSnapshot = getCycleStateSnapshot();
-            pushCycleHistoryAction({
-                type: 'snapshot',
-                before: beforeSnapshot,
-                after: afterSnapshot,
-            });
-            updateCycleDeleteSelectedButtonState();
-            updateCycleUndoButtonState();
-        }
-
-        async function deleteSelectedCycleRows() {
-            const selectedRows = Array.from(document.querySelectorAll('#cycleTimeTableBody .cycle-row-select:checked'))
-                .map((cb) => cb.closest('tr'))
-                .filter((row) => row instanceof HTMLTableRowElement);
-
-            if (selectedRows.length === 0) {
-                return;
-            }
-
-            const confirmed = await showCycleTimeDeleteConfirmModal();
-            if (!confirmed) {
-                return;
-            }
-
-            const beforeSnapshot = getCycleStateSnapshot();
-            selectedRows.forEach((row) => row.remove());
-
-            renumberCycleRows();
-            refreshCycleTimeCalculations();
-
-            const afterSnapshot = getCycleStateSnapshot();
-            pushCycleHistoryAction({
-                type: 'snapshot',
-                before: beforeSnapshot,
-                after: afterSnapshot,
-            });
-
-            updateCycleDeleteSelectedButtonState();
-            updateCycleUndoButtonState();
+            calculateCycleTotals();
         }
 
         function renumberCycleRows() {
             const rows = document.querySelectorAll('#cycleTimeTableBody tr');
             rows.forEach((row, index) => {
-                const numberEl = row.querySelector('.cycle-row-number');
-                if (numberEl) {
-                    numberEl.textContent = index + 1;
-                } else if (row.cells[0]) {
-                    row.cells[0].textContent = index + 1;
-                }
+                row.cells[0].textContent = index + 1;
             });
-
-            updateCycleSelectAllRowsState();
-            updateCycleDeleteSelectedButtonState();
         }
 
         function initSectionToggles() {
@@ -4872,9 +3436,7 @@
                 'tracking_revision_id',
                 'update_section',
                 'import_partlist',
-                'import_partlist_file',
-                'import_cycle_time',
-                'import_cycle_time_file'
+                'import_partlist_file'
             ];
 
             if (alwaysKeep.includes(fieldName)) {
@@ -4883,7 +3445,7 @@
 
             const sectionExactFields = {
                 informasi_project: ['business_category_id', 'customer_id', 'period', 'line', 'model', 'assy_no', 'assy_name', 'forecast', 'project_period'],
-                rates: ['wire_rate_id', 'exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate'],
+                rates: ['exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate'],
                 material: ['forecast', 'project_period', 'material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'import_partlist'],
                 unpriced_parts: ['tracking_revision_id'],
                 cycle_time: ['cycle_times'],
@@ -4892,7 +3454,7 @@
 
             const sectionPrefixes = {
                 material: ['materials[', 'manual_unpriced_prices['],
-                unpriced_parts: ['materials[', 'manual_unpriced_prices['],
+                unpriced_parts: ['manual_unpriced_prices['],
                 cycle_time: ['cycle_times[']
             };
 
@@ -5025,93 +3587,16 @@
             form.submit();
         }
 
-        function showCycleTimeDeleteConfirmModal() {
-            return new Promise((resolve) => {
-                const modal = document.getElementById('cycleTimeDeleteConfirmModal');
-                const okBtn = document.getElementById('cycleTimeDeleteOkBtn');
-                const cancelBtn = document.getElementById('cycleTimeDeleteCancelBtn');
-
-                if (!modal || !okBtn || !cancelBtn) {
-                    resolve(false);
-                    return;
-                }
-
-                const closeWith = (result) => {
-                    modal.classList.add('is-hidden');
-                    modal.setAttribute('aria-hidden', 'true');
-                    okBtn.removeEventListener('click', handleOk);
-                    cancelBtn.removeEventListener('click', handleCancel);
-                    modal.removeEventListener('click', handleOverlay);
-                    document.removeEventListener('keydown', handleEsc);
-                    resolve(result);
-                };
-
-                const handleOk = () => closeWith(true);
-                const handleCancel = () => closeWith(false);
-                const handleOverlay = (event) => {
-                    if (event.target === modal) {
-                        closeWith(false);
-                    }
-                };
-                const handleEsc = (event) => {
-                    if (event.key === 'Escape') {
-                        closeWith(false);
-                    }
-                };
-
-                modal.classList.remove('is-hidden');
-                modal.setAttribute('aria-hidden', 'false');
-
-                okBtn.addEventListener('click', handleOk);
-                cancelBtn.addEventListener('click', handleCancel);
-                modal.addEventListener('click', handleOverlay);
-                document.addEventListener('keydown', handleEsc);
-            });
-        }
-
-        function triggerCycleTimeImport() {
-            const fileInput = document.getElementById('importCycleTimeFileInput');
-            if (!fileInput) return;
-
-            fileInput.value = '';
-            fileInput.click();
-        }
-
-        function submitCycleTimeImport() {
-            const form = document.getElementById('cycleTimeImportForm');
-            if (!form) return;
-
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-                return;
-            }
-
-            form.submit();
-        }
-
         // Initialize calculations on page load
         document.addEventListener('DOMContentLoaded', function () {
-            if (Array.isArray(initialToastNotifications)) {
-                initialToastNotifications.forEach((item, index) => {
-                    const delay = 120 * index;
-                    window.setTimeout(() => {
-                        showPopupNotification(item?.message || '', item?.type || 'success');
-                    }, delay);
-                });
-            }
-
             initSectionToggles();
             bindMaterialTableBehaviors();
             initMaterialFilterPopup();
             initMaterialHeaderFilters();
-            bindCycleSelectAllRows();
-            bindCycleTableBehaviors();
             normalizeMaterialTextInputs();
             markMaterialControlsUndoBase();
-            markCycleControlsUndoBase();
             applyMaterialFilters();
             updateMaterialSelectAllRowsState();
-            updateCycleUndoButtonState();
             formatForecastDisplay();
             calculateTotals();
 
@@ -5134,23 +3619,7 @@
                 if (input) calculateCycleRow(input);
             });
 
-            refreshCycleTimeCalculations();
-            updateCycleSelectAllRowsState();
-            clearCycleSelectionState();
-            markCycleControlsUndoBase();
-            updateCycleUndoButtonState();
-            updateCycleDeleteSelectedButtonState();
-
-            const cycleTableBody = document.getElementById('cycleTimeTableBody');
-            if (cycleTableBody && !cycleTableBody.dataset.boundSelectAllRows) {
-                cycleTableBody.dataset.boundSelectAllRows = '1';
-                cycleTableBody.addEventListener('change', function (event) {
-                    const target = event.target;
-                    if (target instanceof HTMLElement && target.matches('.cycle-row-select')) {
-                        updateCycleSelectAllRowsState();
-                    }
-                });
-            }
+            calculateCycleTotals();
 
             const forecastDisplay = document.getElementById('forecastDisplay');
             if (forecastDisplay) {
@@ -5185,69 +3654,6 @@
                     }
                 });
             }
-
-            const wireRateSelector = document.getElementById('wireRateSelector');
-            const wireRateSourceHint = document.getElementById('wireRateSourceHint');
-            const rateUsdInput = document.getElementById('rateUSD');
-            const rateJpyInput = document.getElementById('rateJPY');
-            const lmeRateInput = document.getElementById('lmeRate');
-
-            function applySelectedWireRateToInputs(autoSubmitRates = false) {
-                if (!wireRateSelector || !rateUsdInput || !rateJpyInput || !lmeRateInput) {
-                    return;
-                }
-
-                const selectedOption = wireRateSelector.options[wireRateSelector.selectedIndex];
-                if (!selectedOption) {
-                    return;
-                }
-
-                const usd = parseFloat(selectedOption.dataset.usd || '0');
-                const jpy = parseFloat(selectedOption.dataset.jpy || '0');
-                const lme = parseFloat(selectedOption.dataset.lme || '0');
-
-                rateUsdInput.value = Number.isFinite(usd) ? usd : 0;
-                rateJpyInput.value = Number.isFinite(jpy) ? jpy : 0;
-                lmeRateInput.value = Number.isFinite(lme) ? lme : 0;
-
-                if (wireRateSourceHint) {
-                    const label = selectedOption.dataset.label || selectedOption.textContent.trim();
-                    wireRateSourceHint.textContent = 'Sumber rate: Database Wire (' + label + ')';
-                }
-
-                recalculateAllRows();
-
-                if (autoSubmitRates) {
-                    const form = document.getElementById('costingForm');
-                    const ratesUpdateBtn = document.querySelector('.section-update-btn[data-section="rates"]');
-                    const updateSectionInput = document.getElementById('updateSectionInput');
-
-                    if (!form || !ratesUpdateBtn) {
-                        return;
-                    }
-
-                    if (updateSectionInput) {
-                        updateSectionInput.value = 'rates';
-                    }
-
-                    if (typeof window.showAppLoading === 'function') {
-                        window.showAppLoading('Memuat rate wire... Notes: Jika ingin ganti rate, ganti juga rate di Database Wire.');
-                    }
-
-                    if (typeof form.requestSubmit === 'function') {
-                        form.requestSubmit(ratesUpdateBtn);
-                    } else {
-                        ratesUpdateBtn.click();
-                    }
-                }
-            }
-
-            if (wireRateSelector) {
-                wireRateSelector.addEventListener('change', function () {
-                    applySelectedWireRateToInputs(true);
-                });
-                applySelectedWireRateToInputs(false);
-            }
         });
 
         // Recalculate when exchange rates change
@@ -5272,35 +3678,5 @@
                 if (input) calculateCycleRow(input);
             });
         }
-
-        // Handle Enter key to save section
-        document.addEventListener('keydown', function (event) {
-            // Only handle Enter key without modifiers
-            if (event.key !== 'Enter' || event.ctrlKey || event.shiftKey || event.altKey || event.metaKey) {
-                return;
-            }
-
-            // Check if the focused element is inside a form section
-            const activeElement = document.activeElement;
-            if (!activeElement || !activeElement.matches('input, textarea, select')) {
-                return;
-            }
-
-            // Find the closest form-section
-            const formSection = activeElement.closest('.form-section');
-            if (!formSection) {
-                return;
-            }
-
-            // Find the section update button within this section
-            const updateButton = formSection.querySelector('.section-update-btn');
-            if (updateButton) {
-                // Prevent default form submission to avoid submitting entire form
-                event.preventDefault();
-                
-                // Trigger section save
-                updateButton.click();
-            }
-        });
     </script>
 @endsection

@@ -168,6 +168,62 @@
             flex-wrap: nowrap;
         }
 
+        .costing-pagination {
+            padding: 0.9rem 1rem 1rem;
+            border-top: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .costing-pagination-summary {
+            font-size: 0.82rem;
+            color: #64748b;
+        }
+
+        .costing-pagination-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .costing-page-link {
+            min-width: 34px;
+            height: 34px;
+            padding: 0 0.6rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #334155;
+            text-decoration: none;
+            background: #fff;
+        }
+
+        .costing-page-link:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+        }
+
+        .costing-page-link.active {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #fff;
+        }
+
+        .costing-page-link.disabled {
+            color: #94a3b8;
+            border-color: #e2e8f0;
+            background: #f8fafc;
+            pointer-events: none;
+        }
+
         .costing-filter-btn {
             min-width: 72px;
             padding: 0.35rem 0.65rem;
@@ -200,6 +256,11 @@
             <input type="text" name="assy_no" class="costing-filter-input" value="{{ $filters['assy_no'] ?? '' }}" placeholder="Assy No">
             <input type="text" name="assy_name" class="costing-filter-input" value="{{ $filters['assy_name'] ?? '' }}" placeholder="Assy Name">
             <input type="text" name="revisi" class="costing-filter-input" value="{{ $filters['revisi'] ?? '' }}" placeholder="V3">
+            <select name="per_page" class="costing-filter-input">
+                @foreach([10, 20, 50, 100] as $size)
+                    <option value="{{ $size }}" {{ (int) $perPage === $size ? 'selected' : '' }}>{{ $size }}/halaman</option>
+                @endforeach
+            </select>
             <div class="costing-filter-actions">
                 <button type="submit" class="btn btn-primary btn-sm costing-filter-btn">Search</button>
                 <a href="{{ route('database.costing', absolute: false) }}" class="btn btn-secondary btn-sm costing-filter-btn">Reset</a>
@@ -247,7 +308,7 @@
                             ]), absolute: false);
                         @endphp
                         <tr>
-                            <td>{{ $key + 1 }}</td>
+                            <td>{{ ($costingData->firstItem() ?? 1) + $key }}</td>
                             <td>{{ $costing->period }}</td>
                             <td>{{ $tanggalValue ? \Carbon\Carbon::parse($tanggalValue)->format('d-m-Y') : '-' }}</td>
                             <td>{{ $costing->customer->name ?? '-' }}</td>
@@ -299,6 +360,39 @@
                     @endforelse
                 </tbody>
             </table>
+        </div>
+        <div class="costing-pagination">
+            <div class="costing-pagination-summary">
+                Menampilkan {{ $costingData->firstItem() ?? 0 }} - {{ $costingData->lastItem() ?? 0 }} dari {{ $costingData->total() }} data
+            </div>
+            <nav class="costing-pagination-nav" aria-label="Pagination">
+                @php
+                    $currentPage = $costingData->currentPage();
+                    $lastPage = $costingData->lastPage();
+                    $startPage = max(1, $currentPage - 2);
+                    $endPage = min($lastPage, $currentPage + 2);
+                @endphp
+
+                @if($costingData->onFirstPage())
+                    <span class="costing-page-link disabled">Prev</span>
+                @else
+                    <a class="costing-page-link" href="{{ $costingData->previousPageUrl() }}">Prev</a>
+                @endif
+
+                @for($page = $startPage; $page <= $endPage; $page++)
+                    @if($page === $currentPage)
+                        <span class="costing-page-link active">{{ $page }}</span>
+                    @else
+                        <a class="costing-page-link" href="{{ $costingData->url($page) }}">{{ $page }}</a>
+                    @endif
+                @endfor
+
+                @if($costingData->hasMorePages())
+                    <a class="costing-page-link" href="{{ $costingData->nextPageUrl() }}">Next</a>
+                @else
+                    <span class="costing-page-link disabled">Next</span>
+                @endif
+            </nav>
         </div>
     </div>
 @endsection

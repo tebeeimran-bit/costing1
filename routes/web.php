@@ -48,6 +48,8 @@ Route::post('/database/wires', [DatabaseController::class, 'storeWire'])->name('
 Route::put('/database/wires/{id}', [DatabaseController::class, 'updateWire'])->name('database.wires.update');
 Route::delete('/database/wires/{id}', [DatabaseController::class, 'destroyWire'])->name('database.wires.destroy');
 Route::get('/database/costing', [DatabaseController::class, 'costing'])->name('database.costing');
+Route::delete('/database/costing/{id}', [DatabaseController::class, 'destroyCosting'])->name('database.costing.destroy');
+Route::get('/database/material-cost', [DatabaseController::class, 'materialCost'])->name('database.material-cost');
 Route::get('/database/customers', [DatabaseController::class, 'customers'])->name('database.customers');
 Route::post('/database/customers', [DatabaseController::class, 'storeCustomer'])->name('database.customers.store');
 Route::put('/database/customers/{id}', [DatabaseController::class, 'updateCustomer'])->name('database.customers.update');

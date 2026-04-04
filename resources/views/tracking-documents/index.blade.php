@@ -765,7 +765,7 @@
                             <div class="history-sub">
                                 <strong>Nama Dokumen Partlist:</strong>
                                 @if(!empty($revision->partlist_original_name) && !empty($revision->partlist_file_path))
-                                    <a href="{{ route('tracking-documents.view', ['revision' => $revision->id, 'type' => 'partlist'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->partlist_original_name }}</a>
+                                    <a href="{{ route('tracking-documents.download', ['revision' => $revision->id, 'type' => 'partlist'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->partlist_original_name }}</a>
                                     @if((int) ($revision->partlist_update_count ?? 0) > 0)
                                         <span style="font-size: 0.78rem; color: var(--slate-500);">({{ $revision->partlist_update_count }}x update{{ $partlistUpdatedAt ? ', ' . $partlistUpdatedAt : '' }})</span>
                                     @endif
@@ -776,7 +776,7 @@
                             <div class="history-sub">
                                 <strong>Nama Dokumen UMH:</strong>
                                 @if(!empty($revision->umh_original_name) && !empty($revision->umh_file_path))
-                                    <a href="{{ route('tracking-documents.view', ['revision' => $revision->id, 'type' => 'umh'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->umh_original_name }}</a>
+                                    <a href="{{ route('tracking-documents.download', ['revision' => $revision->id, 'type' => 'umh'], absolute: false) }}" target="_blank" rel="noopener noreferrer">{{ $revision->umh_original_name }}</a>
                                     @if((int) ($revision->umh_update_count ?? 0) > 0)
                                         <span style="font-size: 0.78rem; color: var(--slate-500);">({{ $revision->umh_update_count }}x update{{ $umhUpdatedAt ? ', ' . $umhUpdatedAt : '' }})</span>
                                     @endif

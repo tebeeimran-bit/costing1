@@ -75,6 +75,14 @@ class DatabaseController extends Controller
 
         $query = CostingData::with(['product', 'customer', 'trackingRevision']);
 
+        $perPage = (int) $request->input('per_page', 20);
+        if ($perPage <= 0) {
+            $perPage = 20;
+        }
+        if ($perPage > 200) {
+            $perPage = 200;
+        }
+
         if ($filters['period'] !== '') {
             $query->where('period', 'like', '%' . $filters['period'] . '%');
         }
@@ -129,9 +137,62 @@ class DatabaseController extends Controller
         $costingData = $query
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return view('database.costing', compact('costingData', 'filters', 'perPage'));
+    }
+
+    public function materialCost(Request $request)
+    {
+        $period = trim((string) $request->input('period', 'all'));
+
+        $assyExpr = "COALESCE(NULLIF(costing_data.assy_no, ''), '-')";
+        $modelExpr = "COALESCE(NULLIF(costing_data.model, ''), '-')";
+        $customerExpr = "COALESCE(NULLIF(customers.name, ''), '-')";
+        $businessCategoryExpr = "COALESCE(NULLIF(products.line, ''), COALESCE(NULLIF(products.name, ''), 'Uncategorized'))";
+
+        $query = CostingData::query()
+            ->leftJoin('customers', 'customers.id', '=', 'costing_data.customer_id')
+            ->leftJoin('products', 'products.id', '=', 'costing_data.product_id')
+            ->selectRaw("{$assyExpr} as assy_no")
+            ->selectRaw("{$modelExpr} as model")
+            ->selectRaw("{$customerExpr} as customer_name")
+            ->selectRaw("{$businessCategoryExpr} as business_category")
+            ->selectRaw('SUM(COALESCE(costing_data.material_cost, 0)) as material_cost_total')
+            ->selectRaw('COUNT(*) as project_count');
+
+        if ($period !== '' && $period !== 'all') {
+            $query->where('costing_data.period', $period);
+        }
+
+        $materialCostRows = $query
+            ->groupByRaw("{$assyExpr}, {$modelExpr}, {$customerExpr}, {$businessCategoryExpr}")
+            ->orderByRaw("{$assyExpr} asc")
+            ->orderByRaw("{$modelExpr} asc")
+            ->orderByRaw("{$customerExpr} asc")
+            ->orderByRaw("{$businessCategoryExpr} asc")
             ->get();
 
-        return view('database.costing', compact('costingData', 'filters'));
+        $totalMaterialCost = (float) $materialCostRows->sum('material_cost_total');
+        $totalProjects = (int) $materialCostRows->sum('project_count');
+
+        $periodOptions = CostingData::query()
+            ->select('period')
+            ->whereNotNull('period')
+            ->where('period', '!=', '')
+            ->distinct()
+            ->orderBy('period', 'desc')
+            ->pluck('period')
+            ->values();
+
+        return view('database.material-cost', compact(
+            'materialCostRows',
+            'totalMaterialCost',
+            'totalProjects',
+            'periodOptions',
+            'period'
+        ));
     }
 
     public function destroyCosting($id)

@@ -585,20 +585,50 @@ class CostingController extends Controller
         $maxBusinessCategorySales = $businessCategorySales->max('potential_sales') ?: 1;
 
         $analysisMode = 'business_category';
-        if ($customerFilter !== '' && $customerFilter !== 'all') {
+        if ($modelFilter !== '' && $modelFilter !== 'all') {
+            $analysisMode = 'assy_no';
+        } elseif ($customerFilter !== '' && $customerFilter !== 'all') {
             $analysisMode = 'model';
         } elseif ($businessCategoryFilter !== '' && $businessCategoryFilter !== 'all') {
             $analysisMode = 'customer';
         }
 
         $analysisDimensionLabel = match ($analysisMode) {
+            'assy_no' => 'Assy No',
             'model' => 'Model',
             'customer' => 'Customer',
             default => 'Business Category',
         };
         $showCustomerPerspective = $analysisMode === 'customer';
 
-        $analysisSalesRows = $analysisMode === 'model'
+        $analysisSalesRows = $analysisMode === 'assy_no'
+            ? $costingData
+                ->groupBy(function ($item) {
+                    $assyNo = trim((string) ($item->assy_no ?? ''));
+                    return $assyNo !== '' ? $assyNo : '-';
+                })
+                ->map(function ($items, $assyNo) use ($resolvePotentialSales) {
+                    $materialCost = (float) $items->sum('material_cost');
+                    $laborCost = (float) $items->sum('labor_cost');
+                    $overheadCost = $items->sum(function ($row) {
+                        return (float) $row->overhead_cost + (float) $row->scrap_cost;
+                    });
+
+                    return [
+                        'dimension_key' => (string) $assyNo,
+                        'name' => (string) $assyNo,
+                        'potential_sales' => $items->sum(function ($row) use ($resolvePotentialSales) {
+                            return $resolvePotentialSales($row);
+                        }),
+                        'project_count' => $items->count(),
+                        'material_cost' => $materialCost,
+                        'labor_cost' => $laborCost,
+                        'overhead_cost' => $overheadCost,
+                    ];
+                })
+                ->sortByDesc('potential_sales')
+                ->values()
+            : ($analysisMode === 'model'
             ? $costingData
                 ->groupBy(function ($item) {
                     $modelName = trim((string) ($item->model ?? ''));
@@ -663,7 +693,7 @@ class CostingController extends Controller
                             'overhead_cost' => (float) ($item['overhead_cost'] ?? 0),
                         ];
                     })
-                    ->values());
+                    ->values()));
 
         $topCustomerPotentialSales = $costingData
             ->groupBy('customer_id')
@@ -748,6 +778,11 @@ class CostingController extends Controller
             }
 
             $categoryItems = $costingData->filter(function ($item) use ($analysisMode, $dimensionKey, $resolveBusinessCategoryLabel) {
+                if ($analysisMode === 'assy_no') {
+                    $assyNo = trim((string) ($item->assy_no ?? ''));
+                    return ($assyNo !== '' ? $assyNo : '-') === $dimensionKey;
+                }
+
                 if ($analysisMode === 'model') {
                     $modelName = trim((string) ($item->model ?? ''));
                     return ($modelName !== '' ? $modelName : '-') === $dimensionKey;
