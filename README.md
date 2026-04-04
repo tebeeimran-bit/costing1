@@ -57,3 +57,36 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## SQLite Backup Otomatis (Harian)
+
+Project ini menyediakan command backup SQLite:
+
+```bash
+php artisan db:backup-sqlite
+```
+
+Opsi retensi file backup:
+
+```bash
+php artisan db:backup-sqlite --keep=14
+```
+
+Lokasi backup:
+
+`database/backups/database.sqlite.Ymd_His.bak`
+
+Scheduler sudah dikonfigurasi untuk menjalankan backup otomatis setiap hari jam `01:30`.
+Supaya scheduler berjalan, jalankan salah satu opsi berikut:
+
+1. Mode development:
+
+```bash
+php artisan schedule:work
+```
+
+2. Mode cron (production): tambahkan cron berikut
+
+```cron
+* * * * * cd /workspaces/costing1 && php artisan schedule:run >> /dev/null 2>&1
+```
