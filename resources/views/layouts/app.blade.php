@@ -1218,6 +1218,19 @@
                         </svg>
                         <span>Dashboard</span>
                     </a>
+                        <a href="{{ route('compare.costing', absolute: false) }}"
+                            class="sidebar-nav-item {{ request()->routeIs('compare.costing') ? 'active' : '' }}">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 6h6" />
+                                <path d="M15 6h6" />
+                                <path d="M9 6a3 3 0 0 1 6 0" />
+                                <path d="M3 18h6" />
+                                <path d="M15 18h6" />
+                                <path d="M9 18a3 3 0 0 1 6 0" />
+                                <path d="M12 6v12" />
+                            </svg>
+                            <span>Compare Costing</span>
+                        </a>
 
                     <!-- Database Dropdown -->
                     <div class="sidebar-dropdown {{ request()->routeIs('database.*') ? 'open' : '' }}">
@@ -1410,6 +1423,19 @@
                                     <polyline points="10 9 9 9 8 9" />
                                 </svg>
                                 Form Costing
+                            </a>
+                            <a href="{{ route('compare.costing', absolute: false) }}"
+                                class="nav-tab {{ request()->routeIs('compare.costing') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 6h6" />
+                                    <path d="M15 6h6" />
+                                    <path d="M9 6a3 3 0 0 1 6 0" />
+                                    <path d="M3 18h6" />
+                                    <path d="M15 18h6" />
+                                    <path d="M9 18a3 3 0 0 1 6 0" />
+                                    <path d="M12 6v12" />
+                                </svg>
+                                Compare
                             </a>
                         </nav>
                     </div>

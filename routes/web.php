@@ -7,6 +7,8 @@ use App\Http\Controllers\TrackingDocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CostingController::class, 'dashboard'])->name('dashboard');
+Route::get('/compare-costing', [CostingController::class, 'compare'])->name('compare.costing');
+Route::get('/compare-costing/revisions-search', [CostingController::class, 'searchCompareRevisions'])->name('compare.costing.revisions-search');
 
 // Test endpoint for debugging Codespaces access
 Route::get('/test', function () {
