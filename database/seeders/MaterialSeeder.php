@@ -9,6 +9,35 @@ use Carbon\Carbon;
 
 class MaterialSeeder extends Seeder
 {
+    private function generatePrice(string $baseUom, string $description, string $materialType): int
+    {
+        $uom = strtoupper(trim($baseUom));
+        $text = strtoupper(trim($description . ' ' . $materialType));
+
+        return match (true) {
+            in_array($uom, ['MM', 'MTR', 'METER', 'M'], true) => rand(80, 2500),
+            in_array($uom, ['KG'], true) => rand(8000, 35000),
+            in_array($uom, ['SET'], true) => rand(12000, 75000),
+            in_array($uom, ['ROL', 'BOX', 'LTR', 'PAC'], true) => rand(1500, 25000),
+            preg_match('/\b(WIRE|CABLE|HARNESS|TUBE|HOSE)\b/', $text) === 1 => rand(500, 12000),
+            preg_match('/\b(CONNECTOR|TERMINAL|HOUSING|RELAY|SWITCH|IC|CHIP|RESISTOR|CAPACITOR)\b/', $text) === 1 => rand(300, 25000),
+            default => rand(300, 18000),
+        };
+    }
+
+    private function generateMoq(string $baseUom): int
+    {
+        $uom = strtoupper(trim($baseUom));
+
+        return match (true) {
+            in_array($uom, ['MM', 'MTR', 'METER', 'M'], true) => rand(100, 5000),
+            in_array($uom, ['KG'], true) => rand(10, 500),
+            in_array($uom, ['SET'], true) => rand(5, 120),
+            in_array($uom, ['ROL', 'BOX', 'LTR', 'PAC'], true) => rand(10, 300),
+            default => rand(25, 1000),
+        };
+    }
+
     public function run(): void
     {
         // Disable foreign key checks to allow truncate
@@ -50,26 +79,27 @@ class MaterialSeeder extends Seeder
         $materials = [];
 
         for ($i = 1; $i <= 20; $i++) {
-            $price = rand(100, 50000);
+            $baseUom = $uomList[array_rand($uomList)];
+            $description = $descriptions[$i - 1];
+            $materialType = $materialTypes[array_rand($materialTypes)];
+            $price = $this->generatePrice($baseUom, $description, $materialType);
             $priceUpdate = Carbon::now()->subDays(rand(1, 365));
-            $priceBefore = $price - rand(10, 500);
-            if ($priceBefore < 0)
-                $priceBefore = 0;
+            $priceBefore = max(0, (int) round($price * (1 - (rand(3, 15) / 100))));
 
             $materials[] = [
                 'plant' => $plants[array_rand($plants)],
                 'material_code' => sprintf('%04d-%03d%s%s', rand(1000, 9999), rand(1, 999), chr(rand(65, 90)), chr(rand(65, 90))),
-                'material_description' => $descriptions[$i - 1],
-                'material_type' => $materialTypes[array_rand($materialTypes)],
+                'material_description' => $description,
+                'material_type' => $materialType,
                 'material_group' => $materialGroups[array_rand($materialGroups)],
-                'base_uom' => $uomList[array_rand($uomList)],
+                'base_uom' => $baseUom,
                 'price' => $price,
                 'purchase_unit' => $purchaseUnits[array_rand($purchaseUnits)],
                 'currency' => $currencies[array_rand($currencies)],
-                'moq' => rand(1, 1000) * 10,
+                'moq' => $this->generateMoq($baseUom),
                 'cn' => rand(0, 1) ? 'C' : 'N',
                 'maker' => $makers[array_rand($makers)],
-                'add_cost_import_tax' => rand(0, 1) ? rand(1, 15) : null,
+                'add_cost_import_tax' => rand(0, 1) ? rand(1, 12) : null,
                 'price_update' => $priceUpdate,
                 'price_before' => $priceBefore,
                 'created_at' => now(),

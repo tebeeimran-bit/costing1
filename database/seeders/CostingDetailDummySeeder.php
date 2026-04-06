@@ -9,6 +9,42 @@ use Illuminate\Database\Seeder;
 
 class CostingDetailDummySeeder extends Seeder
 {
+    private function resolveDummyUnitPrice($material, string $unitLabel): float
+    {
+        $existingPrice = (float) ($material->price ?? 0);
+        if ($existingPrice > 0) {
+            return $existingPrice;
+        }
+
+        return match ($unitLabel) {
+            'Meter' => rand(80, 2500),
+            'Kg' => rand(8000, 35000),
+            'Set' => rand(12000, 75000),
+            'Unit' => rand(1000, 18000),
+            default => rand(300, 12000),
+        };
+    }
+
+    private function resolveDummyQty(string $unitLabel): int
+    {
+        return match ($unitLabel) {
+            'Meter' => rand(5, 120),
+            'Kg' => rand(1, 30),
+            'Set' => rand(1, 25),
+            'Unit' => rand(1, 50),
+            default => rand(1, 80),
+        };
+    }
+
+    private function resolveExchangeRate(string $currency, $costing): float
+    {
+        return match (strtoupper($currency)) {
+            'USD' => (float) ($costing->exchange_rate_usd ?? 15500),
+            'JPY' => (float) ($costing->exchange_rate_jpy ?? 103),
+            default => 1.0,
+        };
+    }
+
     private function normalizeUnitLabel(?string $rawUnit, ?string $partName = null, ?string $partNo = null, ?string $proCode = null): string
     {
         $value = strtoupper(trim((string) $rawUnit));
@@ -82,19 +118,12 @@ class CostingDetailDummySeeder extends Seeder
                     ? $materials->shuffle()->take(4)->values()
                     : $materials->shuffle()->values();
 
-                $weights = [0.38, 0.27, 0.21, 0.14];
-                $materialCostTotal = (float) ($costing->material_cost ?? 0);
-                if ($materialCostTotal <= 0) {
-                    $materialCostTotal = 1000;
-                }
+                $materialCostTotal = 0;
 
                 foreach ($selectedMaterials as $index => $material) {
-                    $weight = $weights[$index] ?? (1 / max(1, $selectedMaterials->count()));
-                    $lineCost = $materialCostTotal * $weight;
-
-                    $basePrice = (float) ($material->price ?? 0);
-                    $unitPriceBasis = $basePrice > 0 ? $basePrice : max(1, round($lineCost / 100));
-                    $qtyReq = $unitPriceBasis > 0 ? ($lineCost / $unitPriceBasis) : 0;
+                    $unitLabel = $this->normalizeUnitLabel($material->base_uom, $material->material_description, $material->material_code, (string) ($costing->product->code ?? ''));
+                    $unitPriceBasis = $this->resolveDummyUnitPrice($material, $unitLabel);
+                    $qtyReq = $this->resolveDummyQty($unitLabel);
 
                     $currency = trim((string) ($material->currency ?? ''));
                     if ($currency === '') {
@@ -106,8 +135,11 @@ class CostingDetailDummySeeder extends Seeder
                         $taxPercent = 0;
                     }
 
-                    $amount2 = $lineCost * (1 + ($taxPercent / 100));
-                    $unitPrice2 = $qtyReq > 0 ? ($amount2 / $qtyReq) : $unitPriceBasis;
+                    $unitDivisor = in_array($unitLabel, ['Meter'], true) ? 1000 : 1;
+                    $amount2 = ($unitPriceBasis * (1 + ($taxPercent / 100))) / max(1, $unitDivisor);
+                    $unitPrice2 = $amount2;
+                    $lineCost = $qtyReq * $amount2 * $this->resolveExchangeRate($currency, $costing);
+                    $materialCostTotal += $lineCost;
 
                     MaterialBreakdown::create([
                         'costing_data_id' => $costing->id,
@@ -117,12 +149,12 @@ class CostingDetailDummySeeder extends Seeder
                         'id_code' => (string) ($material->material_code ?? '-'),
                         'part_name' => (string) ($material->material_description ?? '-'),
                         'pro_code' => (string) ($costing->product->code ?? '-'),
-                        'qty_req' => round($qtyReq, 4),
-                        'amount1' => round($lineCost, 4),
+                        'qty_req' => $qtyReq,
+                        'amount1' => round($unitPriceBasis, 4),
                         'unit_price_basis' => round($unitPriceBasis, 4),
                         'unit_price_basis_text' => $this->normalizeUnitLabel($material->base_uom, $material->material_description, $material->material_code, (string) ($costing->product->code ?? '')),
                         'currency' => $currency,
-                        'qty_moq' => round($qtyReq, 4),
+                        'qty_moq' => max($qtyReq, (int) round($qtyReq * 1.2)),
                         'cn_type' => 'N',
                         'import_tax_percent' => round($taxPercent, 2),
                         'amount2' => round($amount2, 4),
@@ -130,19 +162,15 @@ class CostingDetailDummySeeder extends Seeder
                         'unit_price2' => round($unitPrice2, 4),
                     ]);
                 }
+
+                $costing->update([
+                    'material_cost' => round($materialCostTotal, 2),
+                ]);
             }
 
             $breakdownsToNormalize = $costing->materialBreakdowns()->with('material')->orderBy('id')->get();
             if ($breakdownsToNormalize->isNotEmpty()) {
-                $targetMaterialCost = (float) ($costing->material_cost ?? 0);
-                $currentMaterialCost = (float) $breakdownsToNormalize->sum('amount1');
-                $scaleFactor = $currentMaterialCost > 0 ? ($targetMaterialCost / $currentMaterialCost) : 0;
-
-                if ($currentMaterialCost <= 0 && $targetMaterialCost > 0) {
-                    $equalShare = $targetMaterialCost / max(1, $breakdownsToNormalize->count());
-                } else {
-                    $equalShare = null;
-                }
+                $recalculatedMaterialCost = 0;
 
                 foreach ($breakdownsToNormalize as $index => $breakdown) {
                     $material = $breakdown->material;
@@ -153,25 +181,36 @@ class CostingDetailDummySeeder extends Seeder
                         $breakdown->pro_code
                     );
 
-                    $newAmount1 = $equalShare !== null
-                        ? $equalShare
-                        : ((float) $breakdown->amount1 * $scaleFactor);
+                    $qtyReq = max(1, (int) round((float) ($breakdown->qty_req ?? 0)));
+                    $existingPrice = (float) ($breakdown->unit_price_basis ?? $breakdown->amount1 ?? 0);
+                    $newAmount1 = $existingPrice > 0 ? $existingPrice : $this->resolveDummyUnitPrice($material, $unitLabel);
 
-                    $newAmount2 = $equalShare !== null
-                        ? $equalShare
-                        : ((float) $breakdown->amount2 * $scaleFactor);
+                    $currency = strtoupper(trim((string) ($breakdown->currency ?? 'IDR')));
+                    if (!in_array($currency, ['IDR', 'USD', 'JPY'], true)) {
+                        $currency = 'IDR';
+                    }
 
-                    $qtyReq = (float) ($breakdown->qty_req ?? 0);
-                    $unitPrice2 = $qtyReq > 0 ? ($newAmount2 / $qtyReq) : $newAmount2;
+                    $taxPercent = (float) ($breakdown->import_tax_percent ?? 0);
+                    $unitDivisor = in_array($unitLabel, ['Meter'], true) ? 1000 : 1;
+                    $newAmount2 = ($newAmount1 * (1 + ($taxPercent / 100))) / max(1, $unitDivisor);
+                    $exchangeRate = $this->resolveExchangeRate($currency, $costing);
+                    $recalculatedMaterialCost += $qtyReq * $newAmount2 * $exchangeRate;
+
+                    $unitPrice2 = $newAmount2;
 
                     $breakdown->update([
                         'row_no' => (string) ($breakdown->row_no ?? ($index + 1)),
+                        'qty_req' => $qtyReq,
                         'unit_price_basis_text' => $unitLabel,
                         'amount1' => round($newAmount1, 4),
                         'amount2' => round($newAmount2, 4),
                         'unit_price2' => round($unitPrice2, 4),
                     ]);
                 }
+
+                $costing->update([
+                    'material_cost' => round($recalculatedMaterialCost, 2),
+                ]);
             }
 
             if ($needsCycleTimes) {

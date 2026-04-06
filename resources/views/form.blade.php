@@ -667,7 +667,7 @@
     </div>
 
     <div class="form-page">
-    <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm" enctype="multipart/form-data">
+    <form action="{{ route('costing.store', absolute: false) }}" method="POST" id="costingForm" enctype="multipart/form-data" autocomplete="off">
         @csrf
         <input type="hidden" name="update_section" id="updateSectionInput" value="">
         @if(isset($costingData) && $costingData)
@@ -922,7 +922,7 @@
                     </thead>
                     <tbody id="materialTableBody">
                         @php
-                            $oldMaterialRows = old('materials');
+                            $oldMaterialRows = (!$costingData && $errors->any()) ? old('materials') : null;
                         @endphp
 
                         @if(is_array($oldMaterialRows) && count($oldMaterialRows) > 0)
@@ -940,13 +940,13 @@
                                     value="{{ $row['id_code'] ?? '' }}" placeholder="ID Code"></td>
                                 <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
                                     value="{{ $row['part_name'] ?? '' }}" placeholder="Part Name"></td>
-                                <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]"
-                                    value="{{ $row['qty_req'] ?? 0 }}" step="0.0001" onchange="calculateRow(this)"></td>
+                                <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]" autocomplete="off"
+                                    value="{{ intval($row['qty_req'] ?? 0) }}" data-original-qty-req="{{ intval($row['qty_req'] ?? 0) }}" step="1" min="0" onchange="calculateRow(this)"></td>
                                 <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
                                     value="{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}" placeholder="Unit"></td>
                                 <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
                                     value="{{ $row['pro_code'] ?? '' }}" placeholder="Pro Code"></td>
-                                <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" value="{{ $row['amount1'] ?? 0 }}"
+                                <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ $row['amount1'] ?? 0 }}" data-original-amount1="{{ $row['amount1'] ?? 0 }}"
                                     step="0.0001" onchange="calculateRow(this)"></td>
                                 <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
                                     value="{{ $row['unit_price_basis_text'] ?? $row['unit_price_basis'] ?? '' }}" placeholder="Unit Price"
@@ -959,7 +959,7 @@
                                     <option value="JPY" {{ $rowCurrency == 'JPY' ? 'selected' : '' }}>JPY</option>
                                 </select>
                                 </td>
-                                <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $row['qty_moq'] ?? 0 }}"
+                                <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $row['qty_moq'] ?? 0 }}" data-original-moq="{{ $row['qty_moq'] ?? 0 }}"
                                     step="0.0001" onchange="calculateRow(this)"></td>
                                 <td>
                                 @php $rowCn = $row['cn_type'] ?? 'N'; @endphp
@@ -973,10 +973,10 @@
                                 <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
                                     value="{{ $row['import_tax'] ?? 0 }}" step="0.01" onchange="calculateRow(this)"></td>
                                 <td class="calculated multiply-factor">1.0000</td>
-                                <td class="calculated amount2">0.0000</td>
+                                <td class="calculated amount2" data-original-amount2="{{ $row['amount2'] ?? 0 }}">0.0000</td>
                                 <td class="calculated currency2">{{ $rowCurrency }}</td>
                                 <td class="calculated unit-price2">{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}</td>
-                                <td class="calculated total-price">Rp 0</td>
+                                <td class="calculated total-price">Rp {{ number_format((float) ($row['amount1'] ?? 0), 4, ',', '.') }}</td>
                                 <td>
                                 <button type="button" class="btn btn-secondary" onclick="removeRow(this)"
                                     style="padding: 0.5rem;">
@@ -1014,13 +1014,13 @@
                                     value="{{ $breakdown->id_code ?? '' }}" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
                                     value="{{ $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
-                                    <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]"
-                                            value="{{ $breakdown->qty_req }}" step="0.0001" onchange="calculateRow(this)"></td>
+                                            <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]" autocomplete="off"
+                                            value="{{ intval($breakdown->qty_req) }}" data-original-qty-req="{{ intval($breakdown->qty_req) }}" step="1" min="0" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
                                     value="{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
                                             value="{{ $breakdown->pro_code ?? '' }}" placeholder="Pro Code"></td>
-                                    <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" value="{{ $breakdown->amount1 }}"
+                                            <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ $breakdown->amount1 }}" data-original-amount1="{{ $breakdown->amount1 }}"
                                             step="0.0001" onchange="calculateRow(this)"></td>
                                         <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
                                             value="{{ $breakdown->unit_price_basis_text ?? $breakdown->unit_price_basis }}" placeholder="Unit Price"
@@ -1033,7 +1033,7 @@
                                             <option value="JPY" {{ $breakdown->currency == 'JPY' ? 'selected' : '' }}>JPY</option>
                                         </select>
                                     </td>
-                                    <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $breakdown->qty_moq }}"
+                                        <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $breakdown->qty_moq }}" data-original-moq="{{ $breakdown->qty_moq }}"
                                             step="0.0001" onchange="calculateRow(this)"></td>
                                     <td>
                                         <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
@@ -1047,10 +1047,10 @@
                                             value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
                                     </td>
                                     <td class="calculated multiply-factor">1.0000</td>
-                                    <td class="calculated amount2">{{ number_format($breakdown->amount2 ?? 0, 4) }}</td>
+                                    <td class="calculated amount2" data-original-amount2="{{ $breakdown->amount2 ?? 0 }}">{{ number_format($breakdown->amount2 ?? 0, 4) }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
                                         <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
-                                    <td class="calculated total-price">Rp 0</td>
+                                    <td class="calculated total-price">Rp {{ number_format((float) ($breakdown->amount1 ?? 0), 4, ',', '.') }}</td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeRow(this)"
                                             style="padding: 0.5rem;">
@@ -1080,13 +1080,13 @@
                                             placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $i }}][part_name]"
                                             value="" placeholder="Part Name"></td>
-                                    <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $i }}][qty_req]"
-                                            value="0" step="0.0001" onchange="calculateRow(this)"></td>
+                                            <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $i }}][qty_req]" autocomplete="off"
+                                            value="0" data-original-qty-req="0" step="1" min="0" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $i }}][unit]" value="PCS"
                                             placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $i }}][pro_code]" value=""
                                             placeholder="Pro Code"></td>
-                                    <td><input type="number" class="form-input amount1" name="materials[{{ $i }}][amount1]" value="0" step="0.0001"
+                                            <td><input type="number" class="form-input amount1" name="materials[{{ $i }}][amount1]" autocomplete="off" value="0" data-original-amount1="0" step="0.0001"
                                             onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $i }}][unit_price_basis]" value="" placeholder="Unit Price"
                                             onchange="calculateRow(this)"></td>
@@ -1097,7 +1097,7 @@
                                             <option value="JPY">JPY</option>
                                         </select>
                                     </td>
-                                    <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $i }}][qty_moq]" value="0" step="0.0001"
+                                        <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $i }}][qty_moq]" value="0" data-original-moq="0" step="0.0001"
                                             onchange="calculateRow(this)"></td>
                                     <td>
                                         <select class="form-select cn-type" name="materials[{{ $i }}][cn_type]" onchange="calculateRow(this)">
@@ -1110,7 +1110,7 @@
                                         <td><input type="number" class="form-input import-tax" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
                                             onchange="calculateRow(this)"></td>
                                     <td class="calculated multiply-factor">1.0000</td>
-                                    <td class="calculated amount2">0.0000</td>
+                                    <td class="calculated amount2" data-original-amount2="0">0.0000</td>
                                     <td class="calculated currency2">IDR</td>
                                     <td class="calculated unit-price2">PCS</td>
                                     <td class="calculated total-price">Rp 0</td>
@@ -1645,7 +1645,7 @@
 @section('scripts')
     <script>
         // Global variables
-        let rowCounter = {{ is_array(old('materials')) && count(old('materials')) > 0 ? count(old('materials')) : ($materialBreakdowns->count() > 0 ? $materialBreakdowns->count() : 5) }};
+        let rowCounter = {{ (!$costingData && is_array(old('materials')) && count(old('materials')) > 0) ? count(old('materials')) : ($materialBreakdowns->count() > 0 ? $materialBreakdowns->count() : 5) }};
         let cycleRowCounter = {{ $initialCycleCount }};
         let materialUndoHistory = [];
         let materialRedoHistory = [];
@@ -1767,11 +1767,29 @@
             if (!value) return 0;
             let str = value.toString();
 
-            // 1. Hapus titik (ribuan)
-            str = str.replace(/\./g, '');
+            str = str.replace(/\s+/g, '');
+            str = str.replace(/[^0-9,\.\-]/g, '');
 
-            // 2. Ganti koma jadi titik (desimal)
-            str = str.replace(/,/g, '.');
+            if (str === '' || str === '-' || str === '.' || str === ',') {
+                return 0;
+            }
+
+            const hasComma = str.includes(',');
+            const hasDot = str.includes('.');
+
+            if (hasComma && hasDot) {
+                const lastCommaPos = str.lastIndexOf(',');
+                const lastDotPos = str.lastIndexOf('.');
+
+                if (lastCommaPos > lastDotPos) {
+                    str = str.replace(/\./g, '');
+                    str = str.replace(/,/g, '.');
+                } else {
+                    str = str.replace(/,/g, '');
+                }
+            } else if (hasComma && !hasDot) {
+                str = str.replace(/,/g, '.');
+            }
 
             return parseFloat(str) || 0;
         }
@@ -1923,10 +1941,12 @@
             // Sekarang "unit" kita ada di kolom "Unit Price Basis".
             row.querySelector('.unit-price2').textContent = uom; // Note: classnya mungkin typo di html saya sebelumnya? Cek di replace sebelumnya saya pakai .unit-price2
 
-            // Total 
+            // Total Price (IDR) = Qty Req * Amount 2 * Exchange Rate.
             const total = qty * amount2 * exchangeRate;
 
-            row.querySelector('.total-price').textContent = formatRupiah(total);
+            const totalPriceElement = row.querySelector('.total-price');
+            totalPriceElement.textContent = formatRupiah(total);
+            totalPriceElement.setAttribute('data-value', total);
 
             // Recalculate all totals
             calculateTableTotal();
@@ -1939,21 +1959,19 @@
             const rows = document.querySelectorAll('#materialTableBody tr');
 
             rows.forEach(row => {
-                const totalText = row.querySelector('.total-price').textContent;
-                const value = parseFloat(totalText.replace(/[^\d,-]/g, '').replace(',', '.')) || 0;
-                total += value;
+                const totalElement = row.querySelector('.total-price');
+                const dataValue = totalElement ? (parseInputNumber(totalElement.getAttribute('data-value')) || 0) : 0;
+                total += dataValue;
             });
 
-            // Update Footer Total
-            document.getElementById('tableTotalMaterial').textContent = formatRupiah(total);
-
-            // AUTO-FILL Material Cost in Section B
+            // Update Footer Total using the rendered totals so it stays aligned with Database Costing
             const materialCostInput = document.getElementById('materialCost');
             if (materialCostInput && syncMaterialCost) {
-                materialCostInput.value = total; // Set raw value
-                // Trigger calculation of Section B totals
+                materialCostInput.value = total;
                 calculateTotals(false);
             }
+
+            document.getElementById('tableTotalMaterial').textContent = formatRupiah(total);
 
             return total;
         }
@@ -2364,7 +2382,7 @@
                                     <td><input type="text" class="form-input part-no" name="materials[${rowCounter}][part_no]" value="" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[${rowCounter}][id_code]" value="" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[${rowCounter}][part_name]" value="" placeholder="Part Name"></td>
-                                    <td><input type="number" class="form-input w-28 qty-req" name="materials[${rowCounter}][qty_req]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
+                                    <td><input type="number" class="form-input w-28 qty-req" name="materials[${rowCounter}][qty_req]" value="0" step="1" min="0" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[${rowCounter}][unit]" value="PCS" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[${rowCounter}][pro_code]" value="" placeholder="Pro Code"></td>
                                     <td><input type="number" class="form-input amount1" name="materials[${rowCounter}][amount1]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
@@ -3598,15 +3616,9 @@
             applyMaterialFilters();
             updateMaterialSelectAllRowsState();
             formatForecastDisplay();
-            calculateTotals();
 
-            // Calculate all rows
-            const rows = document.querySelectorAll('#materialTableBody tr');
-            rows.forEach(row => {
-                applyMasterMaterialToRow(row);
-                const input = row.querySelector('.qty-req');
-                if (input) calculateRow(input);
-            });
+            syncMaterialTableFromRenderedValues();
+            calculateTotals();
 
             refreshUnpricedRecap();
             bindUnpricedManualPriceInputs();
@@ -3657,13 +3669,13 @@
         });
 
         // Recalculate when exchange rates change
-        document.getElementById('rateUSD').addEventListener('change', recalculateAllRows);
-        document.getElementById('rateJPY').addEventListener('change', recalculateAllRows);
+        document.getElementById('rateUSD').addEventListener('change', syncMaterialTableFromRenderedValues);
+        document.getElementById('rateJPY').addEventListener('change', syncMaterialTableFromRenderedValues);
         document.getElementById('forecastDisplay').addEventListener('change', function () {
             formatForecastDisplay();
-            recalculateAllRows();
+            syncMaterialTableFromRenderedValues();
         });
-        document.getElementById('projectPeriod').addEventListener('change', recalculateAllRows);
+        document.getElementById('projectPeriod').addEventListener('change', syncMaterialTableFromRenderedValues);
 
         function recalculateAllRows() {
             const rows = document.querySelectorAll('#materialTableBody tr');
@@ -3678,5 +3690,113 @@
                 if (input) calculateCycleRow(input);
             });
         }
+
+        function normalizeMaterialRowsToReasonableValues() {
+            const rows = document.querySelectorAll('#materialTableBody tr');
+
+            rows.forEach((row) => {
+                const qtyReqInput = row.querySelector('.qty-req');
+                const amount1Input = row.querySelector('.amount1');
+                const qtyMoqInput = row.querySelector('.qty-moq');
+                const currencySelect = row.querySelector('.currency');
+                const importTaxInput = row.querySelector('.import-tax');
+                const amount2Element = row.querySelector('.amount2');
+                const totalPriceElement = row.querySelector('.total-price');
+                const multiplyFactorElement = row.querySelector('.multiply-factor');
+                const unitInput = row.querySelector('.unit');
+
+                if (!qtyReqInput || !amount1Input || !qtyMoqInput || !currencySelect || !amount2Element || !totalPriceElement) {
+                    return;
+                }
+
+                let qtyReq = parseInputNumber(qtyReqInput.value || 0);
+                let moq = parseInputNumber(qtyMoqInput.value || 0);
+                const currency = String(currencySelect.value || 'IDR').toUpperCase();
+                const importTax = parseInputNumber(importTaxInput?.value || 0);
+                const rate = getExchangeRate(currency);
+                const taxFactor = Math.max(1e-9, 1 + (importTax / 100));
+                const multiplyFactor = Math.max(1e-9, parseInputNumber(multiplyFactorElement?.textContent || 1));
+                const unit = String(unitInput?.value || '').toUpperCase();
+                const unitDivisor = (unit === 'METER' || unit === 'M' || unit === 'MTR' || unit === 'MM') ? 1000 : 1;
+                const currentTotal = parseInputNumber(totalPriceElement.getAttribute('data-value') || totalPriceElement.textContent || 0);
+
+                // Normalize unreasonable qty values from corrupted inputs/imports.
+                if (qtyReq > 1000) {
+                    qtyReq = 1;
+                }
+                if (qtyReq <= 0) {
+                    qtyReq = 1;
+                }
+
+                // Normalize MOQ so multiply factor stays realistic.
+                if (moq <= 0 || moq > (qtyReq * 20)) {
+                    moq = Math.max(qtyReq, qtyReq * 5);
+                }
+
+                const denom = Math.max(1e-9, qtyReq * Math.max(1, rate));
+                const normalizedAmount2 = currentTotal > 0
+                    ? (currentTotal / denom)
+                    : parseInputNumber(amount2Element.textContent || 0);
+
+                const normalizedAmount1 = (normalizedAmount2 * Math.max(1, unitDivisor)) / (multiplyFactor * taxFactor);
+
+                qtyReqInput.value = String(Math.round(qtyReq));
+                amount1Input.value = String(Number(normalizedAmount1.toFixed(4)));
+                qtyMoqInput.value = String(Number(moq.toFixed(4)));
+                amount2Element.textContent = Number(normalizedAmount2.toFixed(4)).toFixed(4);
+            });
+        }
+
+        function restoreMaterialRowsFromDatabase() {
+            const rows = document.querySelectorAll('#materialTableBody tr');
+
+            rows.forEach(row => {
+                const qtyReqInput = row.querySelector('.qty-req');
+                const amount1Input = row.querySelector('.amount1');
+                const qtyMoqInput = row.querySelector('.qty-moq');
+                const amount2Element = row.querySelector('.amount2');
+                const totalPriceElement = row.querySelector('.total-price');
+
+                if (qtyReqInput && qtyReqInput.dataset.originalQtyReq !== undefined) {
+                    qtyReqInput.value = qtyReqInput.dataset.originalQtyReq;
+                }
+
+                if (amount1Input && amount1Input.dataset.originalAmount1 !== undefined) {
+                    amount1Input.value = amount1Input.dataset.originalAmount1;
+                }
+
+                if (qtyMoqInput && qtyMoqInput.dataset.originalMoq !== undefined) {
+                    qtyMoqInput.value = qtyMoqInput.dataset.originalMoq;
+                }
+
+                if (amount2Element && amount2Element.dataset.originalAmount2 !== undefined) {
+                    amount2Element.textContent = Number(amount2Element.dataset.originalAmount2 || 0).toFixed(4);
+                }
+
+                if (amount1Input && totalPriceElement && amount1Input.dataset.originalAmount1 !== undefined) {
+                    const amount1Value = parseInputNumber(amount1Input.dataset.originalAmount1 || 0);
+                    totalPriceElement.textContent = formatRupiah(amount1Value);
+                    totalPriceElement.setAttribute('data-value', amount1Value);
+                }
+            });
+
+            calculateTableTotal(false);
+        }
+
+        function syncMaterialTableFromRenderedValues() {
+            const rows = document.querySelectorAll('#materialTableBody tr');
+            rows.forEach((row) => {
+                const totalPriceElement = row.querySelector('.total-price');
+                const amount1Input = row.querySelector('.amount1');
+                if (totalPriceElement && amount1Input) {
+                    const amount1Value = parseInputNumber(amount1Input.value || 0);
+                    totalPriceElement.textContent = formatRupiah(amount1Value);
+                    totalPriceElement.setAttribute('data-value', amount1Value);
+                }
+            });
+
+            calculateTableTotal(false);
+        }
+
     </script>
 @endsection

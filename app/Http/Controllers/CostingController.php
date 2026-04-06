@@ -1018,14 +1018,16 @@ class CostingController extends Controller
 
                     $matchedBusinessCategory = null;
                     if ($matchedProduct) {
+                        $productLineNorm = $normalize($matchedProduct->line ?? '');
                         $productCodeNorm = $normalize($matchedProduct->code ?? '');
                         $productNameNorm = $normalize($matchedProduct->name ?? '');
 
-                        $matchedBusinessCategory = $businessCategories->first(function ($category) use ($normalize, $productCodeNorm, $productNameNorm) {
+                        $matchedBusinessCategory = $businessCategories->first(function ($category) use ($normalize, $productLineNorm, $productCodeNorm, $productNameNorm) {
                             $categoryCodeNorm = $normalize($category->code ?? '');
                             $categoryNameNorm = $normalize($category->name ?? '');
 
-                            return ($productCodeNorm !== '' && $categoryCodeNorm === $productCodeNorm)
+                            return ($productLineNorm !== '' && ($categoryNameNorm === $productLineNorm || str_contains($categoryNameNorm, $productLineNorm) || str_contains($productLineNorm, $categoryNameNorm)))
+                                || ($productCodeNorm !== '' && $categoryCodeNorm === $productCodeNorm)
                                 || ($productNameNorm !== '' && $categoryNameNorm === $productNameNorm);
                         });
                     }
@@ -1423,26 +1425,27 @@ class CostingController extends Controller
 
             $basePayload = $request->only($fillableRequestFields);
 
+            // Parse numeric fields properly, removing formatting
             if (array_key_exists('material_cost', $basePayload)) {
-                $basePayload['material_cost'] = $validated['material_cost'] ?? 0;
+                $basePayload['material_cost'] = $this->parseNumericInput($validated['material_cost'] ?? 0);
             }
 
             if (array_key_exists('labor_cost', $basePayload)) {
-                $basePayload['labor_cost'] = $validated['labor_cost'] ?? 0;
+                $basePayload['labor_cost'] = $this->parseNumericInput($validated['labor_cost'] ?? 0);
             }
 
             if (array_key_exists('overhead_cost', $basePayload)) {
-                $basePayload['overhead_cost'] = $validated['overhead_cost'] ?? 0;
+                $basePayload['overhead_cost'] = $this->parseNumericInput($validated['overhead_cost'] ?? 0);
             }
 
             if (array_key_exists('scrap_cost', $basePayload)) {
-                $basePayload['scrap_cost'] = $validated['scrap_cost'] ?? 0;
+                $basePayload['scrap_cost'] = $this->parseNumericInput($validated['scrap_cost'] ?? 0);
             }
 
             $sectionPayloadMap = [
                 'informasi_project' => ['customer_id', 'tracking_revision_id', 'period', 'line', 'model', 'assy_no', 'assy_name', 'forecast', 'project_period'],
                 'rates' => ['exchange_rate_usd', 'exchange_rate_jpy', 'lme_rate', 'tracking_revision_id'],
-                'material' => ['forecast', 'project_period', 'tracking_revision_id'],
+                'material' => ['forecast', 'project_period', 'material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'tracking_revision_id'],
                 'unpriced_parts' => ['tracking_revision_id'],
                 'cycle_time' => ['cycle_times', 'tracking_revision_id'],
                 'resume_cogm' => ['material_cost', 'labor_cost', 'overhead_cost', 'scrap_cost', 'revenue', 'qty_good', 'tracking_revision_id'],
@@ -1527,7 +1530,9 @@ class CostingController extends Controller
                         ? strtolower($partNumber)
                         : ('__row_' . strtolower($rowNo !== '' ? $rowNo : (string) $rowIndex));
                     $partNameInput = trim((string) ($matData['part_name'] ?? ''));
-                    $qtyReq = floatval($matData['qty_req'] ?? 0);
+                    $qtyReqRaw = intval(round(floatval($matData['qty_req'] ?? 0)));
+                    // Keep qty_req in a practical range to avoid exploding totals from malformed input.
+                    $qtyReq = max(1, min(1000, $qtyReqRaw));
                     $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
                     $unitPriceBasisNumeric = $this->toFloatValue($unitPriceBasisRaw);
                     $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
@@ -1552,6 +1557,9 @@ class CostingController extends Controller
                     if ($qtyMoqRaw === '' && $masterMaterial?->moq !== null) {
                         $moq = floatval($masterMaterial->moq);
                     }
+                    // Bound MOQ to a realistic range relative to qty requirement.
+                    $maxMoq = max(1000, $qtyReq * 20);
+                    $moq = max((float) $qtyReq, min($maxMoq, $moq));
 
                     $cnType = strtoupper(trim((string) ($matData['cn_type'] ?? '')));
                     if (!in_array($cnType, ['C', 'N', 'E'], true)) {
@@ -1799,6 +1807,22 @@ class CostingController extends Controller
             if ($trackingRevisionId && in_array($updateSection, ['', 'resume_cogm'], true)) {
                 DocumentRevision::whereKey($trackingRevisionId)->update([
                     'status' => DocumentRevision::STATUS_SUDAH_COSTING,
+                ]);
+            }
+
+            // Keep database costing total aligned with Material section table total.
+            if ($shouldProcessMaterials) {
+                $materialCostFromRequest = $this->parseNumericInput($request->input('material_cost', 0));
+                $materialCost = $materialCostFromRequest > 0
+                    ? $materialCostFromRequest
+                    : $this->calculateMaterialCostFromBreakdowns(
+                    (int) $costingData->id,
+                    (float) ($costingData->exchange_rate_usd ?? 15500),
+                    (float) ($costingData->exchange_rate_jpy ?? 103)
+                );
+
+                $costingData->update([
+                    'material_cost' => $materialCost,
                 ]);
             }
 
@@ -2179,7 +2203,7 @@ class CostingController extends Controller
             $partKey = strtolower($partNo);
             $partName = trim((string) ($matData['part_name'] ?? ''));
 
-            $qtyReq = floatval($matData['qty_req'] ?? 0);
+            $qtyReq = intval(round(floatval($matData['qty_req'] ?? 0)));
             $amount1 = $this->toFloatValue($matData['amount1'] ?? 0);
             $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
             $unitPriceBasis = $this->toFloatValue($unitPriceBasisRaw);
@@ -2590,7 +2614,7 @@ class CostingController extends Controller
                 $partNo = $idCode;
             }
 
-            $qtyReq = $this->toFloatValue($qtyRaw);
+            $qtyReq = intval(round($this->toFloatValue($qtyRaw)));
             $hasRowNumber = $this->hasPartlistRowNumber($rowNo);
 
             $isRowEmpty = ($partNo === '' || $partNo === '-')
@@ -2680,7 +2704,7 @@ class CostingController extends Controller
             }
 
             $partName = trim((string) $this->rowCellValue($rowValues, $headerMap, 'part_name'));
-            $qtyReq = $this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'qty_req'));
+            $qtyReq = intval(round($this->toFloatValue($this->rowCellValue($rowValues, $headerMap, 'qty_req'))));
 
             if (($partNo === '' || $partNo === '-') && ($idCode === '' || $idCode === '-') && $partName === '' && $qtyReq <= 0) {
                 continue;
@@ -2795,7 +2819,7 @@ class CostingController extends Controller
             $partName = trim((string) ($rowValues[$headerMap['part_name']] ?? ''));
             $partNoUpper = strtoupper($partNo);
             $idCodeUpper = strtoupper($idCode);
-            $qtyReq = $this->toFloatValue($rowValues[$headerMap['qty_req']] ?? '');
+            $qtyReq = intval(round($this->toFloatValue($rowValues[$headerMap['qty_req']] ?? '')));
             $hasRowNumber = $this->hasPartlistRowNumber($rowNo);
 
             $isRowEmpty = ($partNo === '' || $partNo === '-')
@@ -2967,6 +2991,37 @@ class CostingController extends Controller
         }
 
         return is_numeric($normalized) ? (float) $normalized : 0;
+    }
+
+    private function parseNumericInput($value): float
+    {
+        return $this->toFloatValue($value);
+    }
+
+    private function calculateMaterialCostFromBreakdowns(int $costingDataId, float $usdRate, float $jpyRate): float
+    {
+        $usdRate = $usdRate > 0 ? $usdRate : 15500;
+        $jpyRate = $jpyRate > 0 ? $jpyRate : 103;
+
+        $rows = MaterialBreakdown::where('costing_data_id', $costingDataId)
+            ->get(['qty_req', 'amount2', 'currency']);
+
+        $total = 0.0;
+        foreach ($rows as $row) {
+            $qtyReq = max(0.0, (float) ($row->qty_req ?? 0));
+            $amount2 = max(0.0, (float) ($row->amount2 ?? 0));
+            $currency = strtoupper(trim((string) ($row->currency ?? 'IDR')));
+
+            $rate = match ($currency) {
+                'USD' => $usdRate,
+                'JPY' => $jpyRate,
+                default => 1.0,
+            };
+
+            $total += $qtyReq * $amount2 * $rate;
+        }
+
+        return round($total, 4);
     }
 
     private function uploadErrorCodeToMessage(int $errorCode): string

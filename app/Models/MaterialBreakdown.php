@@ -30,6 +30,10 @@ class MaterialBreakdown extends Model
         'unit_price2',
     ];
 
+    protected $casts = [
+        'qty_req' => 'integer',
+    ];
+
     public function costingData()
     {
         return $this->belongsTo(CostingData::class);
