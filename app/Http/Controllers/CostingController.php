@@ -2121,6 +2121,11 @@ class CostingController extends Controller
                     }
 
                     $resolvedPartNameForRecap = $partNameInput;
+                    // Wire/tube parts: kosongkan part_name (belum ada database tube)
+                    $upperPartName = strtoupper(trim($resolvedPartNameForRecap));
+                    if (in_array($upperPartName, ['WIRE', 'TUBE']) || str_contains($upperPartName, 'PENGIKAT WIRE')) {
+                        $resolvedPartNameForRecap = '';
+                    }
 
                     // Re-calculate logic (replicating JS logic for safety)
                     $unit = strtoupper($resolvedUnit);
@@ -2753,8 +2758,13 @@ class CostingController extends Controller
             }
 
             $partName = trim((string) ($row->part_name ?? ''));
+            // Wire/tube parts: kosongkan part_name
+            $upperPN = strtoupper($partName);
+            if (in_array($upperPN, ['WIRE', 'TUBE']) || str_contains($upperPN, 'PENGIKAT WIRE')) {
+                $partName = '';
+            }
             if ($partName === '' || $partName === '-') {
-                $partName = $partNumber;
+                $partName = '';
             }
 
             $partKey = strtolower($partNumber);
@@ -2798,8 +2808,13 @@ class CostingController extends Controller
 
             $partKey = strtolower($partNo);
             $partName = trim((string) ($matData['part_name'] ?? ''));
+            // Wire/tube parts: kosongkan part_name
+            $upperPN = strtoupper($partName);
+            if (in_array($upperPN, ['WIRE', 'TUBE']) || str_contains($upperPN, 'PENGIKAT WIRE')) {
+                $partName = '';
+            }
             if ($partName === '' || $partName === '-') {
-                $partName = $partNo;
+                $partName = '';
             }
 
             $qtyReq = intval(round(floatval($matData['qty_req'] ?? 0)));
