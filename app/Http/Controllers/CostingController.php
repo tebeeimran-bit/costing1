@@ -229,7 +229,7 @@ class CostingController extends Controller
             [
                 'label' => 'A04 (Canceled/Failed)',
                 'count' => $a04ProjectCount,
-                'color' => '#f97316',
+                'color' => '#dc2626',
             ],
             [
                 'label' => 'A05 (Die Go/Berhasil)',
@@ -302,17 +302,22 @@ class CostingController extends Controller
             })
             ->values();
 
-        $monthlySubmitCounts = $submitPeriodCandidates->map(function ($submitPeriod) use ($submitScope) {
+        // Batch-fetch all monthly submit counts in one query.
+        $submitRangeStart = \Carbon\Carbon::createFromFormat('Y-m', (string) $submitPeriodCandidates->first())->startOfMonth();
+        $submitRangeEnd   = \Carbon\Carbon::createFromFormat('Y-m', (string) $submitPeriodCandidates->last())->endOfMonth();
+        $batchedSubmitCounts = (clone $submitScope)
+            ->whereBetween('submitted_at', [$submitRangeStart, $submitRangeEnd])
+            ->selectRaw("DATE_FORMAT(submitted_at, '%Y-%m') as ym, COUNT(*) as cnt")
+            ->groupByRaw("DATE_FORMAT(submitted_at, '%Y-%m')")
+            ->pluck('cnt', 'ym');
+
+        $monthlySubmitCounts = $submitPeriodCandidates->map(function ($submitPeriod) use ($batchedSubmitCounts) {
             $monthStart = \Carbon\Carbon::createFromFormat('Y-m', (string) $submitPeriod)->startOfMonth();
-            $monthEnd = $monthStart->copy()->endOfMonth();
-            $count = (clone $submitScope)
-                ->whereBetween('submitted_at', [$monthStart, $monthEnd])
-                ->count();
 
             return [
                 'period' => $submitPeriod,
                 'period_label' => $monthStart->format('M y'),
-                'count' => $count,
+                'count' => (int) ($batchedSubmitCounts->get($submitPeriod, 0)),
             ];
         })->values();
 
@@ -385,7 +390,7 @@ class CostingController extends Controller
             [
                 'label' => 'A04 (Canceled/Failed)',
                 'count' => $a04ProjectCount,
-                'color' => '#f97316',
+                'color' => '#dc2626',
             ],
             [
                 'label' => 'A05 (Die Go/Berhasil)',
@@ -408,13 +413,14 @@ class CostingController extends Controller
 
         $pieSegments = [];
         $pieStartAngle = 0.0;
+        $pieStatusSum = $a00ProjectCount + $a04ProjectCount + $a05ProjectCount;
         foreach ($statusProjectData as $statusItem) {
             $count = (int) ($statusItem['count'] ?? 0);
-            if ($count <= 0 || $statusProjectTotal <= 0) {
+            if ($count <= 0 || $pieStatusSum <= 0) {
                 continue;
             }
 
-            $sliceAngle = ($count / $statusProjectTotal) * 360;
+            $sliceAngle = ($count / $pieStatusSum) * 360;
             $pieEndAngle = $pieStartAngle + $sliceAngle;
             $pieSegments[] = $statusItem['color']
                 . ' '
@@ -428,11 +434,6 @@ class CostingController extends Controller
         if (empty($pieSegments)) {
             $statusProjectPieGradient = 'conic-gradient(#e2e8f0 0deg 360deg)';
         } else {
-            if ($pieStartAngle < 360) {
-                $pieSegments[] = '#e2e8f0 '
-                    . number_format($pieStartAngle, 2, '.', '')
-                    . 'deg 360deg';
-            }
             $statusProjectPieGradient = 'conic-gradient(' . implode(', ', $pieSegments) . ')';
         }
 
@@ -489,11 +490,16 @@ class CostingController extends Controller
             ->reverse()
             ->values();
 
-        $trendScope = CostingData::query();
+        // Batch-fetch all trend periods in a single query instead of N separate ones.
+        $trendScope = CostingData::query()->with('product');
         $applyFilters($trendScope);
+        $allTrendItems = $trendScope
+            ->whereIn('period', $trendPeriodCandidates->all())
+            ->get();
+        $allTrendByPeriod = $allTrendItems->groupBy('period');
 
-        $trendData = $trendPeriodCandidates->map(function ($trendPeriod) use ($trendScope, $resolvePotentialSales) {
-            $items = (clone $trendScope)->where('period', $trendPeriod)->get();
+        $trendData = $trendPeriodCandidates->map(function ($trendPeriod) use ($allTrendByPeriod, $resolvePotentialSales) {
+            $items = $allTrendByPeriod->get($trendPeriod, collect());
             $totalPotentialSalesPerPeriod = $items->sum(function ($row) use ($resolvePotentialSales) {
                 return $resolvePotentialSales($row);
             });
@@ -512,11 +518,8 @@ class CostingController extends Controller
 
         $maxTrendCost = $trendData->max('potential_sales') ?: 1;
 
-        $monthlyProductCounts = $trendPeriodCandidates->map(function ($trendPeriod) use ($trendScope, $resolveAssyLabel) {
-            $items = (clone $trendScope)
-                ->with('product')
-                ->where('period', $trendPeriod)
-                ->get();
+        $monthlyProductCounts = $trendPeriodCandidates->map(function ($trendPeriod) use ($allTrendByPeriod, $resolveAssyLabel) {
+            $items = $allTrendByPeriod->get($trendPeriod, collect());
 
             $count = $items
                 ->map(function ($row) use ($resolveAssyLabel) {
@@ -1308,6 +1311,12 @@ class CostingController extends Controller
         $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
         $wireRates = WireRate::orderBy('period_month', 'asc')->orderBy('id', 'asc')->get();
+
+        // Merge wire rate periods into available periods
+        $wireRatePeriods = $wireRates
+            ->filter(fn ($r) => $r->period_month)
+            ->map(fn ($r) => $r->period_month->format('Y-m'));
+        $periods = $periods->merge($wireRatePeriods)->unique()->sortDesc()->values();
         $selectedWireRateId = (int) session('wire_selected_rate_id', 0);
 
         if ($selectedWireRateId <= 0 && $wireRates->isNotEmpty()) {
@@ -1341,75 +1350,108 @@ class CostingController extends Controller
             if ($trackingRevision) {
                 $openUnpricedParts = UnpricedPart::where('document_revision_id', $trackingRevision->id)
                     ->whereNull('resolved_at')
-                    ->whereNotNull('part_name')
-                    ->where('part_name', '!=', '')
                     ->orderBy('part_number')
                     ->get()
-                    ->map(function ($item) {
-                        $partNumber = trim((string) ($item->part_number ?? ''));
-                        $partName = trim((string) ($item->part_name ?? ''));
+                    ->unique('part_number');
 
-                        $matchedMaterials = collect();
-                        if ($partNumber !== '' && $partNumber !== '-') {
-                            $matchedMaterials = Material::query()
-                                ->where(function ($query) {
-                                    $query->whereNull('material_code')
-                                        ->orWhere('material_code', 'not like', '__ROW_%');
-                                })
-                                ->whereNotNull('material_description')
-                                ->where('material_description', '!=', '')
-                                ->whereRaw('LOWER(material_description) = ?', [Str::lower($partNumber)])
-                                ->orderBy('material_code')
-                                ->get();
+                // Pre-load all materials & wires once (2 queries total instead of N*8)
+                $allMaterials = Material::query()
+                    ->where(function ($q) {
+                        $q->whereNull('material_code')->orWhere('material_code', 'not like', '__ROW_%');
+                    })
+                    ->whereNotNull('material_description')
+                    ->where('material_description', '!=', '')
+                    ->orderBy('material_code')
+                    ->get();
+                $allWires = Wire::all();
+
+                // Build lookup indexes in memory
+                $matByDescExact = $allMaterials->groupBy(fn ($m) => Str::lower($m->material_description));
+                $wireByItemLower = $allWires->groupBy(fn ($w) => Str::lower($w->item));
+                $wireByIdcodeLower = $allWires->groupBy(fn ($w) => Str::lower($w->idcode));
+
+                $openUnpricedParts = $openUnpricedParts->map(function ($item) use ($allMaterials, $allWires, $matByDescExact, $wireByItemLower, $wireByIdcodeLower) {
+                    $partNumber = trim((string) ($item->part_number ?? ''));
+                    $partName = trim((string) ($item->part_name ?? ''));
+
+                    $matchedMaterials = collect();
+
+                    $searchTerms = array_filter([$partNumber, $partName], fn ($v) => $v !== '' && $v !== '-');
+
+                    foreach ($searchTerms as $term) {
+                        $lower = Str::lower($term);
+
+                        // 1) Exact match
+                        $matchedMaterials = $matByDescExact->get($lower, collect());
+
+                        // 2) Suffix match (e.g. "604152-0" matches "TERM 604152-0")
+                        if ($matchedMaterials->isEmpty()) {
+                            $suffix = ' ' . $lower;
+                            $matchedMaterials = $allMaterials->filter(fn ($m) => Str::endsWith(Str::lower($m->material_description), $suffix))->values();
                         }
 
-                        if ($matchedMaterials->isEmpty() && $partName !== '' && $partName !== '-') {
-                            $matchedMaterials = Material::query()
-                                ->where(function ($query) {
-                                    $query->whereNull('material_code')
-                                        ->orWhere('material_code', 'not like', '__ROW_%');
-                                })
-                                ->whereNotNull('material_description')
-                                ->where('material_description', '!=', '')
-                                ->whereRaw('LOWER(material_description) = ?', [Str::lower($partName)])
-                                ->orderBy('material_code')
-                                ->get();
+                        // 3) Contains match
+                        if ($matchedMaterials->isEmpty()) {
+                            $matchedMaterials = $allMaterials->filter(fn ($m) => str_contains(Str::lower($m->material_description), $lower))->values();
                         }
 
-                        $item->matched_materials = $matchedMaterials;
+                        if ($matchedMaterials->isNotEmpty()) break;
+                    }
 
-                        $firstMatched = $matchedMaterials->first();
-                        if ($firstMatched) {
-                            $item->matched_material_description = $firstMatched->material_description;
-                            $item->matched_price = $firstMatched->price;
-                            $item->matched_purchase_unit = $firstMatched->purchase_unit;
-                            $item->matched_currency = $firstMatched->currency;
-                            $item->matched_moq = $firstMatched->moq;
-                            $item->matched_cn = $firstMatched->cn;
-                            $item->matched_maker = $firstMatched->maker;
-                            $item->matched_add_cost_import_tax = $firstMatched->add_cost_import_tax;
-                            $item->matched_price_update = $firstMatched->price_update;
-                            $item->matched_price_before = $firstMatched->price_before;
+                    $item->matched_materials = $matchedMaterials;
+
+                    $firstMatched = $matchedMaterials->first();
+                    if ($firstMatched) {
+                        $item->matched_material_description = $firstMatched->material_description;
+                        $item->matched_price = $firstMatched->price;
+                        $item->matched_purchase_unit = $firstMatched->purchase_unit;
+                        $item->matched_currency = $firstMatched->currency;
+                        $item->matched_moq = $firstMatched->moq;
+                        $item->matched_cn = $firstMatched->cn;
+                        $item->matched_maker = $firstMatched->maker;
+                        $item->matched_add_cost_import_tax = $firstMatched->add_cost_import_tax;
+                        $item->matched_price_update = $firstMatched->price_update;
+                        $item->matched_price_before = $firstMatched->price_before;
+                    }
+
+                    // Wire matching (in-memory)
+                    $item->matched_wires = collect();
+                    foreach ($searchTerms as $term) {
+                        $lower = Str::lower($term);
+
+                        // Exact match on item or idcode
+                        $wires = $wireByItemLower->get($lower, collect());
+                        if ($wires->isEmpty()) $wires = $wireByIdcodeLower->get($lower, collect());
+
+                        // Prefix match (e.g., "AVSS 0.5 B" starts with wire item "AVSS 0.5")
+                        if ($wires->isEmpty()) {
+                            $wires = $allWires->filter(function ($w) use ($lower) {
+                                $wItem = Str::lower($w->item);
+                                return $wItem !== '' && (
+                                    str_starts_with($lower, $wItem . ' ') ||
+                                    str_starts_with($lower, $wItem)
+                                );
+                            })->values();
                         }
 
-                        // Lookup wire prices
-                        $item->matched_wires = collect();
-                        if ($partNumber !== '' && $partNumber !== '-') {
-                            $item->matched_wires = Wire::query()
-                                ->whereRaw('LOWER(item) = ?', [Str::lower($partNumber)])
-                                ->orWhereRaw('LOWER(idcode) = ?', [Str::lower($partNumber)])
-                                ->get();
+                        if ($wires->isNotEmpty()) {
+                            $item->matched_wires = $wires;
+                            break;
                         }
+                    }
 
-                        if ($item->matched_wires->isEmpty() && $partName !== '' && $partName !== '-') {
-                            $item->matched_wires = Wire::query()
-                                ->whereRaw('LOWER(item) = ?', [Str::lower($partName)])
-                                ->orWhereRaw('LOWER(idcode) = ?', [Str::lower($partName)])
-                                ->get();
-                        }
+                    // Fallback: populate matched fields from wire data when no material match
+                    if ($matchedMaterials->isEmpty() && $item->matched_wires->isNotEmpty()) {
+                        $firstWire = $item->matched_wires->first();
+                        $item->matched_material_description = 'WIRE ' . $firstWire->item;
+                        $item->matched_price = $firstWire->price;
+                        $item->matched_currency = 'IDR';
+                        $item->matched_wire_idcode = $firstWire->idcode;
+                        $item->matched_source = 'wire';
+                    }
 
-                        return $item;
-                    });
+                    return $item;
+                });
 
                 $project = $trackingRevision->project;
                 if ($project) {
@@ -1513,11 +1555,27 @@ class CostingController extends Controller
             }
         }
 
+        // Slim down materials JSON for the JS lookup (only needed fields)
+        $materialsSlim = $materials->map(function ($m) {
+            return [
+                'material_code' => $m->material_code,
+                'material_description' => $m->material_description,
+                'base_uom' => $m->base_uom,
+                'currency' => $m->currency,
+                'price' => $m->price,
+                'moq' => $m->moq,
+                'cn' => $m->cn,
+                'maker' => $m->maker,
+                'add_cost_import_tax' => $m->add_cost_import_tax,
+            ];
+        })->values();
+
         return view('form', compact(
             'products',
             'businessCategories',
             'customers',
             'materials',
+            'materialsSlim',
             'cycleTimeTemplates',
             'plants',
             'periods',
@@ -1889,6 +1947,15 @@ class CostingController extends Controller
                     $costingData->update($payload);
                 }
             } else {
+                // When creating new costing data from a section update, merge all available base fields
+                $payload = array_merge($basePayload, $payload);
+                if ($trackingRevisionId) {
+                    $payload['tracking_revision_id'] = $trackingRevisionId;
+                }
+                if ($productId) {
+                    $payload['product_id'] = $productId;
+                }
+
                 $requiredOnCreate = ['product_id', 'customer_id', 'period'];
                 foreach ($requiredOnCreate as $requiredField) {
                     if (!array_key_exists($requiredField, $payload) || $payload[$requiredField] === null || $payload[$requiredField] === '') {
@@ -1923,9 +1990,12 @@ class CostingController extends Controller
             $hasMaterialPayload = $request->has('materials') || !empty($importedMaterialRows);
             $shouldProcessMaterials = $updateSection === '' || $updateSection === 'material';
             $shouldProcessUnpricedOnly = $updateSection === 'unpriced_parts';
-            // Keep existing material rows when material payload is missing, to avoid accidental data loss.
+            // When the material section is explicitly submitted, always sync — even if
+            // the payload is empty (user deleted all rows).  Only skip when the section
+            // was NOT the one being updated and no material data arrived (prevents
+            // accidental data loss from other section updates).
             $shouldSyncMaterialBreakdowns = $shouldProcessMaterials
-                && $hasMaterialPayload;
+                && ($hasMaterialPayload || $updateSection === 'material');
 
             if ($shouldSyncMaterialBreakdowns) {
                 MaterialBreakdown::where('costing_data_id', $costingData->id)->delete();
@@ -1935,7 +2005,30 @@ class CostingController extends Controller
                 ? $importedMaterialRows
                 : $request->input('materials', []);
 
+            // Pre-load all master materials in one query to avoid N+1 (was ~800 queries for 400 rows)
+            $masterMaterialsCache = null;
+            if ($shouldSyncMaterialBreakdowns && is_array($materialsInput) && count($materialsInput) > 0) {
+                $lookupCodes = [];
+                foreach ($materialsInput as $matData) {
+                    $p = trim((string) ($matData['part_no'] ?? ''));
+                    $i = trim((string) ($matData['id_code'] ?? ''));
+                    if ($p !== '' && $p !== '-') $lookupCodes[] = Str::lower($p);
+                    if ($i !== '' && $i !== '-') $lookupCodes[] = Str::lower($i);
+                }
+                $lookupCodes = array_values(array_unique($lookupCodes));
+
+                if (!empty($lookupCodes)) {
+                    $masterMaterialsCache = $this->validMasterMaterialsQuery()
+                        ->whereRaw('LOWER(material_code) IN (' . implode(',', array_fill(0, count($lookupCodes), '?')) . ')', $lookupCodes)
+                        ->get()
+                        ->keyBy(fn ($m) => Str::lower($m->material_code));
+                } else {
+                    $masterMaterialsCache = collect();
+                }
+            }
+
             if ($shouldSyncMaterialBreakdowns && is_array($materialsInput)) {
+                $pendingBreakdowns = [];
                 foreach ($materialsInput as $rowIndex => $matData) {
                     $rowNo = trim((string) ($matData['row_no'] ?? ''));
                     $rowPartNo = trim((string) ($matData['part_no'] ?? ''));
@@ -1944,7 +2037,7 @@ class CostingController extends Controller
                     $normalizedRowIdCode = ($rowIdCode === '-' ? '' : $rowIdCode);
                     $partNumber = $normalizedRowPartNo;
 
-                    $masterMaterial = $this->findMasterMaterial($rowPartNo, $rowIdCode);
+                    $masterMaterial = $this->findMasterMaterialFromCache($masterMaterialsCache, $rowPartNo, $rowIdCode);
                     $materialCode = '__ROW_' . $costingData->id . '_' . $rowIndex;
 
                     $partKey = $partNumber !== ''
@@ -1978,9 +2071,11 @@ class CostingController extends Controller
                     if ($qtyMoqRaw === '' && $masterMaterial?->moq !== null) {
                         $moq = floatval($masterMaterial->moq);
                     }
-                    // Bound MOQ to a realistic range relative to qty requirement.
-                    $maxMoq = max(1000, $qtyReq * 20);
-                    $moq = max((float) $qtyReq, min($maxMoq, $moq));
+                    // Only bound MOQ when it has been explicitly set (non-zero)
+                    if ($moq > 0) {
+                        $maxMoq = max(1000, $qtyReq * 20);
+                        $moq = max((float) $qtyReq, min($maxMoq, $moq));
+                    }
 
                     $cnType = strtoupper(trim((string) ($matData['cn_type'] ?? '')));
                     if (!in_array($cnType, ['C', 'N', 'E'], true)) {
@@ -2002,25 +2097,26 @@ class CostingController extends Controller
 
                     $material = $masterMaterial;
                     if (!$material) {
-                        $material = Material::firstOrCreate(
-                            ['material_code' => $materialCode],
-                            [
-                                'material_description' => $partNameInput !== '' ? $partNameInput : null,
-                                'base_uom' => $resolvedUnit,
-                                'maker' => $resolvedSupplier !== '' ? $resolvedSupplier : null,
-                                'currency' => $resolvedCurrency,
-                                'price' => 0,
-                            ]
-                        );
+                        if (!isset($placeholderMaterial)) {
+                            $placeholderMaterial = Material::firstOrCreate(
+                                ['material_code' => '__PLACEHOLDER__'],
+                                [
+                                    'material_description' => null,
+                                    'base_uom' => 'PCS',
+                                    'currency' => 'IDR',
+                                    'price' => 0,
+                                ]
+                            );
+                        }
+                        $material = $placeholderMaterial;
                     }
 
-                    // Keep Unit editable per current save flow: if user changes unit in material section,
-                    // persist it so rendered rows stay consistent after update/refresh.
-                    if ($material && $resolvedUnit !== '' && $resolvedUnit !== '-') {
-                        $currentBaseUom = strtoupper(trim((string) ($material->base_uom ?? '')));
+                    // Only update base_uom on actual master material records (not placeholder)
+                    if ($masterMaterial && $resolvedUnit !== '' && $resolvedUnit !== '-') {
+                        $currentBaseUom = strtoupper(trim((string) ($masterMaterial->base_uom ?? '')));
                         if ($currentBaseUom !== $resolvedUnit) {
-                            $material->base_uom = $resolvedUnit;
-                            $material->save();
+                            $masterMaterial->base_uom = $resolvedUnit;
+                            $masterMaterial->save();
                         }
                     }
 
@@ -2048,7 +2144,7 @@ class CostingController extends Controller
                     $unitDivisor2 = in_array(strtoupper($unit), ['METER', 'M', 'MTR', 'MM']) ? 1000 : 1;
                     $amount2 = ($unitDivisor2 != 0) ? ($numerator / $unitDivisor2) : 0;
 
-                    MaterialBreakdown::create([
+                    $pendingBreakdowns[] = [
                         'costing_data_id' => $costingData->id,
                         'material_id' => $material->id,
                         'row_no' => $rowNo !== '' ? $rowNo : null,
@@ -2066,8 +2162,10 @@ class CostingController extends Controller
                         'import_tax_percent' => $importTax,
                         'amount2' => $amount2,
                         'currency2' => $resolvedCurrency,
-                        'unit_price2' => $amount2, // Saving calculated amount2 as unit_price2 default
-                    ]);
+                        'unit_price2' => $amount2,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
 
                     $rowAmount1 = $priceBase;
                     $rowBasisPrice = $unitPriceBasisNumeric;
@@ -2096,6 +2194,13 @@ class CostingController extends Controller
 
                     if ($manualPrice > 0) {
                         $partAggregation[$partKey]['manual_price'] = $manualPrice;
+                    }
+                }
+
+                // Batch insert all material breakdowns in chunks (was 400 individual INSERTs)
+                if (!empty($pendingBreakdowns)) {
+                    foreach (array_chunk($pendingBreakdowns, 100) as $chunk) {
+                        MaterialBreakdown::insert($chunk);
                     }
                 }
             }
@@ -2269,6 +2374,7 @@ class CostingController extends Controller
 
             if ($importFromPartlist) {
                 $successMessage = 'Partlist berhasil diimport ke Material (' . count($importedMaterialRows) . ' baris).';
+                session()->flash('just_imported_partlist', true);
             } elseif ($importFromCycleTime) {
                 $successMessage = 'Cycle Time berhasil diimport (' . count($importedCycleTimeRows) . ' baris).';
             }
@@ -2281,9 +2387,33 @@ class CostingController extends Controller
 
             session()->flash('success', $successMessage);
 
+            // AJAX requests get a small JSON response instead of the full form page
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $successMessage,
+                    'redirect' => $redirectUrl,
+                ]);
+            }
+
             return response('', 302, ['Location' => $redirectUrl]);
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('CostingController@store error', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+                'update_section' => $updateSection,
+            ]);
+
+            if ($request->expectsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+                ], 500);
+            }
+
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage())->withInput();
         }
     }
@@ -2295,7 +2425,43 @@ class CostingController extends Controller
             'import_partlist' => 1,
         ]);
 
-        return $this->store($request);
+        $response = $this->store($request);
+
+        // Instead of redirecting to the full form (4.4MB HTML), return a tiny
+        // HTML page that redirects via JS. This prevents dev tunnel 502 timeout.
+        $errorMsg = session('error') ?: session('warning');
+        $successMsg = session('success');
+
+        $redirect = null;
+        if ($response instanceof \Illuminate\Http\RedirectResponse) {
+            $redirect = $response->getTargetUrl();
+        } elseif ($response->getStatusCode() === 302) {
+            $redirect = $response->headers->get('Location');
+        }
+
+        if ($errorMsg) {
+            // On error, redirect back to form with error message preserved in session
+            $redirect = $redirect ?: url()->previous();
+            return response(
+                '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' .
+                '<script>window.location.replace(' . json_encode($redirect) . ');</script>' .
+                '</body></html>',
+                200,
+                ['Content-Type' => 'text/html']
+            );
+        }
+
+        $redirect = $redirect ?: route('form', [], false);
+        // Preserve session flash data for the next request
+        session()->reflash();
+
+        return response(
+            '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>' .
+            '<script>window.location.replace(' . json_encode($redirect) . ');</script>' .
+            '</body></html>',
+            200,
+            ['Content-Type' => 'text/html']
+        );
     }
 
     public function importCycleTime(Request $request)
@@ -2373,6 +2539,8 @@ class CostingController extends Controller
 
     private function loadPartlistMaterialRows(?int $trackingRevisionId, $uploadedPartlistFile = null): array
     {
+        set_time_limit(180);
+
         $sourcePath = null;
         $extension = '';
 
@@ -2427,6 +2595,8 @@ class CostingController extends Controller
 
     private function loadCycleTimeRows($uploadedCycleTimeFile): array
     {
+        set_time_limit(180);
+
         if (!$uploadedCycleTimeFile) {
             return ['rows' => [], 'error' => 'File Cycle Time belum dipilih.'];
         }
@@ -2461,7 +2631,9 @@ class CostingController extends Controller
             throw new \RuntimeException('Parser PhpSpreadsheet tidak tersedia.');
         }
 
-        $spreadsheet = IOFactory::load($filePath);
+        $reader = IOFactory::createReaderForFile($filePath);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($filePath);
         $bestCycleTimes = [];
 
         foreach ($spreadsheet->getAllSheets() as $sheet) {
@@ -2581,6 +2753,9 @@ class CostingController extends Controller
             }
 
             $partName = trim((string) ($row->part_name ?? ''));
+            if ($partName === '' || $partName === '-') {
+                $partName = $partNumber;
+            }
 
             $partKey = strtolower($partNumber);
             $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
@@ -2623,6 +2798,9 @@ class CostingController extends Controller
 
             $partKey = strtolower($partNo);
             $partName = trim((string) ($matData['part_name'] ?? ''));
+            if ($partName === '' || $partName === '-') {
+                $partName = $partNo;
+            }
 
             $qtyReq = intval(round(floatval($matData['qty_req'] ?? 0)));
             $amount1 = $this->toFloatValue($matData['amount1'] ?? 0);
@@ -2813,7 +2991,9 @@ class CostingController extends Controller
     private function parsePartlistWithPhpSpreadsheet(string $filePath): array
     {
         try {
-            $spreadsheet = IOFactory::load($filePath);
+            $reader = IOFactory::createReaderForFile($filePath);
+            $reader->setReadDataOnly(true);
+            $spreadsheet = $reader->load($filePath);
         } catch (\Throwable $e) {
             return [];
         }
@@ -3543,6 +3723,30 @@ class CostingController extends Controller
             ->whereRaw('UPPER(material_code) NOT IN (' . implode(',', array_fill(0, count($skipCodes), '?')) . ')', $skipCodes);
     }
 
+    private function findMasterMaterialFromCache($cache, ?string $partNo, ?string $idCode): ?Material
+    {
+        if ($cache === null) {
+            return $this->findMasterMaterial($partNo, $idCode);
+        }
+
+        $partNo = trim((string) $partNo);
+        $idCode = trim((string) $idCode);
+
+        $candidates = array_values(array_unique(array_filter([$partNo, $idCode], function ($value) {
+            $normalized = trim((string) $value);
+            return $normalized !== '' && $normalized !== '-' && !$this->isMaterialMetaCode($normalized);
+        })));
+
+        foreach ($candidates as $code) {
+            $match = $cache->get(Str::lower($code));
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return null;
+    }
+
     private function findMasterMaterial(?string $partNo, ?string $idCode): ?Material
     {
         $partNo = trim((string) $partNo);
@@ -3593,5 +3797,21 @@ class CostingController extends Controller
     private function isMaterialMetaCode(string $code): bool
     {
         return in_array(strtoupper(trim($code)), $this->materialMetaSkipCodes(), true);
+    }
+
+    public function updateStatusProject(Request $request, $revisionId)
+    {
+        $request->validate(['status' => 'required|in:A00,A04,A05']);
+
+        $revision = DocumentRevision::findOrFail($revisionId);
+        $status = $request->input('status');
+
+        // Business rule: A04 and A05 are mutually exclusive; A00 must always be ada
+        $revision->a00 = 'ada';
+        $revision->a04 = ($status === 'A04') ? 'ada' : 'belum_ada';
+        $revision->a05 = ($status === 'A05') ? 'ada' : 'belum_ada';
+        $revision->save();
+
+        return response()->json(['success' => true, 'status' => $status]);
     }
 }

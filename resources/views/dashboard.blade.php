@@ -80,7 +80,7 @@
                 </svg>
             </div>
         </div>
-        <div class="kpi-card" style="background: #f97316;">
+        <div class="kpi-card" style="background: #dc2626;">
             <div class="kpi-label" style="color: white;">A04 (Canceled/Failed)</div>
             <div class="kpi-value" style="color: white;">{{ number_format($a04ProjectCount, 0, ',', '.') }}</div>
             <div class="kpi-icon" style="color: white;">
@@ -110,7 +110,7 @@
             </div>
             <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
                 <div style="position: relative; width: 180px; height: 180px; margin: 0 auto;">
-                    <div style="width: 180px; height: 180px; border-radius: 50%; background: {{ $statusProjectPieGradient }};"></div>
+                    <div style="width: 180px; height: 180px; border-radius: 50%; background: {{ $statusProjectPieGradient }}; animation: pie-spin-cw 0.9s cubic-bezier(0.25, 0.46, 0.45, 0.94) both; transform-origin: center;"></div>
                     <div style="position: absolute; inset: 34px; border-radius: 50%; background: white; display: flex; flex-direction: column; align-items: center; justify-content: center;">
                         <span style="font-size: 0.75rem; color: var(--slate-500);">Total</span>
                         <span style="font-size: 1.4rem; font-weight: 800; color: var(--slate-800);">{{ number_format($statusProjectTotal, 0, ',', '.') }}</span>
@@ -256,7 +256,7 @@
                                     </div>
                                 @endif
                                 @if($item['a04_count'] > 0)
-                                    <div style="width: {{ $a04Pct }}%; background: #f97316; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 700;">
+                                    <div style="width: {{ $a04Pct }}%; background: #dc2626; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.7rem; font-weight: 700;">
                                         {{ $item['a04_count'] }}
                                     </div>
                                 @endif
@@ -279,7 +279,7 @@
                     <span style="font-size: 0.85rem; color: var(--slate-600);">A00 (RFQ/RFI)</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="width: 16px; height: 16px; background: #f97316; border-radius: 3px;"></span>
+                    <span style="width: 16px; height: 16px; background: #dc2626; border-radius: 3px;"></span>
                     <span style="font-size: 0.85rem; color: var(--slate-600);">A04 (Canceled/Failed)</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
@@ -479,10 +479,25 @@
                         ])))) }}">
                             <td>{{ $index + 1 }}</td>
                             <td>
-                                <select class="status-project-select" onchange="updateStatusProjectDropdownColor(this)" style="border: 1px solid var(--slate-300); border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.78rem; font-weight: 700; color: #ffffff; background: #3b82f6; min-width: 170px;">
-                                    <option value="A00" {{ $statusProjectValue === 'A00' ? 'selected' : '' }}>A00 (RFQ/RFI)</option>
-                                    <option value="A04" {{ $statusProjectValue === 'A04' ? 'selected' : '' }}>A04 (Cancelled/Failed)</option>
-                                    <option value="A05" {{ $statusProjectValue === 'A05' ? 'selected' : '' }}>A05 (Die Go)</option>
+                                @php
+                                    $statusProjectColors = [
+                                        'A00' => '#2563eb',
+                                        'A04' => '#dc2626',
+                                        'A05' => '#16a34a',
+                                    ];
+                                    $statusProjectDisplayValue = in_array($statusProjectValue, ['A00', 'A04', 'A05'], true)
+                                        ? $statusProjectValue
+                                        : 'A00';
+                                    $statusProjectBgColor = $statusProjectColors[$statusProjectDisplayValue] ?? '#2563eb';
+                                @endphp
+                                <select class="status-project-select"
+                                    onchange="updateStatusProjectDropdownColor(this); saveStatusProject(this)"
+                                    data-revision-id="{{ $row->trackingRevision?->id ?? '' }}"
+                                    data-status-project-color="{{ $statusProjectBgColor }}"
+                                    style="border: 1px solid {{ $statusProjectBgColor }}; border-radius: 6px; padding: 0.3rem 0.5rem; font-size: 0.78rem; font-weight: 700; color: #ffffff; background: {{ $statusProjectBgColor }}; min-width: 170px;">
+                                    <option value="A00" {{ $statusProjectDisplayValue === 'A00' ? 'selected' : '' }} style="background: #2563eb; color: #fff; font-weight: 700;">A00 (RFQ/RFI)</option>
+                                    <option value="A04" {{ $statusProjectDisplayValue === 'A04' ? 'selected' : '' }} style="background: #dc2626; color: #fff; font-weight: 700;">A04 (Cancelled/Failed)</option>
+                                    <option value="A05" {{ $statusProjectDisplayValue === 'A05' ? 'selected' : '' }} style="background: #16a34a; color: #fff; font-weight: 700;">A05 (Die Go)</option>
                                 </select>
                             </td>
                             <td>{{ $row->product->line ?? $row->product->name ?? '-' }}</td>
@@ -716,6 +731,37 @@
         filterDetailCostingTable(false);
     }
 
+    function saveStatusProject(selectEl) {
+        const revisionId = selectEl.dataset.revisionId;
+        if (!revisionId) return;
+
+        const status = selectEl.value;
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content
+            || document.querySelector('input[name="_token"]')?.value || '';
+
+        selectEl.disabled = true;
+        fetch('/costing/status-project/' + revisionId, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ status: status }),
+        })
+        .then(function(res) {
+            if (!res.ok) throw new Error('Gagal menyimpan');
+            return res.json();
+        })
+        .then(function() {
+            selectEl.disabled = false;
+        })
+        .catch(function() {
+            selectEl.disabled = false;
+            alert('Gagal menyimpan status project. Silakan coba lagi.');
+        });
+    }
+
     function updateStatusProjectDropdownColor(selectEl) {
         if (!selectEl) {
             return;
@@ -723,15 +769,26 @@
 
         const statusColors = {
             A00: '#2563eb',
-            A04: '#f97316',
+            A04: '#dc2626',
             A05: '#16a34a',
         };
 
         const selectedValue = (selectEl.value || '').trim();
         const bgColor = statusColors[selectedValue] || '#64748b';
+        selectEl.dataset.statusProjectColor = bgColor;
         selectEl.style.backgroundColor = bgColor;
         selectEl.style.borderColor = bgColor;
         selectEl.style.color = '#ffffff';
+
+        // Ensure option colors stay applied
+        selectEl.querySelectorAll('option').forEach(function(opt) {
+            const optColor = statusColors[opt.value];
+            if (optColor) {
+                opt.style.backgroundColor = optColor;
+                opt.style.color = '#fff';
+                opt.style.fontWeight = '700';
+            }
+        });
     }
 
     function initializeStatusProjectDropdownColors() {

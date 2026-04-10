@@ -29,7 +29,7 @@ return new class extends Migration {
                 $table->string('base_uom')->default('PCS')->after('material_group');
             }
             if (!Schema::hasColumn('materials', 'price')) {
-                $table->decimal('price', 15, 2)->default(0)->after('base_uom');
+                $table->decimal('price', 20, 6)->default(0)->after('base_uom');
             }
             if (!Schema::hasColumn('materials', 'purchase_unit')) {
                 $table->string('purchase_unit')->nullable()->after('price');
@@ -38,7 +38,7 @@ return new class extends Migration {
                 $table->string('currency')->default('IDR')->after('purchase_unit');
             }
             if (!Schema::hasColumn('materials', 'moq')) {
-                $table->decimal('moq', 15, 2)->nullable()->after('currency');
+                $table->decimal('moq', 20, 6)->nullable()->after('currency');
             }
             if (!Schema::hasColumn('materials', 'cn')) {
                 $table->string('cn')->nullable()->after('moq');
@@ -53,7 +53,7 @@ return new class extends Migration {
                 $table->date('price_update')->nullable()->after('add_cost_import_tax');
             }
             if (!Schema::hasColumn('materials', 'price_before')) {
-                $table->decimal('price_before', 15, 2)->nullable()->after('price_update');
+                $table->decimal('price_before', 20, 6)->nullable()->after('price_update');
             }
         });
 

@@ -3,12 +3,37 @@
 use App\Http\Controllers\CostingController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\DocumentReceiptController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingDocumentController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [CostingController::class, 'dashboard'])->name('dashboard');
 Route::get('/compare-costing', [CostingController::class, 'compare'])->name('compare.costing');
 Route::get('/compare-costing/revisions-search', [CostingController::class, 'searchCompareRevisions'])->name('compare.costing.revisions-search');
+
+// Reports & Analysis
+Route::get('/resume-cogm', [ReportController::class, 'resumeCogm'])->name('resume-cogm');
+Route::get('/analisis-tren', [ReportController::class, 'analisisTren'])->name('analisis-tren');
+Route::get('/cogm-submissions', [ReportController::class, 'cogmSubmissions'])->name('cogm-submissions');
+Route::get('/laporan', [ReportController::class, 'laporan'])->name('laporan');
+Route::get('/audit-trail', [ReportController::class, 'auditTrail'])->name('audit-trail');
+
+// Database - Rate & Kurs
+Route::get('/database/rate-kurs', [ReportController::class, 'rateKurs'])->name('rate-kurs');
+Route::post('/database/rate-kurs', [ReportController::class, 'storeExchangeRate'])->name('rate-kurs.store');
+Route::delete('/database/rate-kurs/{id}', [ReportController::class, 'destroyExchangeRate'])->name('rate-kurs.destroy');
+
+// Database - Product
+Route::get('/database/products-manage', [ReportController::class, 'products'])->name('products.index');
+Route::post('/database/products-manage', [ReportController::class, 'storeProduct'])->name('products.store');
+Route::put('/database/products-manage/{id}', [ReportController::class, 'updateProduct'])->name('products.update');
+Route::delete('/database/products-manage/{id}', [ReportController::class, 'destroyProduct'])->name('products.destroy');
+
+// Database - Material Breakdown
+Route::get('/database/material-breakdown', [ReportController::class, 'materialBreakdown'])->name('material-breakdown');
+
+// Database - Unpriced Parts
+Route::get('/database/unpriced-parts', [ReportController::class, 'unpricedParts'])->name('unpriced-parts');
 
 // Test endpoint for debugging Codespaces access
 Route::get('/test', function () {
@@ -72,6 +97,10 @@ Route::get('/database/pics', [DatabaseController::class, 'pics'])->name('databas
 Route::post('/database/pics', [DatabaseController::class, 'storePic'])->name('database.pics.store');
 Route::put('/database/pics/{id}', [DatabaseController::class, 'updatePic'])->name('database.pics.update');
 Route::delete('/database/pics/{id}', [DatabaseController::class, 'destroyPic'])->name('database.pics.destroy');
+Route::get('/database/project-documents', [DatabaseController::class, 'projectDocuments'])->name('database.project-documents');
+Route::put('/database/project-documents/{id}', [DatabaseController::class, 'updateProjectDocument'])->name('database.project-documents.update');
+Route::delete('/database/project-documents/{id}', [DatabaseController::class, 'destroyProjectDocument'])->name('database.project-documents.destroy');
+Route::patch('/costing/status-project/{revisionId}', [CostingController::class, 'updateStatusProject'])->name('costing.status-project.update');
 Route::get('/form', [CostingController::class, 'form'])->name('form');
 Route::post('/costing/store', [CostingController::class, 'store'])->name('costing.store');
 Route::get('/costing/import-partlist', fn () => redirect()->route('form'))->name('costing.import-partlist.get');
@@ -95,6 +124,7 @@ Route::post('/tracking-documents/{project}/update-project-info', [TrackingDocume
 Route::delete('/tracking-documents/{project}', [TrackingDocumentController::class, 'destroyProject'])->name('tracking-documents.destroy-project');
 Route::post('/tracking-documents/{revision}/unpriced-price', [TrackingDocumentController::class, 'updateUnpricedPartPrice'])->name('tracking-documents.update-unpriced-price');
 Route::post('/tracking-documents/{revision}/unpriced-delete', [TrackingDocumentController::class, 'deleteUnpricedPart'])->name('tracking-documents.delete-unpriced-part');
+Route::post('/tracking-documents/{revision}/unpriced-bulk-delete', [TrackingDocumentController::class, 'bulkDeleteUnpricedParts'])->name('tracking-documents.bulk-delete-unpriced-parts');
 Route::get('/tracking-documents/{revision}/{type}', [TrackingDocumentController::class, 'download'])
 	->where('type', 'partlist|umh|a00|a04|a05')
 	->name('tracking-documents.download');

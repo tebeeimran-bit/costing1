@@ -11,7 +11,19 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        DB::statement('DROP INDEX IF EXISTS cycle_time_templates_sequence_unique');
+        // Drop index safely for both SQLite and MySQL
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('DROP INDEX IF EXISTS cycle_time_templates_sequence_unique');
+        } else {
+            // In MySQL, try to drop the index; ignore error if it doesn't exist
+            try {
+                Schema::table('cycle_time_templates', function (Blueprint $table) {
+                    $table->dropUnique('cycle_time_templates_sequence_unique');
+                });
+            } catch (\Exception $e) {
+                // Index doesn't exist, skip
+            }
+        }
 
         Schema::table('cycle_time_templates', function (Blueprint $table) {
             $table->dropColumn([

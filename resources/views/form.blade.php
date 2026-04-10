@@ -681,6 +681,8 @@
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.update-unpriced-price', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
         <input type="hidden" id="deleteUnpricedPartUrl"
             value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.delete-unpriced-part', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
+        <input type="hidden" id="bulkDeleteUnpricedUrl"
+            value="{{ isset($trackingRevision) && $trackingRevision ? route('tracking-documents.bulk-delete-unpriced-parts', ['revision' => $trackingRevision->id], absolute: false) : '' }}">
 
         <!-- Section A: Filter & Header -->
         <div class="card form-section">
@@ -775,7 +777,7 @@
                     <label class="form-label">Plant</label>
                     <select name="line" class="form-select">
                         @php
-                            $selectedPlant = old('line', $costingData->line ?? '');
+                            $selectedPlant = old('line', $costingData->line ?? ($plants->first()?->code ?? ''));
                         @endphp
                         <option value="">-- Pilih Plant --</option>
                         @foreach($plants as $plant)
@@ -789,7 +791,10 @@
                     <label class="form-label">Periode</label>
                     <select name="period" class="form-select" id="periodInput">
                         @php
-                            $selectedPeriod = old('period', $costingData->period ?? '');
+                            $defaultPeriod = $activeWireRate && $activeWireRate->period_month
+                                ? $activeWireRate->period_month->format('Y-m')
+                                : '';
+                            $selectedPeriod = old('period', $costingData->period ?? $defaultPeriod);
                         @endphp
                         <option value="">-- Pilih Periode --</option>
                         @foreach($periods as $period)
@@ -824,15 +829,34 @@
                 </div>
             </div>
             <div class="form-grid param-grid">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="form-label">Rate Aktif</label>
+                    <select name="wire_rate_id" id="wireRateSelector" class="form-select" onchange="updateRatesFromWireRate(this)">
+                        @foreach($wireRates as $wr)
+                            @php
+                                $wrLabel = $wr->period_month
+                                    ? $wr->period_month->format('M-Y')
+                                    : ($wr->request_name ?? 'Request #' . $wr->id);
+                            @endphp
+                            <option value="{{ $wr->id }}"
+                                data-usd="{{ $wr->usd_rate }}"
+                                data-jpy="{{ $wr->jpy_rate }}"
+                                data-lme="{{ $wr->lme_active }}"
+                                {{ (int) $selectedWireRateId === (int) $wr->id ? 'selected' : '' }}>
+                                {{ $wrLabel }} | JPY: {{ number_format((float)$wr->jpy_rate, 2, ',', '.') }} | USD: {{ number_format((float)$wr->usd_rate, 0, ',', '.') }} | LME: {{ number_format((float)$wr->lme_active, 0, ',', '.') }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="form-group">
                     <label class="form-label">USD</label>
                     <input type="number" name="exchange_rate_usd" class="form-input" id="rateUSD"
-                        value="{{ $costingData->exchange_rate_usd ?? 15500 }}" step="0.01">
+                        value="{{ $costingData->exchange_rate_usd ?? ($activeWireRate->usd_rate ?? 15500) }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label class="form-label">JPY</label>
                     <input type="number" name="exchange_rate_jpy" class="form-input" id="rateJPY"
-                        value="{{ $costingData->exchange_rate_jpy ?? 103 }}" step="0.01">
+                        value="{{ $costingData->exchange_rate_jpy ?? ($activeWireRate->jpy_rate ?? 103) }}" step="0.01">
                 </div>
                 <div class="form-group">
                     <label class="form-label">IDR</label>
@@ -842,7 +866,7 @@
                 <div class="form-group">
                     <label class="form-label">LME Rate</label>
                     <input type="number" name="lme_rate" class="form-input" id="lmeRate"
-                        value="{{ $costingData->lme_rate ?? '' }}" step="0.01" placeholder="8500">
+                        value="{{ $costingData->lme_rate ?? ($activeWireRate->lme_active ?? '') }}" step="0.01" placeholder="8500">
                 </div>
             </div>
         </div>
@@ -895,7 +919,8 @@
                         <tr>
                             <th>
                                 <span class="material-row-no-header">
-                                    <input type="checkbox" id="materialSelectAllRows" title="Pilih semua baris">
+                                    <input type="checkbox" id="materialSelectAllRows" title="Pilih semua baris"
+                                        onchange="toggleAllMaterialRowCheckboxes(this.checked)">
                                     <span>No</span>
                                 </span>
                             </th>
@@ -996,10 +1021,15 @@
                                     $partNoDisplay = trim((string) ($breakdown->part_no ?? ''));
                                     if ($partNoDisplay === '') {
                                         $partNoDisplay = $breakdown->material->material_code ?? '';
-                                        if (str_starts_with((string) $partNoDisplay, '__ROW_')) {
+                                        if (str_starts_with((string) $partNoDisplay, '__ROW_') || $partNoDisplay === '__PLACEHOLDER__') {
                                             $partNoDisplay = '-';
                                         }
                                     }
+                                    $partNameDisplay = trim((string) ($breakdown->part_name ?? ''));
+                                    if ($partNameDisplay === '') {
+                                        $partNameDisplay = $breakdown->material->material_description ?? '';
+                                    }
+                                    $unitDisplay = strtoupper(trim((string) ($breakdown->material?->base_uom ?? '')));
                                 @endphp
                                 <tr data-row="{{ $index }}">
                                     <td>
@@ -1013,11 +1043,11 @@
                                     <td><input type="text" class="form-input id-code" name="materials[{{ $index }}][id_code]"
                                     value="{{ $breakdown->id_code ?? '' }}" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
-                                    value="{{ $breakdown->material->material_description ?? '' }}" placeholder="Part Name"></td>
+                                    value="{{ $partNameDisplay }}" placeholder="Part Name"></td>
                                             <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]" autocomplete="off"
                                             value="{{ intval($breakdown->qty_req) }}" data-original-qty-req="{{ intval($breakdown->qty_req) }}" step="1" min="0" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
-                                    value="{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}" placeholder="Unit"></td>
+                                    value="{{ $unitDisplay }}" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
                                             value="{{ $breakdown->pro_code ?? '' }}" placeholder="Pro Code"></td>
                                             <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ $breakdown->amount1 }}" data-original-amount1="{{ $breakdown->amount1 }}"
@@ -1155,6 +1185,9 @@
                     <button type="submit" class="btn btn-primary btn-sm section-update-btn" name="update_section" value="unpriced_parts" data-section="unpriced_parts" formnovalidate>
                         Update
                     </button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="unpricedDeleteSelectedBtn" onclick="deleteSelectedUnpricedRows()">
+                        Hapus Terpilih
+                    </button>
                     @if(isset($trackingRevision) && $trackingRevision)
                         <a href="{{ route('tracking-documents.export-unpriced', ['revision' => $trackingRevision->id, 'format' => 'excel'], absolute: false) }}"
                             class="btn btn-secondary">Export Unpriced Parts (Excel)</a>
@@ -1168,6 +1201,13 @@
                 <table class="material-table">
                     <thead>
                         <tr>
+                            <th rowspan="2">
+                                <span style="display:inline-flex;align-items:center;gap:0.3rem;">
+                                    <input type="checkbox" id="unpricedSelectAll" title="Pilih semua baris"
+                                        onchange="toggleAllUnpricedRowCheckboxes(this.checked)">
+                                    <span>No</span>
+                                </span>
+                            </th>
                             <th rowspan="2">Part No</th>
                             <th rowspan="2">ID Code</th>
                             <th rowspan="2">Part Name</th>
@@ -1190,16 +1230,27 @@
                     </thead>
                     <tbody id="unpricedRecapBody">
                         @if(isset($openUnpricedParts) && $openUnpricedParts->count() > 0)
-                            @foreach($openUnpricedParts as $item)
+                            @foreach($openUnpricedParts as $unpricedIdx => $item)
                                 @php
                                     $matchedMaterials = collect($item->matched_materials ?? []);
+                                    $matchedWires = collect($item->matched_wires ?? []);
+                                    $matchedSource = $item->matched_source ?? null;
                                 @endphp
-                                <tr>
+                                <tr data-unpriced-part="{{ $item->part_number }}">
+                                    <td>
+                                        <span style="display:inline-flex;align-items:center;gap:0.3rem;">
+                                            <input type="checkbox" class="unpriced-row-select" data-part-number="{{ $item->part_number }}">
+                                            <span>{{ $unpricedIdx + 1 }}</span>
+                                        </span>
+                                    </td>
                                     <td>
                                         <div>{{ $item->part_number }}</div>
                                         @if(!empty($item->matched_material_description))
                                             <div style="font-size: 0.8rem; color: var(--slate-500); margin-top: 0.25rem;">
                                                 {{ $item->matched_material_description }}
+                                                @if($matchedSource === 'wire')
+                                                    <span style="background: #dbeafe; color: #1e40af; padding: 0.1rem 0.3rem; border-radius: 0.25rem; font-size: 0.7rem; margin-left: 0.3rem;">WIRE</span>
+                                                @endif
                                             </div>
                                         @endif
                                     </td>
@@ -1208,6 +1259,8 @@
                                             @foreach($matchedMaterials as $matched)
                                                 <div>{{ $matched->material_code ?: '-' }}</div>
                                             @endforeach
+                                        @elseif($matchedSource === 'wire' && !empty($item->matched_wire_idcode))
+                                            {{ $item->matched_wire_idcode }}
                                         @else
                                             -
                                         @endif
@@ -1233,7 +1286,19 @@
                                                 </div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4) : number_format((float) ($item->detected_price ?? 0), 4) }}
+                                            @if($matchedSource === 'wire' && isset($item->matched_price))
+                                                <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                                    <input type="checkbox"
+                                                        class="matched-price-select"
+                                                        data-part-number="{{ $item->part_number }}"
+                                                        data-price="{{ (float) $item->matched_price }}"
+                                                        data-currency="{{ $item->matched_currency ?? 'IDR' }}"
+                                                        checked>
+                                                    <span>{{ number_format((float) $item->matched_price, 4) }}</span>
+                                                </div>
+                                            @else
+                                                {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4) : number_format((float) ($item->detected_price ?? 0), 4) }}
+                                            @endif
                                         @endif
                                     </td>
                                     <td>
@@ -1241,6 +1306,8 @@
                                             @foreach($matchedMaterials as $matched)
                                                 <div>{{ $matched->purchase_unit ?: '-' }}</div>
                                             @endforeach
+                                        @elseif($matchedSource === 'wire')
+                                            m
                                         @else
                                             {{ $item->matched_purchase_unit ?: '-' }}
                                         @endif
@@ -1326,7 +1393,7 @@
                             @endforeach
                         @else
                             <tr>
-                                <td colspan="15" style="text-align: center; color: var(--slate-500);">
+                                <td colspan="16" style="text-align: center; color: var(--slate-500);">
                                     Belum ada part tanpa harga untuk versi dokumen ini.
                                 </td>
                             </tr>
@@ -1613,6 +1680,17 @@
         @if(isset($trackingRevisionId) && $trackingRevisionId)
             <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
         @endif
+        <input type="hidden" name="wire_rate_id" id="importWireRateId" value="{{ $selectedWireRateId }}">
+        <input type="hidden" name="business_category_id" id="importBusinessCategoryId" value="{{ $costingData->product->line ?? ($trackingProjectPrefill['business_category_id'] ?? '') }}">
+        <input type="hidden" name="customer_id" id="importCustomerId" value="{{ $costingData->customer_id ?? ($trackingProjectPrefill['customer_id'] ?? '') }}">
+        <input type="hidden" name="period" id="importPeriod" value="{{ $costingData->period ?? '' }}">
+        <input type="hidden" name="line" id="importLine" value="{{ $costingData->line ?? '' }}">
+        <input type="hidden" name="model" id="importModel" value="{{ $costingData->model ?? ($trackingProjectPrefill['model'] ?? '') }}">
+        <input type="hidden" name="assy_no" id="importAssyNo" value="{{ $costingData->assy_no ?? ($trackingProjectPrefill['assy_no'] ?? '') }}">
+        <input type="hidden" name="assy_name" id="importAssyName" value="{{ $costingData->assy_name ?? ($trackingProjectPrefill['assy_name'] ?? '') }}">
+        <input type="hidden" name="exchange_rate_usd" id="importRateUsd" value="{{ $costingData->exchange_rate_usd ?? ($activeWireRate->usd_rate ?? 15500) }}">
+        <input type="hidden" name="exchange_rate_jpy" id="importRateJpy" value="{{ $costingData->exchange_rate_jpy ?? ($activeWireRate->jpy_rate ?? 103) }}">
+        <input type="hidden" name="lme_rate" id="importLmeRate" value="{{ $costingData->lme_rate ?? ($activeWireRate->lme_active ?? '') }}">
         <input type="hidden" name="forecast" id="importForecast" value="{{ $forecastValue ?? 0 }}">
         <input type="hidden" name="project_period" id="importProjectPeriod" value="{{ $costingData->project_period ?? 2 }}">
         <input type="file" name="import_partlist_file" id="importPartlistFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitPartlistImport(); }">
@@ -1657,8 +1735,8 @@
         let activeMaterialFilterColumn = null;
         let materialSortState = { column: null, direction: null };
 
-        // Materials data for dynamic selection
-        const materials = @json($materials);
+        // Materials data for dynamic selection (slim: only fields needed for JS lookup)
+        const materials = @json($materialsSlim);
         const materialMasterByCode = new Map();
         materials.forEach((item) => {
             const codeKey = String(item?.material_code || '').trim().toUpperCase();
@@ -1980,9 +2058,12 @@
             const tbody = document.getElementById('unpricedRecapBody');
             if (!tbody) return;
 
-            // Keep persisted server-side recap rows intact.
+            // Only show server-persisted unpriced data.
+            // The recap is populated when the user clicks "Update" in the
+            // Rekapan Part Tanpa Harga section, which triggers server-side
+            // processing and returns the data via $openUnpricedParts.
             if (hasServerUnpricedData) {
-                const visibleRows = tbody.querySelectorAll('tr').length;
+                const visibleRows = tbody.querySelectorAll('tr[data-unpriced-part]').length;
                 const banner = document.getElementById('unpricedTopBanner');
                 const bannerText = document.getElementById('unpricedTopBannerText');
 
@@ -2000,74 +2081,10 @@
                 return;
             }
 
-            const partMap = new Map();
-            const rows = document.querySelectorAll('#materialTableBody tr');
-
-            rows.forEach((row) => {
-                const partNo = (row.querySelector('.part-no')?.value || '').trim();
-                if (!partNo) return;
-
-                const partName = (row.querySelector('.part-name')?.value || '').trim();
-                const qty = parseFloat(row.querySelector('.qty-req')?.value) || 0;
-                const amount1Price = parseInputNumber(row.querySelector('.amount1')?.value || 0);
-
-                // Rule: jika Amount 1 terisi, part dianggap sudah punya harga.
-                if (amount1Price > 0) {
-                    return;
-                }
-
-                const key = partNo.toLowerCase();
-                if (!partMap.has(key)) {
-                    partMap.set(key, {
-                        partNo,
-                        partName,
-                        qty: 0,
-                    });
-                }
-
-                partMap.get(key).qty += qty;
-            });
-
-            if (partMap.size === 0) {
-                tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
-            } else {
-                tbody.innerHTML = Array.from(partMap.values()).map((item) => `
-                    <tr>
-                        <td>${item.partNo}</td>
-                        <td>-</td>
-                        <td>${item.partName || '-'}</td>
-                        <td>${item.qty.toFixed(4)}</td>
-                        <td>0</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td>-</td>
-                        <td><input type="number" step="0.0001" class="form-input unpriced-manual-price" data-part-number="${item.partNo}" name="manual_unpriced_prices[${item.partNo}]" placeholder="Isi harga jika sudah ada"></td>
-                        <td>
-                            <button type="button" class="btn btn-primary btn-sm unpriced-add-price-btn" data-part-number="${item.partNo}">Tambah</button>
-                            <button type="button" class="btn btn-secondary btn-sm unpriced-delete-btn" data-part-number="${item.partNo}">Hapus</button>
-                        </td>
-                    </tr>
-                `).join('');
-            }
-
+            // No server data — show empty message
+            tbody.innerHTML = '<tr><td colspan="16" style="text-align: center; color: var(--slate-500);">Klik tombol "Update" di section ini untuk mendeteksi part tanpa harga.</td></tr>';
             const banner = document.getElementById('unpricedTopBanner');
-            const bannerText = document.getElementById('unpricedTopBannerText');
-            if (banner) {
-                banner.style.display = partMap.size > 0 ? 'flex' : 'none';
-            }
-            if (bannerText) {
-                bannerText.textContent = `Terdapat ${partMap.size} part yang belum memiliki harga pada versi dokumen ini.`;
-            }
-
-            bindUnpricedManualPriceInputs();
-            bindUnpricedDeleteButtons();
-            bindMatchedPriceSelectors();
-            bindUnpricedAddPriceButtons();
+            if (banner) banner.style.display = 'none';
         }
 
         function bindMatchedPriceSelectors() {
@@ -2229,14 +2246,153 @@
                     const partNumber = this.dataset.partNumber || '';
                     if (!partNumber) return;
 
-                    const confirmed = window.confirm(`Hapus part tanpa harga "${partNumber}"?`);
-                    if (!confirmed) {
-                        return;
-                    }
-
-                    deleteUnpricedPart(partNumber);
+                    openAppConfirm(`Hapus part tanpa harga "${partNumber}"?`, function() {
+                        removeUnpricedRow(partNumber);
+                    });
                 });
             });
+
+            document.querySelectorAll('#unpricedRecapBody .unpriced-row-select').forEach(cb => {
+                if (cb.dataset.boundChange === '1') return;
+                cb.dataset.boundChange = '1';
+                cb.addEventListener('change', updateUnpricedSelectAllState);
+            });
+        }
+
+        function removeUnpricedRow(partNumber) {
+            const row = document.querySelector(`#unpricedRecapBody tr[data-unpriced-part="${CSS.escape(partNumber)}"]`);
+            if (row) {
+                row.remove();
+            }
+            renumberUnpricedRows();
+            updateUnpricedSelectAllState();
+
+            // Also sync to server if URL available
+            deleteUnpricedPartFromServer(partNumber);
+        }
+
+        function deleteUnpricedPartFromServer(partNumber) {
+            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
+            const url = document.getElementById('deleteUnpricedPartUrl')?.value || '';
+            if (!trackingRevisionId || !url) return Promise.resolve();
+
+            return fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ part_number: partNumber })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data && data.ok) {
+                    updateUnpricedBanner(data.open_unpriced_count || 0);
+                }
+            })
+            .catch(() => {});
+        }
+
+        function updateUnpricedBanner(openCount) {
+            const banner = document.getElementById('unpricedTopBanner');
+            const bannerText = document.getElementById('unpricedTopBannerText');
+            if (banner) banner.style.display = openCount > 0 ? 'flex' : 'none';
+            if (bannerText) bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
+        }
+
+        function toggleAllUnpricedRowCheckboxes(checked) {
+            document.querySelectorAll('#unpricedRecapBody .unpriced-row-select').forEach(cb => {
+                cb.checked = checked;
+            });
+        }
+
+        function updateUnpricedSelectAllState() {
+            const all = document.querySelectorAll('#unpricedRecapBody .unpriced-row-select');
+            const checked = document.querySelectorAll('#unpricedRecapBody .unpriced-row-select:checked');
+            const selectAll = document.getElementById('unpricedSelectAll');
+            if (selectAll) {
+                selectAll.checked = all.length > 0 && all.length === checked.length;
+                selectAll.indeterminate = checked.length > 0 && checked.length < all.length;
+            }
+        }
+
+        function renumberUnpricedRows() {
+            const rows = document.querySelectorAll('#unpricedRecapBody tr[data-unpriced-part]');
+            rows.forEach((row, idx) => {
+                const numSpan = row.querySelector('.unpriced-row-select')?.parentElement?.querySelector('span');
+                if (numSpan) numSpan.textContent = idx + 1;
+            });
+            if (rows.length === 0) {
+                const tbody = document.getElementById('unpricedRecapBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="16" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
+                }
+            }
+        }
+
+        function deleteSelectedUnpricedRows() {
+            const selectedRows = Array.from(document.querySelectorAll('#unpricedRecapBody .unpriced-row-select:checked'))
+                .map(cb => cb.closest('tr'))
+                .filter(row => row instanceof HTMLTableRowElement);
+
+            if (selectedRows.length === 0) return;
+
+            openAppConfirm(
+                `Hapus ${selectedRows.length} baris yang dipilih?`,
+                function() {
+                    showAppLoading('Menghapus...');
+                    const partNumbers = selectedRows
+                        .map(row => row.dataset.unpricedPart || '')
+                        .filter(p => p !== '');
+
+                    // Optimistically remove rows from DOM immediately
+                    selectedRows.forEach(row => row.remove());
+                    renumberUnpricedRows();
+                    updateUnpricedSelectAllState();
+
+                    const bulkUrl = document.getElementById('bulkDeleteUnpricedUrl')?.value || '';
+                    const deleteUrl = document.getElementById('deleteUnpricedPartUrl')?.value || '';
+
+                    if (bulkUrl && partNumbers.length > 0) {
+                        // Single bulk request
+                        fetch(bulkUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ part_numbers: partNumbers })
+                        })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data && data.ok) {
+                                updateUnpricedBanner(data.open_unpriced_count || 0);
+                            }
+                            hideAppLoading();
+                        })
+                        .catch(() => {
+                            hideAppLoading();
+                        });
+                    } else if (deleteUrl && partNumbers.length > 0) {
+                        // Fallback: single delete for each (old endpoint)
+                        Promise.all(partNumbers.map(pn =>
+                            fetch(deleteUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                                    'Accept': 'application/json'
+                                },
+                                body: JSON.stringify({ part_number: pn })
+                            }).catch(() => {})
+                        )).then(() => hideAppLoading());
+                    } else {
+                        hideAppLoading();
+                    }
+                }
+            );
         }
 
         function syncManualPriceToServer(partNumber, value) {
@@ -2282,57 +2438,7 @@
                 });
         }
 
-        function deleteUnpricedPart(partNumber) {
-            const trackingRevisionId = document.getElementById('trackingRevisionId')?.value || '';
-            const url = document.getElementById('deleteUnpricedPartUrl')?.value || '';
-
-            if (!trackingRevisionId || !url) {
-                return;
-            }
-
-            fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    part_number: partNumber
-                })
-            })
-                .then((response) => response.json())
-                .then((data) => {
-                    if (!data || data.ok !== true) {
-                        return;
-                    }
-
-                    const row = document.querySelector(`#unpricedRecapBody .unpriced-delete-btn[data-part-number="${CSS.escape(partNumber)}"]`)?.closest('tr');
-                    if (row) {
-                        row.remove();
-                    }
-
-                    const tbody = document.getElementById('unpricedRecapBody');
-                    if (tbody && tbody.children.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="15" style="text-align: center; color: var(--slate-500);">Belum ada part tanpa harga untuk versi dokumen ini.</td></tr>';
-                    }
-
-                    const banner = document.getElementById('unpricedTopBanner');
-                    const bannerText = document.getElementById('unpricedTopBannerText');
-                    const openCount = Number(data.open_unpriced_count || 0);
-
-                    if (banner) {
-                        banner.style.display = openCount > 0 ? 'flex' : 'none';
-                    }
-
-                    if (bannerText) {
-                        bannerText.textContent = `Terdapat ${openCount} part yang belum memiliki harga pada versi dokumen ini.`;
-                    }
-                })
-                .catch(() => {
-                    // Silent fail
-                });
-        }
+        // deleteUnpricedPart replaced by removeUnpricedRow + deleteUnpricedPartFromServer
 
 
 
@@ -2430,8 +2536,6 @@
                 after: afterSnapshot,
             });
             applyMaterialFilters();
-
-            submitMaterialSection();
         }
 
         // Renumber rows
@@ -2476,24 +2580,64 @@
                 return;
             }
 
-            const beforeSnapshot = getMaterialStateSnapshot();
-            selectedRows.forEach((row) => row.remove());
+            openAppConfirm(
+                'Hapus ' + selectedRows.length + ' baris yang dipilih?',
+                function () {
+                    const beforeSnapshot = getMaterialStateSnapshot();
+                    selectedRows.forEach((row) => row.remove());
 
-            renumberRows();
-            calculateTableTotal();
-            refreshUnpricedRecap();
+                    renumberRows();
+                    calculateTableTotal();
+                    refreshUnpricedRecap();
 
-            const afterSnapshot = getMaterialStateSnapshot();
-            pushMaterialHistoryAction({
-                type: 'snapshot',
-                before: beforeSnapshot,
-                after: afterSnapshot,
+                    const afterSnapshot = getMaterialStateSnapshot();
+                    pushMaterialHistoryAction({
+                        type: 'snapshot',
+                        before: beforeSnapshot,
+                        after: afterSnapshot,
+                    });
+
+                    applyMaterialFilters();
+                    updateMaterialSelectAllRowsState();
+
+                    // Auto-save to persist deletion via AJAX, then reload
+                    submitMaterialSectionAjax();
+                }
+            );
+        }
+
+        function submitMaterialSectionAjax() {
+            const form = document.getElementById('costingForm');
+            if (!form) return;
+
+            showAppLoading('Menyimpan perubahan...');
+
+            const formData = new FormData(form);
+            formData.set('update_section', 'material');
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                },
+                body: formData,
+            })
+            .then(function (resp) {
+                // Server returns 302 redirect — any 2xx/3xx is success
+                if (resp.ok || resp.status === 302 || resp.redirected) {
+                    window.location.reload();
+                } else {
+                    return resp.text().then(function (txt) {
+                        hideAppLoading();
+                        openAppNotify('Gagal menyimpan: ' + (resp.status));
+                    });
+                }
+            })
+            .catch(function () {
+                // Network error — data was likely saved, just reload
+                window.location.reload();
             });
-
-            applyMaterialFilters();
-            updateMaterialSelectAllRowsState();
-
-            submitMaterialSection();
         }
 
         function submitMaterialSection() {
@@ -3417,6 +3561,25 @@
             });
         }
 
+        function updateRatesFromWireRate(select) {
+            const option = select.options[select.selectedIndex];
+            if (!option) return;
+            const usd = option.getAttribute('data-usd');
+            const jpy = option.getAttribute('data-jpy');
+            const lme = option.getAttribute('data-lme');
+            if (usd !== null) document.getElementById('rateUSD').value = usd;
+            if (jpy !== null) document.getElementById('rateJPY').value = jpy;
+            if (lme !== null) document.getElementById('lmeRate').value = lme;
+        }
+
+        function toggleAllMaterialRowCheckboxes(checked) {
+            document.querySelectorAll('#materialTableBody .material-row-select').forEach(function (cb) {
+                if (cb instanceof HTMLInputElement) {
+                    cb.checked = checked;
+                }
+            });
+        }
+
         function initSectionToggles() {
             const sections = document.querySelectorAll('.form-page .form-section');
 
@@ -3472,7 +3635,7 @@
 
             const sectionPrefixes = {
                 material: ['materials[', 'manual_unpriced_prices['],
-                unpriced_parts: ['manual_unpriced_prices['],
+                unpriced_parts: ['materials[', 'manual_unpriced_prices['],
                 cycle_time: ['cycle_times[']
             };
 
@@ -3582,8 +3745,10 @@
             const form = document.getElementById('partlistImportForm');
             const importForecast = document.getElementById('importForecast');
             const importProjectPeriod = document.getElementById('importProjectPeriod');
+            const importWireRateId = document.getElementById('importWireRateId');
             const forecastHidden = document.getElementById('forecast');
             const projectPeriod = document.getElementById('projectPeriod');
+            const wireRateSelector = document.getElementById('wireRateSelector');
 
             if (!form) return;
 
@@ -3596,6 +3761,32 @@
             if (importProjectPeriod && projectPeriod) {
                 importProjectPeriod.value = projectPeriod.value || '0';
             }
+
+            if (importWireRateId && wireRateSelector) {
+                importWireRateId.value = wireRateSelector.value || '';
+            }
+
+            // Sync main form fields to import form
+            const syncFields = {
+                'importBusinessCategoryId': 'select[name="business_category_id"]',
+                'importCustomerId': 'select[name="customer_id"]',
+                'importPeriod': '#periodInput',
+                'importLine': 'select[name="line"]',
+                'importModel': 'input[name="model"]',
+                'importAssyNo': 'input[name="assy_no"]',
+                'importAssyName': 'input[name="assy_name"]',
+                'importRateUsd': '#rateUSD',
+                'importRateJpy': '#rateJPY',
+                'importLmeRate': '#lmeRate',
+            };
+            for (const [hiddenId, mainSelector] of Object.entries(syncFields)) {
+                const hidden = document.getElementById(hiddenId);
+                const main = document.querySelector('#costingForm ' + mainSelector);
+                if (hidden && main) hidden.value = main.value || '';
+            }
+
+            // Submit the import form
+            showAppLoading('Mengimport partlist...');
 
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();

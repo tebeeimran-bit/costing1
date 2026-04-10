@@ -13,6 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Trust all proxies for Codespaces environment
         $middleware->trustProxies(at: '*');
+
+        // Gzip compress all responses
+        $middleware->append(\App\Http\Middleware\CompressResponse::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

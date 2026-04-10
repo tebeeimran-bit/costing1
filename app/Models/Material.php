@@ -28,10 +28,10 @@ class Material extends Model
     ];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'moq' => 'decimal:2',
+        'price' => 'decimal:6',
+        'moq' => 'decimal:6',
         'add_cost_import_tax' => 'decimal:2',
-        'price_before' => 'decimal:2',
+        'price_before' => 'decimal:6',
         'price_update' => 'date',
     ];
 

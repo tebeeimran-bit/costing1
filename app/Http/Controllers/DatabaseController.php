@@ -11,6 +11,9 @@ use App\Models\WireRate;
 use App\Models\BusinessCategory;
 use App\Models\CostingData;
 use App\Models\CycleTimeTemplate;
+use App\Models\DocumentRevision;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -736,6 +739,7 @@ class DatabaseController extends Controller
             return back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
         }
 
+        $sheet = $spreadsheet->getActiveSheet();
         $highestRow = (int) $sheet->getHighestDataRow();
         $highestColIndex = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
 
@@ -789,14 +793,15 @@ class DatabaseController extends Controller
                 }
 
                 $cellRef = Coordinate::stringFromColumnIndex($col) . $row;
-                $rawValue = trim((string) $sheet->getCell($cellRef)->getFormattedValue());
+                $cell = $sheet->getCell($cellRef);
+                $rawValue = trim((string) $cell->getFormattedValue());
 
                 // Process based on field type
                 if (in_array($field, ['price', 'moq', 'add_cost_import_tax', 'price_before'])) {
-                    // Numeric fields
-                    if ($rawValue !== '') {
-                        $numVal = $this->toNullableFloat($rawValue);
-                        $payload[$field] = $numVal;
+                    // Numeric fields — use raw getValue() to preserve full precision
+                    $cellRawValue = $cell->getValue();
+                    if ($cellRawValue !== null && $cellRawValue !== '') {
+                        $payload[$field] = floatval($cellRawValue);
                     } else {
                         // For price field (NOT NULL), use default 0 if empty
                         $payload[$field] = ($field === 'price') ? 0 : null;
@@ -1080,7 +1085,8 @@ class DatabaseController extends Controller
             }
 
             foreach ($lmeColumnByValue as $col) {
-                $valueByRowCol[$row][$col] = trim((string) $sheet->getCell($col . $row)->getFormattedValue());
+                $rawValue = $sheet->getCell($col . $row)->getValue();
+                $valueByRowCol[$row][$col] = is_numeric($rawValue) ? (float) $rawValue : trim((string) $sheet->getCell($col . $row)->getFormattedValue());
             }
         }
 
@@ -1302,5 +1308,161 @@ class DatabaseController extends Controller
         }
 
         return date('Y-m-d', $parsed);
+    }
+
+    public function projectDocuments(Request $request)
+    {
+        $search = trim($request->input('search', ''));
+        $statusFilter = trim($request->input('status', ''));
+        $perPage = (int) $request->input('per_page', 15);
+        if (!in_array($perPage, [10, 15, 25, 50])) {
+            $perPage = 15;
+        }
+
+        $costingData = CostingData::with(['trackingRevision.project', 'product', 'customer'])
+            ->get();
+
+        $a00Count = 0;
+        $a04Count = 0;
+        $a05Count = 0;
+
+        $rows = $costingData->map(function ($item) use (&$a00Count, &$a04Count, &$a05Count) {
+            $rev = $item->trackingRevision;
+            if (!$rev) {
+                return null;
+            }
+
+            $status = 'none';
+            if (($rev->a05 ?? null) === 'ada') {
+                $status = 'a05';
+                $a05Count++;
+            } elseif (($rev->a04 ?? null) === 'ada') {
+                $status = 'a04';
+                $a04Count++;
+            } elseif (($rev->a00 ?? null) === 'ada') {
+                $status = 'a00';
+                $a00Count++;
+            }
+
+            return (object) [
+                'revision' => $rev,
+                'project' => $rev->project,
+                'costingData' => $item,
+                'status' => $status,
+            ];
+        })->filter()->values();
+
+        // Server-side filtering
+        if ($search !== '') {
+            $searchLower = mb_strtolower($search);
+            $rows = $rows->filter(function ($row) use ($searchLower) {
+                $text = implode(' ', array_filter([
+                    $row->costingData->customer->name ?? '',
+                    $row->costingData->model ?? '',
+                    $row->costingData->assy_name ?? '',
+                    $row->project->customer ?? '',
+                    $row->project->model ?? '',
+                    $row->project->part_name ?? '',
+                    $row->revision->version_label ?? '',
+                ]));
+                return str_contains(mb_strtolower($text), $searchLower);
+            })->values();
+        }
+
+        if ($statusFilter !== '') {
+            $rows = $rows->filter(fn($row) => $row->status === $statusFilter)->values();
+        }
+
+        // Paginate the collection
+        $currentPage = \Illuminate\Pagination\LengthAwarePaginator::resolveCurrentPage();
+        $pagedRows = new \Illuminate\Pagination\LengthAwarePaginator(
+            $rows->forPage($currentPage, $perPage),
+            $rows->count(),
+            $perPage,
+            $currentPage,
+            ['path' => $request->url(), 'query' => $request->query()]
+        );
+
+        return view('database.project-documents', compact('pagedRows', 'a00Count', 'a04Count', 'a05Count', 'search', 'statusFilter', 'perPage'));
+    }
+
+    public function updateProjectDocument(Request $request, $id)
+    {
+        $revision = DocumentRevision::findOrFail($id);
+
+        $validated = $request->validate([
+            'a00' => 'required|in:ada,belum_ada',
+            'a00_received_date' => 'nullable|date',
+            'a00_document_file' => 'nullable|file|mimes:pdf|max:10240',
+            'a04' => 'required|in:ada,belum_ada',
+            'a04_received_date' => 'nullable|date',
+            'a04_document_file' => 'nullable|file|mimes:pdf|max:10240',
+            'a05' => 'required|in:ada,belum_ada',
+            'a05_received_date' => 'nullable|date',
+            'a05_document_file' => 'nullable|file|mimes:pdf|max:10240',
+        ]);
+
+        // Business rule: if A04 or A05 exists, A00 must also exist
+        if ($validated['a04'] === 'ada' || $validated['a05'] === 'ada') {
+            $validated['a00'] = 'ada';
+        }
+
+        // Business rule: A04 and A05 are mutually exclusive (cannot both be 'ada')
+        if ($validated['a04'] === 'ada' && $validated['a05'] === 'ada') {
+            return back()->withErrors(['a04' => 'A04 dan A05 tidak bisa keduanya "Ada". Project hanya bisa menjadi salah satu: A04 (Cancelled) atau A05 (Die Go).']);
+        }
+
+        // Business rule: cannot remove A00 if A04 or A05 still exists
+        if ($validated['a00'] === 'belum_ada' && ($validated['a04'] === 'ada' || $validated['a05'] === 'ada')) {
+            return back()->withErrors(['a00' => 'A00 tidak bisa dihapus jika A04 atau A05 masih ada.']);
+        }
+
+        foreach (['a00', 'a04', 'a05'] as $prefix) {
+            $status = $validated[$prefix];
+            $revision->$prefix = $status;
+
+            $dateField = $prefix . '_received_date';
+            $fileField = $prefix . '_document_file';
+            $pathField = $prefix . '_document_file_path';
+            $nameField = $prefix . '_document_original_name';
+
+            if ($status === 'ada') {
+                $revision->$dateField = $validated[$dateField] ?? null;
+
+                if ($request->hasFile($fileField)) {
+                    $file = $request->file($fileField);
+                    $path = $file->storeAs(
+                        'tracking-documents/' . $prefix,
+                        now()->format('YmdHis') . '-' . Str::uuid() . '.' . $file->getClientOriginalExtension()
+                    );
+                    $revision->$pathField = $path;
+                    $revision->$nameField = $file->getClientOriginalName();
+                }
+            } else {
+                $revision->$dateField = null;
+                $revision->$pathField = null;
+                $revision->$nameField = null;
+            }
+        }
+
+        $revision->save();
+
+        return back()->with('success', 'Dokumen project berhasil diperbarui.');
+    }
+
+    public function destroyProjectDocument($id)
+    {
+        $revision = DocumentRevision::findOrFail($id);
+
+        foreach (['a00', 'a04', 'a05'] as $prefix) {
+            $revision->$prefix = null;
+            $revision->{$prefix . '_received_date'} = null;
+            $revision->{$prefix . '_document_original_name'} = null;
+            $revision->{$prefix . '_document_file_path'} = null;
+        }
+
+        $revision->save();
+
+        return back()->with('success', 'Dokumen project berhasil dihapus.');
     }
 }

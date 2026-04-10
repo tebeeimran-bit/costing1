@@ -166,7 +166,7 @@
                         <td>{{ $material->material_type ?? '-' }}</td>
                         <td>{{ $material->material_group ?? '-' }}</td>
                         <td>{{ $material->base_uom ?? '-' }}</td>
-                        <td>{{ $material->price ? number_format($material->price, 0, ',', '.') : '0' }}</td>
+                        <td>{{ $material->price ? rtrim(rtrim(number_format($material->price, 6, ',', '.'), '0'), ',') : '0' }}</td>
                         <td>{{ $material->purchase_unit ?? '-' }}</td>
                         <td>{{ $material->currency ?? '-' }}</td>
                         <td>{{ $material->moq ? number_format($material->moq, 0, ',', '.') : '-' }}</td>
@@ -175,7 +175,7 @@
                         <td>{{ $material->add_cost_import_tax ? number_format($material->add_cost_import_tax, 2) . '%' : '-' }}
                         </td>
                         <td>{{ $material->price_update ? $material->price_update->format('d M Y') : '-' }}</td>
-                        <td>{{ $material->price_before ? number_format($material->price_before, 0, ',', '.') : '-' }}</td>
+                        <td>{{ $material->price_before ? rtrim(rtrim(number_format($material->price_before, 6, ',', '.'), '0'), ',') : '-' }}</td>
                         <td class="aksi-cell" style="white-space: nowrap;">
                             <div class="aksi-actions">
                                 <button type="button" class="btn-action btn-edit js-open-edit-material" title="Edit"

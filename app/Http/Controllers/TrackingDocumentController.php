@@ -9,6 +9,7 @@ use App\Models\Customer;
 use App\Models\DocumentProject;
 use App\Models\DocumentRevision;
 use App\Models\Material;
+use App\Models\Pic;
 use App\Models\Plant;
 use App\Models\Product;
 use App\Models\UnpricedPart;
@@ -27,8 +28,10 @@ class TrackingDocumentController extends Controller
         $lines = Product::query()->whereNotNull('line')->distinct('line')->orderBy('line')->pluck('line');
         $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
+        $picsEngineering = Pic::where('type', 'engineering')->orderBy('name')->get();
+        $picsMarketing = Pic::where('type', 'marketing')->orderBy('name')->get();
 
-        return view('tracking-documents.create', compact('products', 'businessCategories', 'customers', 'lines', 'plants', 'periods'));
+        return view('tracking-documents.create', compact('products', 'businessCategories', 'customers', 'lines', 'plants', 'periods', 'picsEngineering', 'picsMarketing'));
     }
 
     public function index()
@@ -39,6 +42,8 @@ class TrackingDocumentController extends Controller
         $lines = Product::query()->whereNotNull('line')->distinct('line')->orderBy('line')->pluck('line');
         $plants = Plant::orderBy('code')->orderBy('name')->get();
         $periods = CostingData::distinct('period')->orderBy('period', 'desc')->pluck('period');
+        $picsEngineering = Pic::where('type', 'engineering')->orderBy('name')->get();
+        $picsMarketing = Pic::where('type', 'marketing')->orderBy('name')->get();
 
         $projects = DocumentProject::with([
             'product',
@@ -59,7 +64,7 @@ class TrackingDocumentController extends Controller
             ->sortByDesc('id')
             ->values();
 
-        return view('tracking-documents.index', compact('revisions', 'projects', 'products', 'businessCategories', 'customers', 'lines', 'plants', 'periods'));
+        return view('tracking-documents.index', compact('revisions', 'projects', 'products', 'businessCategories', 'customers', 'lines', 'plants', 'periods', 'picsEngineering', 'picsMarketing'));
     }
 
     public function storeReceipt(Request $request)
@@ -228,7 +233,7 @@ class TrackingDocumentController extends Controller
             ]);
         });
 
-        return redirect()->route('tracking-documents.index', absolute: false)
+        return redirect()->route('tracking-documents.index')
             ->with('success', 'Project baru berhasil dibuat.');
     }
 
@@ -268,9 +273,7 @@ class TrackingDocumentController extends Controller
             'cogm_generated_at' => null,
         ]);
 
-        $target = route('form', ['tracking_revision_id' => $revision->id], absolute: false);
-
-        return response('', 302, ['Location' => $target]);
+        return redirect()->to(route('form', ['tracking_revision_id' => $revision->id], false));
     }
 
     public function submitCogm(Request $request, DocumentRevision $revision)
@@ -863,6 +866,59 @@ class TrackingDocumentController extends Controller
 
         return response()->json([
             'ok' => true,
+            'open_unpriced_count' => $openCount,
+            'status' => $revision->fresh()->status,
+            'status_label' => $revision->fresh()->status_label,
+        ]);
+    }
+
+    public function bulkDeleteUnpricedParts(Request $request, DocumentRevision $revision)
+    {
+        $validated = $request->validate([
+            'part_numbers' => 'required|array|min:1',
+            'part_numbers.*' => 'required|string|max:255',
+        ]);
+
+        $partKeys = array_map(fn ($p) => strtolower(trim((string) $p)), $validated['part_numbers']);
+
+        DB::transaction(function () use ($revision, $partKeys) {
+            UnpricedPart::where('document_revision_id', $revision->id)
+                ->whereNull('resolved_at')
+                ->where(function ($q) use ($partKeys) {
+                    foreach ($partKeys as $key) {
+                        $q->orWhereRaw('lower(part_number) = ?', [$key]);
+                    }
+                })
+                ->update([
+                    'resolved_at' => now(),
+                    'resolution_source' => 'manual_delete',
+                ]);
+
+            $hasOpenUnpriced = UnpricedPart::where('document_revision_id', $revision->id)
+                ->whereNull('resolved_at')
+                ->exists();
+
+            if ($hasOpenUnpriced) {
+                if ($revision->status !== DocumentRevision::STATUS_SUBMITTED_TO_MARKETING) {
+                    $revision->update([
+                        'status' => DocumentRevision::STATUS_PENDING_PRICING,
+                    ]);
+                }
+            } elseif ($revision->status === DocumentRevision::STATUS_PENDING_PRICING) {
+                $revision->update([
+                    'status' => DocumentRevision::STATUS_COGM_GENERATED,
+                    'cogm_generated_at' => now(),
+                ]);
+            }
+        });
+
+        $openCount = UnpricedPart::where('document_revision_id', $revision->id)
+            ->whereNull('resolved_at')
+            ->count();
+
+        return response()->json([
+            'ok' => true,
+            'deleted_count' => count($partKeys),
             'open_unpriced_count' => $openCount,
             'status' => $revision->fresh()->status,
             'status_label' => $revision->fresh()->status_label,

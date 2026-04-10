@@ -736,7 +736,8 @@
                         <div class="history-sub">Total submit COGM ke Marketing: {{ $project->revisions->sum(fn ($item) => $item->cogmSubmissions->count()) }} kali</div>
                         @if($project->revisions->isNotEmpty())
                             <div class="action-group" style="margin-top: 0.6rem;">
-                                <form action="{{ route('tracking-documents.add-version', ['revision' => $project->revisions->first()->id], absolute: false) }}" method="POST" style="display: inline-flex;">
+                                <form action="{{ route('tracking-documents.add-version', ['revision' => $project->revisions->first()->id], absolute: false) }}" method="POST" style="display: inline-flex;"
+                                    onsubmit="return confirmAddVersion(event, this);">
                                     @csrf
                                     <button type="submit" class="btn btn-primary btn-sm">Tambah Versi</button>
                                 </form>
@@ -933,12 +934,22 @@
 
                             <div class="form-group">
                                 <label class="form-label">PIC Engineering <span style="color: var(--red-500);">*</span></label>
-                                <input type="text" name="pic_engineering" class="form-input" value="{{ $editRevision?->pic_engineering }}" required>
+                                <select name="pic_engineering" class="form-select" required>
+                                    <option value="">-- Pilih PIC Engineering --</option>
+                                    @foreach($picsEngineering as $pic)
+                                        <option value="{{ $pic->name }}" {{ ($editRevision?->pic_engineering === $pic->name) ? 'selected' : '' }}>{{ $pic->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="form-group">
                                 <label class="form-label">PIC Marketing <span style="color: var(--red-500);">*</span></label>
-                                <input type="text" name="pic_marketing" class="form-input" value="{{ $editRevision?->pic_marketing }}" required>
+                                <select name="pic_marketing" class="form-select" required>
+                                    <option value="">-- Pilih PIC Marketing --</option>
+                                    @foreach($picsMarketing as $pic)
+                                        <option value="{{ $pic->name }}" {{ ($editRevision?->pic_marketing === $pic->name) ? 'selected' : '' }}>{{ $pic->name }}</option>
+                                    @endforeach
+                                </select>
                             </div>
 
                             <div class="form-group">
@@ -1120,7 +1131,12 @@
                         @csrf
                         <div class="form-group" style="margin-bottom: 1rem;">
                             <label class="form-label">PIC Marketing <span style="color: var(--red-500);">*</span></label>
-                            <input type="text" name="pic_marketing" class="form-input" required>
+                            <select name="pic_marketing" class="form-select" required>
+                                <option value="">-- Pilih PIC Marketing --</option>
+                                @foreach($picsMarketing as $pic)
+                                    <option value="{{ $pic->name }}">{{ $pic->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="form-group" style="margin-bottom: 1rem;">
                             <label class="form-label">Nilai COGM</label>
@@ -1177,9 +1193,27 @@
         </div>
     </div>
 
+    <div id="add-version-confirm-modal" class="modal is-hidden" onclick="handleOverlayClose(event, this.id)">
+        <div class="modal-content" style="width: min(480px, 100%); padding: 1.5rem;">
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="width: 48px; height: 48px; margin: 0 auto;">
+                    <path d="M12 9v4" /><path d="M12 17h.01" />
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                </svg>
+                <h4 style="margin: 0.8rem 0 0.4rem;">Konfirmasi Tambah Versi</h4>
+                <p style="color: var(--slate-600, #555); font-size: 0.9rem;">Tambah versi baru untuk project ini? Aksi ini akan membuat revisi baru.</p>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 0.6rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeAddVersionConfirmModal()">Batal</button>
+                <button type="button" class="btn btn-primary btn-sm" onclick="submitAddVersion()">Ya, Tambah Versi</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let pendingDeleteForm = null;
         let pendingDeleteVersionForm = null;
+        let pendingAddVersionForm = null;
 
         function searchProjects() {
             const input = document.getElementById('projectSearchInput');
@@ -1278,6 +1312,10 @@
                     closeDeleteVersionConfirmModal();
                     return;
                 }
+                if (id === 'add-version-confirm-modal') {
+                    closeAddVersionConfirmModal();
+                    return;
+                }
                 closeModal(id);
             }
         }
@@ -1339,6 +1377,30 @@
             const formToSubmit = pendingDeleteVersionForm;
             pendingDeleteVersionForm = null;
             closeModal('delete-version-confirm-modal');
+            formToSubmit.submit();
+        }
+
+        function confirmAddVersion(event, form) {
+            event.preventDefault();
+            pendingAddVersionForm = form;
+            openModal('add-version-confirm-modal');
+            return false;
+        }
+
+        function closeAddVersionConfirmModal() {
+            pendingAddVersionForm = null;
+            closeModal('add-version-confirm-modal');
+        }
+
+        function submitAddVersion() {
+            if (!pendingAddVersionForm) {
+                closeModal('add-version-confirm-modal');
+                return;
+            }
+
+            const formToSubmit = pendingAddVersionForm;
+            pendingAddVersionForm = null;
+            closeModal('add-version-confirm-modal');
             formToSubmit.submit();
         }
 

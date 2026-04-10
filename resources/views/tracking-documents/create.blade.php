@@ -241,11 +241,21 @@
                     </div>
                     <div class="form-group">
                         <label class="form-label">PIC Engineering <span style="color: var(--red-500);">*</span></label>
-                        <input type="text" name="pic_engineering" class="form-input" value="{{ old('pic_engineering') }}" required>
+                        <select name="pic_engineering" class="form-select" required>
+                            <option value="">-- Pilih PIC Engineering --</option>
+                            @foreach($picsEngineering as $pic)
+                                <option value="{{ $pic->name }}" {{ old('pic_engineering') === $pic->name ? 'selected' : '' }}>{{ $pic->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">PIC Marketing <span style="color: var(--red-500);">*</span></label>
-                        <input type="text" name="pic_marketing" class="form-input" value="{{ old('pic_marketing') }}" required>
+                        <select name="pic_marketing" class="form-select" required>
+                            <option value="">-- Pilih PIC Marketing --</option>
+                            @foreach($picsMarketing as $pic)
+                                <option value="{{ $pic->name }}" {{ old('pic_marketing') === $pic->name ? 'selected' : '' }}>{{ $pic->name }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-group">
                         <label class="form-label">A00</label>
