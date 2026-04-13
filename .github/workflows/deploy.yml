@@ -1,0 +1,46 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy via SSH
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy ke server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /home/ubuntu/costing1
+
+            echo ">>> Git pull..."
+            git pull origin main
+
+            echo ">>> Install/update PHP dependencies..."
+            composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+            echo ">>> Run migrations..."
+            php artisan migrate --force --no-interaction
+
+            echo ">>> Clear & rebuild cache..."
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+
+            echo ">>> Build frontend assets..."
+            npm ci --prefer-offline
+            npm run build
+
+            echo ">>> Deploy selesai!"
