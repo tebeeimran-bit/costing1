@@ -1,11 +1,20 @@
 <?php
 
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CostingController;
 use App\Http\Controllers\DatabaseController;
 use App\Http\Controllers\DocumentReceiptController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TrackingDocumentController;
 use Illuminate\Support\Facades\Route;
+
+// Auth routes
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.submit');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// All app routes require authentication
+Route::middleware('auth')->group(function () {
 
 Route::get('/', [CostingController::class, 'dashboard'])->name('dashboard');
 Route::get('/compare-costing', [CostingController::class, 'compare'])->name('compare.costing');
@@ -131,3 +140,12 @@ Route::get('/tracking-documents/{revision}/{type}', [TrackingDocumentController:
 Route::get('/tracking-documents/{revision}/export-unpriced/{format}', [TrackingDocumentController::class, 'exportUnpricedParts'])
 	->where('format', 'excel|pdf')
 	->name('tracking-documents.export-unpriced');
+
+// Permission management (admin only)
+Route::get('/permissions', [AuthController::class, 'permissions'])->name('permissions');
+Route::post('/permissions', [AuthController::class, 'storeUser'])->name('permissions.store');
+Route::post('/permissions/update-access', [AuthController::class, 'updatePermission'])->name('permissions.update-access');
+Route::put('/permissions/{id}', [AuthController::class, 'updateUser'])->name('permissions.update');
+Route::delete('/permissions/{id}', [AuthController::class, 'destroyUser'])->name('permissions.destroy');
+
+}); // end auth middleware group

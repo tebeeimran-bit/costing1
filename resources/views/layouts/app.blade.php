@@ -293,9 +293,41 @@
                         <span>Audit Trail</span>
                     </a>
                 </div>
+                @if(auth()->check() && auth()->user()->role === 'admin')
+                <div class="sidebar-nav-section">
+                    <div class="sidebar-nav-title">Administrasi</div>
+                    <a href="{{ route('permissions', absolute: false) }}"
+                        class="sidebar-nav-item {{ request()->routeIs('permissions') ? 'active' : '' }}">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                            <circle cx="8.5" cy="7" r="4"/>
+                            <path d="M17 11l2 2 4-4"/>
+                        </svg>
+                        <span>Permission</span>
+                    </a>
+                </div>
+                @endif
             </nav>
-            <div class="sidebar-footer">
-                <p class="sidebar-footer-text">© 2025 Dharma Electrindo Mfg</p>
+            <div class="sidebar-footer" style="padding: 0.75rem 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+                @auth
+                <div style="display: flex; align-items: center; gap: 0.625rem; margin-bottom: 0.5rem;">
+                    <div style="width: 32px; height: 32px; background: rgba(255,255,255,0.15); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; color: rgba(255,255,255,0.7);"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    </div>
+                    <div style="overflow: hidden;">
+                        <div style="font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ auth()->user()->name }}</div>
+                        <div style="font-size: 0.625rem; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.05em;">{{ auth()->user()->role ?? 'user' }}</div>
+                    </div>
+                </div>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button type="submit" style="width: 100%; padding: 0.375rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: rgba(255,255,255,0.7); font-size: 0.6875rem; font-family: inherit; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.375rem; transition: all 0.15s;" onmouseenter="this.style.background='rgba(255,255,255,0.15)'" onmouseleave="this.style.background='rgba(255,255,255,0.08)'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        Logout
+                    </button>
+                </form>
+                @endauth
+                <p class="sidebar-footer-text" style="margin-top: 0.5rem;">© {{ date('Y') }} Dharma Electrindo Mfg</p>
             </div>
         </aside>
 

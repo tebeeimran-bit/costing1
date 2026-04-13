@@ -1,0 +1,134 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\RolePermission;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+
+class AuthController extends Controller
+{
+    public function showLogin()
+    {
+        if (Auth::check()) {
+            return redirect()->route('dashboard');
+        }
+
+        return view('auth.login');
+    }
+
+    public function login(Request $request)
+    {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
+        if (Auth::attempt($credentials, $request->boolean('remember'))) {
+            $request->session()->regenerate();
+
+            return redirect()->intended(route('dashboard'));
+        }
+
+        return back()->withErrors([
+            'email' => 'Email atau password salah.',
+        ])->onlyInput('email');
+    }
+
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
+
+    public function permissions()
+    {
+        $users = User::orderBy('name')->get();
+        $permissionMatrix = RolePermission::getMatrix();
+        $roles = ['admin', 'editor', 'viewer'];
+        $modules = [
+            'dashboard' => 'Dashboard',
+            'input_data' => 'Input Data',
+            'database' => 'Database',
+            'laporan' => 'Laporan',
+            'user_management' => 'User Management',
+        ];
+
+        return view('auth.permissions', compact('users', 'permissionMatrix', 'roles', 'modules'));
+    }
+
+    public function updatePermission(Request $request)
+    {
+        $validated = $request->validate([
+            'role' => ['required', 'in:admin,editor,viewer'],
+            'module' => ['required', 'in:dashboard,input_data,database,laporan,user_management'],
+            'access' => ['required', 'in:full,view,none'],
+        ]);
+
+        RolePermission::updateOrCreate(
+            ['role' => $validated['role'], 'module' => $validated['module']],
+            ['access' => $validated['access']]
+        );
+
+        return redirect()->route('permissions')->with('success', 'Permission berhasil diperbarui.');
+    }
+
+    public function storeUser(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password' => ['required', 'string', 'min:6'],
+            'role' => ['required', 'in:admin,editor,viewer'],
+        ]);
+
+        $validated['password'] = Hash::make($validated['password']);
+
+        User::create($validated);
+
+        return redirect()->route('permissions')->with('success', 'User berhasil ditambahkan.');
+    }
+
+    public function updateUser(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $user->id],
+            'role' => ['required', 'in:admin,editor,viewer'],
+            'password' => ['nullable', 'string', 'min:6'],
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        return redirect()->route('permissions')->with('success', 'User berhasil diperbarui.');
+    }
+
+    public function destroyUser($id)
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->id === Auth::id()) {
+            return redirect()->route('permissions')->with('error', 'Tidak dapat menghapus akun sendiri.');
+        }
+
+        $user->delete();
+
+        return redirect()->route('permissions')->with('success', 'User berhasil dihapus.');
+    }
+}
