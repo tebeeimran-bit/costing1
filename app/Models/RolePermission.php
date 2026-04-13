@@ -22,10 +22,16 @@ class RolePermission extends Model
 
     public static function hasAccess(string $role, string $module, string $minLevel = 'view'): bool
     {
+        // Admin selalu punya akses penuh ke semua modul
+        if ($role === 'admin') {
+            return true;
+        }
+
         $perm = self::where('role', $role)->where('module', $module)->first();
 
+        // Jika tidak ada record, akses ditolak
         if (!$perm) {
-            return $role === 'admin';
+            return false;
         }
 
         if ($minLevel === 'view') {

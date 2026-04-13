@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Gzip compress all responses
         $middleware->append(\App\Http\Middleware\CompressResponse::class);
+
+        // Alias RBAC permission middleware
+        $middleware->alias([
+            'permission' => \App\Http\Middleware\CheckPermission::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

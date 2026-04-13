@@ -71,6 +71,16 @@ class AuthController extends Controller
             'access' => ['required', 'in:full,view,none'],
         ]);
 
+        // Admin selalu full – tidak bisa diubah
+        if ($validated['role'] === 'admin') {
+            return redirect()->route('permissions')->with('error', 'Permission role Admin tidak dapat diubah.');
+        }
+
+        // Modul user_management hanya boleh diakses admin – tidak bisa diberi akses ke role lain
+        if ($validated['module'] === 'user_management') {
+            return redirect()->route('permissions')->with('error', 'Modul User Management hanya dapat diakses oleh Admin.');
+        }
+
         RolePermission::updateOrCreate(
             ['role' => $validated['role'], 'module' => $validated['module']],
             ['access' => $validated['access']]

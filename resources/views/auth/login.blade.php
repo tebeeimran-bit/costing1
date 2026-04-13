@@ -4,11 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="color-scheme" content="light only">
     <title>Login - Costing System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
     <style>
+        html { color-scheme: light only !important; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -16,8 +18,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%) !important;
             padding: 1rem;
+            color-scheme: light only;
         }
         .login-container {
             width: 100%;
@@ -56,7 +59,7 @@
             margin-top: 0.25rem;
         }
         .login-card {
-            background: #fff;
+            background: #ffffff !important;
             border-radius: 16px;
             padding: 2rem;
             box-shadow: 0 20px 60px rgba(0,0,0,0.15);
@@ -64,11 +67,11 @@
         .login-card h2 {
             font-size: 1.25rem;
             font-weight: 700;
-            color: #1e293b;
+            color: #1e293b !important;
             margin-bottom: 0.25rem;
         }
         .login-card .subtitle {
-            color: #64748b;
+            color: #64748b !important;
             font-size: 0.875rem;
             margin-bottom: 1.5rem;
         }
@@ -79,24 +82,24 @@
             display: block;
             font-size: 0.8125rem;
             font-weight: 600;
-            color: #334155;
+            color: #334155 !important;
             margin-bottom: 0.375rem;
         }
         .form-input {
             width: 100%;
             padding: 0.625rem 0.875rem;
-            border: 1.5px solid #e2e8f0;
+            border: 1.5px solid #e2e8f0 !important;
             border-radius: 10px;
             font-size: 0.875rem;
             font-family: inherit;
-            color: #1e293b;
-            background: #f8fafc;
+            color: #1e293b !important;
+            background: #f8fafc !important;
             transition: all 0.2s;
             outline: none;
         }
         .form-input:focus {
-            border-color: #2563eb;
-            background: #fff;
+            border-color: #2563eb !important;
+            background: #ffffff !important;
             box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
         }
         .form-input::placeholder {

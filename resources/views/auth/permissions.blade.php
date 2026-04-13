@@ -27,21 +27,37 @@
     <div class="card" style="margin-bottom: 1.5rem;">
         <div class="card-header">
             <h3 class="card-title">Daftar Role & Hak Akses</h3>
-            <span style="font-size: 0.75rem; color: #64748b;">Klik pada status akses untuk mengubah</span>
+            <span style="font-size: 0.75rem; color: #64748b;">Ubah level akses per modul menggunakan dropdown</span>
         </div>
         <div class="card-body" style="padding: 1.25rem;">
+            {{-- Legend --}}
+            <div style="display: flex; gap: 1.25rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                <span style="font-size: 0.75rem; color: #15803d; display: flex; align-items: center; gap: 0.3rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><polyline points="20 6 9 17 4 12"/></svg> Akses penuh — bisa lihat & edit
+                </span>
+                <span style="font-size: 0.75rem; color: #d97706; display: flex; align-items: center; gap: 0.3rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg> Lihat saja — hanya baca, tidak bisa edit
+                </span>
+                <span style="font-size: 0.75rem; color: #dc2626; display: flex; align-items: center; gap: 0.3rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Tidak ada akses — halaman diblokir (403)
+                </span>
+                <span style="font-size: 0.75rem; color: #64748b; display: flex; align-items: center; gap: 0.3rem;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Terkunci — tidak dapat diubah
+                </span>
+            </div>
+            <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.8125rem;">
                 <thead>
                     <tr style="border-bottom: 2px solid #e2e8f0;">
-                        <th style="text-align: left; padding: 0.625rem 0.75rem; color: #1e293b; font-weight: 700; text-transform: uppercase; font-size: 0.6875rem; letter-spacing: 0.05em;">Role</th>
+                        <th style="text-align: left; padding: 0.625rem 0.75rem; color: #1e293b; font-weight: 700; text-transform: uppercase; font-size: 0.6875rem; letter-spacing: 0.05em; min-width: 90px;">Role</th>
                         @foreach($modules as $key => $label)
-                        <th style="text-align: left; padding: 0.625rem 0.75rem; color: #1e293b; font-weight: 700; text-transform: uppercase; font-size: 0.6875rem; letter-spacing: 0.05em;">{{ $label }}</th>
+                        <th style="text-align: left; padding: 0.625rem 0.75rem; color: #1e293b; font-weight: 700; text-transform: uppercase; font-size: 0.6875rem; letter-spacing: 0.05em; min-width: 160px;">{{ $label }}</th>
                         @endforeach
                     </tr>
                 </thead>
                 <tbody>
                     @foreach($roles as $role)
-                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                    <tr style="border-bottom: 1px solid #f1f5f9; {{ $role === 'admin' ? 'background: #f8fafc;' : '' }}">
                         <td style="padding: 0.625rem 0.75rem;">
                             @if($role === 'admin')
                                 <span style="background: #dbeafe; color: #1e40af; padding: 0.125rem 0.5rem; border-radius: 6px; font-weight: 600; font-size: 0.75rem;">Admin</span>
@@ -53,35 +69,42 @@
                         </td>
                         @foreach($modules as $moduleKey => $moduleLabel)
                             @php
-                                $access = $permissionMatrix[$role][$moduleKey] ?? 'none';
-                                $nextAccess = match($access) { 'full' => 'view', 'view' => 'none', default => 'full' };
+                                $isLocked = $role === 'admin' || $moduleKey === 'user_management';
+                                $access = ($role === 'admin' || $moduleKey === 'user_management' && $role !== 'admin')
+                                    ? ($role === 'admin' ? 'full' : 'none')
+                                    : ($permissionMatrix[$role][$moduleKey] ?? 'none');
                             @endphp
-                            <td style="padding: 0.625rem 0.75rem;">
-                                <form method="POST" action="{{ route('permissions.update-access') }}" style="display: inline;">
-                                    @csrf
-                                    <input type="hidden" name="role" value="{{ $role }}">
-                                    <input type="hidden" name="module" value="{{ $moduleKey }}">
-                                    <input type="hidden" name="access" value="{{ $nextAccess }}">
-                                    <button type="submit" style="background: none; border: 1px solid transparent; border-radius: 6px; padding: 0.25rem 0.5rem; cursor: pointer; font-family: inherit; font-size: 0.8125rem; transition: all 0.15s;
-                                        @if($access === 'full') color: #22c55e; @elseif($access === 'view') color: #f59e0b; @else color: #ef4444; @endif"
-                                        onmouseenter="this.style.borderColor='#cbd5e1'; this.style.background='#f8fafc'"
-                                        onmouseleave="this.style.borderColor='transparent'; this.style.background='none'"
-                                        title="Klik untuk ubah ke: {{ match($nextAccess) { 'full' => 'Akses penuh', 'view' => 'Lihat saja', default => 'Tidak bisa akses' } }}">
-                                        @if($access === 'full')
-                                            &#10003; Akses penuh
-                                        @elseif($access === 'view')
-                                            &#9679; Lihat saja
-                                        @else
-                                            &#10007; Tidak bisa akses
-                                        @endif
-                                    </button>
-                                </form>
+                            <td style="padding: 0.5rem 0.75rem;">
+                                @if($isLocked)
+                                    {{-- Terkunci: tampilkan badge saja --}}
+                                    <span style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.775rem; color: #94a3b8; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.25rem 0.6rem;">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                        {{ $role === 'admin' ? 'Akses penuh' : 'Tidak ada akses' }}
+                                    </span>
+                                @else
+                                    {{-- Dapat diubah: dropdown select --}}
+                                    <form method="POST" action="{{ route('permissions.update-access') }}">
+                                        @csrf
+                                        <input type="hidden" name="role" value="{{ $role }}">
+                                        <input type="hidden" name="module" value="{{ $moduleKey }}">
+                                        <select name="access" onchange="this.form.submit()"
+                                            style="padding: 0.3rem 0.5rem; border-radius: 6px; font-size: 0.775rem; font-family: inherit; outline: none; cursor: pointer;
+                                                border: 1.5px solid {{ $access === 'full' ? '#86efac' : ($access === 'view' ? '#fcd34d' : '#fca5a5') }};
+                                                background: {{ $access === 'full' ? '#f0fdf4' : ($access === 'view' ? '#fffbeb' : '#fef2f2') }};
+                                                color: {{ $access === 'full' ? '#15803d' : ($access === 'view' ? '#b45309' : '#dc2626') }};">
+                                            <option value="full" {{ $access === 'full' ? 'selected' : '' }} style="color: #15803d; background: #f0fdf4;">✓ Akses penuh</option>
+                                            <option value="view" {{ $access === 'view' ? 'selected' : '' }} style="color: #b45309; background: #fffbeb;">● Lihat saja</option>
+                                            <option value="none" {{ $access === 'none' ? 'selected' : '' }} style="color: #dc2626; background: #fef2f2;">✗ Tidak ada akses</option>
+                                        </select>
+                                    </form>
+                                @endif
                             </td>
                         @endforeach
                     </tr>
                     @endforeach
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 
