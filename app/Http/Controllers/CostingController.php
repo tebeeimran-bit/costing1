@@ -305,10 +305,13 @@ class CostingController extends Controller
         // Batch-fetch all monthly submit counts in one query.
         $submitRangeStart = \Carbon\Carbon::createFromFormat('Y-m', (string) $submitPeriodCandidates->first())->startOfMonth();
         $submitRangeEnd   = \Carbon\Carbon::createFromFormat('Y-m', (string) $submitPeriodCandidates->last())->endOfMonth();
+        $submitMonthExpression = DB::connection()->getDriverName() === 'sqlite'
+            ? "strftime('%Y-%m', submitted_at)"
+            : "DATE_FORMAT(submitted_at, '%Y-%m')";
         $batchedSubmitCounts = (clone $submitScope)
             ->whereBetween('submitted_at', [$submitRangeStart, $submitRangeEnd])
-            ->selectRaw("DATE_FORMAT(submitted_at, '%Y-%m') as ym, COUNT(*) as cnt")
-            ->groupByRaw("DATE_FORMAT(submitted_at, '%Y-%m')")
+            ->selectRaw($submitMonthExpression . ' as ym, COUNT(*) as cnt')
+            ->groupByRaw($submitMonthExpression)
             ->pluck('cnt', 'ym');
 
         $monthlySubmitCounts = $submitPeriodCandidates->map(function ($submitPeriod) use ($batchedSubmitCounts) {
