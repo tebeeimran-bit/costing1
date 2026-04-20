@@ -901,7 +901,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 data-jpy="{{ $wr->jpy_rate }}"
                                 data-lme="{{ $wr->lme_active }}"
                                 {{ (int) $selectedWireRateId === (int) $wr->id ? 'selected' : '' }}>
-                                {{ $wrLabel }} | JPY: {{ number_format((float)$wr->jpy_rate, 2, ',', '.') }} | USD: {{ number_format((float)$wr->usd_rate, 0, ',', '.') }} | LME: {{ number_format((float)$wr->lme_active, 0, ',', '.') }}
+                                {{ $wrLabel }} | JPY: {{ rtrim(rtrim(number_format((float)$wr->jpy_rate, 2, ',', '.'), '0'), ',') }} | USD: {{ number_format((float)$wr->usd_rate, 0, ',', '.') }} | LME: {{ number_format((float)$wr->lme_active, 0, ',', '.') }}
                             </option>
                         @endforeach
                     </select>
@@ -1059,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <td class="calculated amount2" data-original-amount2="{{ $row['amount2'] ?? 0 }}">0.0000</td>
                                 <td class="calculated currency2">{{ $rowCurrency }}</td>
                                 <td class="calculated unit-price2">{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}</td>
-                                <td class="calculated total-price">Rp {{ number_format((float) ($row['amount1'] ?? 0), 4, ',', '.') }}</td>
+                                <td class="calculated total-price">Rp {{ rtrim(rtrim(number_format((float) ($row['amount1'] ?? 0), 4, ',', '.'), '0'), ',') }}</td>
                                 <td>
                                 <button type="button" class="btn btn-secondary" onclick="removeRow(this)"
                                     style="padding: 0.5rem;">
@@ -1135,10 +1135,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                             value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
                                     </td>
                                     <td class="calculated multiply-factor">1.0000</td>
-                                    <td class="calculated amount2" data-original-amount2="{{ $breakdown->amount2 ?? 0 }}">{{ number_format($breakdown->amount2 ?? 0, 4, ',', '.') }}</td>
+                                    <td class="calculated amount2" data-original-amount2="{{ $breakdown->amount2 ?? 0 }}">{{ rtrim(rtrim(number_format($breakdown->amount2 ?? 0, 4, ',', '.'), '0'), ',') }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
                                         <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
-                                    <td class="calculated total-price">Rp {{ number_format((float) ($breakdown->amount1 ?? 0), 4, ',', '.') }}</td>
+                                    <td class="calculated total-price">Rp {{ rtrim(rtrim(number_format((float) ($breakdown->amount1 ?? 0), 4, ',', '.'), '0'), ',') }}</td>
                                     <td>
                                         <button type="button" class="btn btn-secondary" onclick="removeRow(this)"
                                             style="padding: 0.5rem;">
@@ -1340,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         data-price="{{ $matchedPrice }}"
                                                         data-currency="{{ $matched->currency ?? '' }}"
                                                         {{ $isMatchedChecked ? 'checked' : '' }}>
-                                                    <span>{{ number_format($matchedPrice, 4, ',', '.') }}</span>
+                                                    <span>{{ rtrim(rtrim(number_format($matchedPrice, 4, ',', '.'), '0'), ',') }}</span>
                                                 </div>
                                             @endforeach
                                         @else
@@ -1352,10 +1352,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         data-price="{{ (float) $item->matched_price }}"
                                                         data-currency="{{ $item->matched_currency ?? 'IDR' }}"
                                                         checked>
-                                                    <span>{{ number_format((float) $item->matched_price, 4, ',', '.') }}</span>
+                                                    <span>{{ rtrim(rtrim(number_format((float) $item->matched_price, 4, ',', '.'), '0'), ',') }}</span>
                                                 </div>
                                             @else
-                                                {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4, ',', '.') : number_format((float) ($item->detected_price ?? 0), 4, ',', '.') }}
+                                                {{ isset($item->matched_price) && $item->matched_price !== null ? rtrim(rtrim(number_format((float) $item->matched_price, 4, ',', '.'), '0'), ',') : rtrim(rtrim(number_format((float) ($item->detected_price ?? 0), 4, ',', '.'), '0'), ',') }}
                                             @endif
                                         @endif
                                     </td>
@@ -1382,10 +1382,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? number_format((float) $matched->moq, 2, ',', '.') : '-' }}</div>
+                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? rtrim(rtrim(number_format((float) $matched->moq, 2, ',', '.'), '0'), ',') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? number_format((float) $item->matched_moq, 2, ',', '.') : '-' }}
+                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? rtrim(rtrim(number_format((float) $item->matched_moq, 2, ',', '.'), '0'), ',') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1409,10 +1409,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? number_format((float) $matched->add_cost_import_tax, 2, ',', '.') : '-' }}</div>
+                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? rtrim(rtrim(number_format((float) $matched->add_cost_import_tax, 2, ',', '.'), '0'), ',') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? number_format((float) $item->matched_add_cost_import_tax, 2, ',', '.') : '-' }}
+                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? rtrim(rtrim(number_format((float) $item->matched_add_cost_import_tax, 2, ',', '.'), '0'), ',') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1427,10 +1427,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? number_format((float) $matched->price_before, 2, ',', '.') : '-' }}</div>
+                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? rtrim(rtrim(number_format((float) $matched->price_before, 2, ',', '.'), '0'), ',') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? number_format((float) $item->matched_price_before, 2, ',', '.') : '-' }}
+                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? rtrim(rtrim(number_format((float) $item->matched_price_before, 2, ',', '.'), '0'), ',') : '-' }}
                                         @endif
                                     </td>
                                     <td>
