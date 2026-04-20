@@ -1023,13 +1023,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                     value="{{ $row['id_code'] ?? '' }}" placeholder="ID Code"></td>
                                 <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
                                     value="{{ $row['part_name'] ?? '' }}" placeholder="Part Name"></td>
-                                <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]" autocomplete="off"
-                                    value="{{ intval($row['qty_req'] ?? 0) }}" data-original-qty-req="{{ intval($row['qty_req'] ?? 0) }}" step="1" min="0" onchange="calculateRow(this)"></td>
+                                <td><input type="text" class="form-input w-28 qty-req number-format" name="materials[{{ $index }}][qty_req]" autocomplete="off"
+                                    value="{{ number_format((float) ($row['qty_req'] ?? 0), 0, ',', '.') }}" data-original-qty-req="{{ intval($row['qty_req'] ?? 0) }}" onchange="calculateRow(this)"></td>
                                 <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
                                     value="{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}" placeholder="Unit"></td>
                                 <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
                                     value="{{ $row['pro_code'] ?? '' }}" placeholder="Pro Code"></td>
-                                <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ $row['amount1'] ?? 0 }}" data-original-amount1="{{ $row['amount1'] ?? 0 }}"
+                                <td><input type="text" class="form-input amount1 number-format" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ rtrim(rtrim(number_format((float) ($row['amount1'] ?? 0), 4, ',', '.'), '0'), ',') }}" data-original-amount1="{{ $row['amount1'] ?? 0 }}"
                                     step="0.0001" onchange="calculateRow(this)"></td>
                                 <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
                                     value="{{ $row['unit_price_basis_text'] ?? $row['unit_price_basis'] ?? '' }}" placeholder="Unit Price"
@@ -1042,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <option value="JPY" {{ $rowCurrency == 'JPY' ? 'selected' : '' }}>JPY</option>
                                 </select>
                                 </td>
-                                <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $row['qty_moq'] ?? 0 }}" data-original-moq="{{ $row['qty_moq'] ?? 0 }}"
+                                <td><input type="text" class="form-input w-28 qty-moq number-format" name="materials[{{ $index }}][qty_moq]" value="{{ rtrim(rtrim(number_format((float) ($row['qty_moq'] ?? 0), 6, ',', '.'), '0'), ',') }}" data-original-moq="{{ $row['qty_moq'] ?? 0 }}"
                                     step="0.0001" onchange="calculateRow(this)"></td>
                                 <td>
                                 @php $rowCn = $row['cn_type'] ?? 'N'; @endphp
@@ -1102,13 +1102,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                     value="{{ $breakdown->id_code ?? '' }}" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $index }}][part_name]"
                                     value="{{ $partNameDisplay }}" placeholder="Part Name"></td>
-                                            <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $index }}][qty_req]" autocomplete="off"
-                                            value="{{ intval($breakdown->qty_req) }}" data-original-qty-req="{{ intval($breakdown->qty_req) }}" step="1" min="0" onchange="calculateRow(this)"></td>
+                                            <td><input type="text" class="form-input w-28 qty-req number-format" name="materials[{{ $index }}][qty_req]" autocomplete="off"
+                                            value="{{ number_format((float) ($breakdown->qty_req), 0, ',', '.') }}" data-original-qty-req="{{ intval($breakdown->qty_req) }}" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $index }}][unit]"
                                     value="{{ $unitDisplay }}" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $index }}][pro_code]"
                                             value="{{ $breakdown->pro_code ?? '' }}" placeholder="Pro Code"></td>
-                                            <td><input type="number" class="form-input amount1" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ $breakdown->amount1 }}" data-original-amount1="{{ $breakdown->amount1 }}"
+                                            <td><input type="text" class="form-input amount1 number-format" name="materials[{{ $index }}][amount1]" autocomplete="off" value="{{ rtrim(rtrim(number_format((float) ($breakdown->amount1), 4, ',', '.'), '0'), ',') }}" data-original-amount1="{{ $breakdown->amount1 }}"
                                             step="0.0001" onchange="calculateRow(this)"></td>
                                         <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $index }}][unit_price_basis]"
                                             value="{{ $breakdown->unit_price_basis_text ?? $breakdown->unit_price_basis }}" placeholder="Unit Price"
@@ -1121,7 +1121,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <option value="JPY" {{ $breakdown->currency == 'JPY' ? 'selected' : '' }}>JPY</option>
                                         </select>
                                     </td>
-                                        <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $index }}][qty_moq]" value="{{ $breakdown->qty_moq }}" data-original-moq="{{ $breakdown->qty_moq }}"
+                                        <td><input type="text" class="form-input w-28 qty-moq number-format" name="materials[{{ $index }}][qty_moq]" value="{{ rtrim(rtrim(number_format((float) ($breakdown->qty_moq), 6, ',', '.'), '0'), ',') }}" data-original-moq="{{ $breakdown->qty_moq }}"
                                             step="0.0001" onchange="calculateRow(this)"></td>
                                     <td>
                                         <select class="form-select cn-type" name="materials[{{ $index }}][cn_type]" onchange="calculateRow(this)">
@@ -1168,13 +1168,13 @@ document.addEventListener('DOMContentLoaded', () => {
                                             placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[{{ $i }}][part_name]"
                                             value="" placeholder="Part Name"></td>
-                                            <td><input type="number" class="form-input w-28 qty-req" name="materials[{{ $i }}][qty_req]" autocomplete="off"
-                                            value="0" data-original-qty-req="0" step="1" min="0" onchange="calculateRow(this)"></td>
+                                            <td><input type="text" class="form-input w-28 qty-req number-format" name="materials[{{ $i }}][qty_req]" autocomplete="off"
+                                            value="0" data-original-qty-req="0" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[{{ $i }}][unit]" value="PCS"
                                             placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[{{ $i }}][pro_code]" value=""
                                             placeholder="Pro Code"></td>
-                                            <td><input type="number" class="form-input amount1" name="materials[{{ $i }}][amount1]" autocomplete="off" value="0" data-original-amount1="0" step="0.0001"
+                                            <td><input type="text" class="form-input amount1 number-format" name="materials[{{ $i }}][amount1]" autocomplete="off" value="0" data-original-amount1="0" step="0.0001"
                                             onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit-price-basis" name="materials[{{ $i }}][unit_price_basis]" value="" placeholder="Unit Price"
                                             onchange="calculateRow(this)"></td>
@@ -1185,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <option value="JPY">JPY</option>
                                         </select>
                                     </td>
-                                        <td><input type="number" class="form-input w-28 qty-moq" name="materials[{{ $i }}][qty_moq]" value="0" data-original-moq="0" step="0.0001"
+                                        <td><input type="text" class="form-input w-28 qty-moq number-format" name="materials[{{ $i }}][qty_moq]" value="0" data-original-moq="0" step="0.0001"
                                             onchange="calculateRow(this)"></td>
                                     <td>
                                         <select class="form-select cn-type" name="materials[{{ $i }}][cn_type]" onchange="calculateRow(this)">
@@ -1195,7 +1195,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $i }}][supplier]" value=""
                                             placeholder="Supplier"></td>
-                                        <td><input type="number" class="form-input import-tax" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
+                                        <td><input type="text" class="form-input import-tax number-format" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
                                             onchange="calculateRow(this)"></td>
                                     <td class="calculated multiply-factor">1.0000</td>
                                     <td class="calculated amount2" data-original-amount2="0">0.0000</td>
@@ -1434,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         @endif
                                     </td>
                                     <td>
-                                        <input type="number" step="0.0001" class="form-input unpriced-manual-price"
+                                        <input type="text" class="form-input unpriced-manual-price number-format"
                                             name="manual_unpriced_prices[{{ $item->part_number }}]"
                                             data-part-number="{{ $item->part_number }}"
                                             value="{{ $item->manual_price ?? '' }}" placeholder="Isi harga jika sudah ada">
@@ -1816,6 +1816,66 @@ document.addEventListener('DOMContentLoaded', () => {
             }).format(number);
         }
 
+        
+        // Auto-format numbers with dots for thousands and comma for decimal
+        
+        // Convert JS float (e.g. 4000.25) to input format '4.000,25'
+        function floatToInput(num) {
+            let str = String(Number(num));
+            str = str.replace('.', ',');
+            return formatNumberInput(str);
+        }
+
+        function formatNumberInput(value) {
+            if (!value) return '';
+            let raw = value.toString().replace(/[^0-9,]/g, '');
+            let parts = raw.split(',');
+            let integerPart = parts[0];
+            let decimalPart = parts.length > 1 ? ',' + parts[1] : '';
+            
+            // Add thousand separators
+            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+            return integerPart + decimalPart;
+        }
+
+        document.addEventListener('input', function(e) {
+            if (e.target && e.target.classList.contains('number-format')) {
+                let startPos = e.target.selectionStart;
+                let oldVal = e.target.value;
+                
+                // Allow user to type comma if it's the last character
+                if (oldVal.endsWith(',') && (oldVal.match(/,/g) || []).length === 1) {
+                    return;
+                }
+
+                let newVal = formatNumberInput(oldVal);
+                e.target.value = newVal;
+                
+                // adjust cursor
+                if (startPos !== null) {
+                    let diff = newVal.length - oldVal.length;
+                    let newPos = startPos + diff;
+                    // basic heuristic, might jump to end on some browsers but works fine
+                    e.target.setSelectionRange(newPos, newPos);
+                }
+            }
+        });
+        
+        document.addEventListener('blur', function(e) {
+            if (e.target && e.target.classList.contains('number-format')) {
+                // remove trailing commas on blur
+                let v = e.target.value;
+                if (v.endsWith(',')) {
+                    e.target.value = v.slice(0, -1);
+                }
+                
+                // also calculateRow if not already fired by browser
+                if (typeof calculateRow === 'function' && e.target.closest('tr')) {
+                    calculateRow(e.target);
+                }
+            }
+        }, true);
+
         function formatWholeNumber(number) {
             return String(Math.round(Number(number) || 0));
         }
@@ -1993,19 +2053,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 const currentMoq = parseInputNumber(qtyMoqInput.value || 0);
                 const masterMoq = Number(master.moq || 0);
                 if (currentMoq <= 0 && masterMoq > 0) {
-                    qtyMoqInput.value = String(masterMoq);
+                    qtyMoqInput.value = floatToInput(masterMoq);
                 }
             }
 
             if (importTaxInput && String(importTaxInput.value || '').trim() === '' && master.add_cost_import_tax !== null && master.add_cost_import_tax !== undefined) {
-                importTaxInput.value = String(master.add_cost_import_tax || 0);
+                importTaxInput.value = floatToInput(master.add_cost_import_tax || 0);
             }
 
             if (amount1Input) {
                 const currentAmount1 = parseInputNumber(amount1Input.value || 0);
                 const masterPrice = Number(master.price || 0);
                 if (currentAmount1 <= 0 && masterPrice > 0) {
-                    amount1Input.value = String(masterPrice);
+                    amount1Input.value = floatToInput(masterPrice);
                 }
             }
 
@@ -2229,7 +2289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const manualInput = document.querySelector(`#unpricedRecapBody .unpriced-manual-price[data-part-number="${escapedPart}"]`);
             if (manualInput instanceof HTMLInputElement) {
-                manualInput.value = selectedPrice > 0 ? String(selectedPrice) : '';
+                manualInput.value = selectedPrice > 0 ? floatToInput(selectedPrice) : '';
             }
 
             const targetKey = normalizePartKey(partNumber);
@@ -2546,16 +2606,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td><input type="text" class="form-input part-no" name="materials[${rowCounter}][part_no]" value="" placeholder="Part No"></td>
                                     <td><input type="text" class="form-input id-code" name="materials[${rowCounter}][id_code]" value="" placeholder="ID Code"></td>
                                     <td><input type="text" class="form-input part-name" name="materials[${rowCounter}][part_name]" value="" placeholder="Part Name"></td>
-                                    <td><input type="number" class="form-input w-28 qty-req" name="materials[${rowCounter}][qty_req]" value="0" step="1" min="0" onchange="calculateRow(this)"></td>
+                                    <td><input type="text" class="form-input w-28 qty-req number-format" name="materials[${rowCounter}][qty_req]" value="0" step="1" min="0" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit" name="materials[${rowCounter}][unit]" value="PCS" placeholder="Unit"></td>
                                     <td><input type="text" class="form-input pro-code" name="materials[${rowCounter}][pro_code]" value="" placeholder="Pro Code"></td>
-                                    <td><input type="number" class="form-input amount1" name="materials[${rowCounter}][amount1]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
+                                    <td><input type="text" class="form-input amount1 number-format" name="materials[${rowCounter}][amount1]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><input type="text" class="form-input unit-price-basis" name="materials[${rowCounter}][unit_price_basis]" value="" placeholder="Unit Price" onchange="calculateRow(this)"></td>
                                     <td><select class="form-select currency" name="materials[${rowCounter}][currency]" onchange="calculateRow(this)"><option value="IDR">IDR</option><option value="USD">USD</option><option value="JPY">JPY</option></select></td>
-                                    <td><input type="number" class="form-input w-28 qty-moq" name="materials[${rowCounter}][qty_moq]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
+                                    <td><input type="text" class="form-input w-28 qty-moq number-format" name="materials[${rowCounter}][qty_moq]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
                                     <td><input type="text" class="form-input supplier" name="materials[${rowCounter}][supplier]" value="" placeholder="Supplier"></td>
-                                    <td><input type="number" class="form-input import-tax" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
+                                    <td><input type="text" class="form-input import-tax number-format" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
                                     <td class="calculated multiply-factor">1.0000</td>
                         <td class="calculated amount2">0.0000</td>
                         <td class="calculated currency2">IDR</td>
@@ -3989,9 +4049,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 const normalizedAmount1 = (normalizedAmount2 * Math.max(1, unitDivisor)) / (multiplyFactor * taxFactor);
 
-                qtyReqInput.value = String(Math.round(qtyReq));
-                amount1Input.value = String(Number(normalizedAmount1.toFixed(4)));
-                qtyMoqInput.value = String(Number(moq.toFixed(4)));
+                qtyReqInput.value = floatToInput(Math.round(qtyReq));
+                amount1Input.value = floatToInput(normalizedAmount1.toFixed(4));
+                qtyMoqInput.value = floatToInput(Number(moq.toFixed(4)));
                 amount2Element.textContent = Number(normalizedAmount2.toFixed(4)).toFixed(4);
             });
         }
@@ -4007,15 +4067,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const totalPriceElement = row.querySelector('.total-price');
 
                 if (qtyReqInput && qtyReqInput.dataset.originalQtyReq !== undefined) {
-                    qtyReqInput.value = qtyReqInput.dataset.originalQtyReq;
+                    qtyReqInput.value = floatToInput(qtyReqInput.dataset.originalQtyReq || 0);
                 }
 
                 if (amount1Input && amount1Input.dataset.originalAmount1 !== undefined) {
-                    amount1Input.value = amount1Input.dataset.originalAmount1;
+                    amount1Input.value = floatToInput(amount1Input.dataset.originalAmount1 || 0);
                 }
 
                 if (qtyMoqInput && qtyMoqInput.dataset.originalMoq !== undefined) {
-                    qtyMoqInput.value = qtyMoqInput.dataset.originalMoq;
+                    qtyMoqInput.value = floatToInput(qtyMoqInput.dataset.originalMoq || 0);
                 }
 
                 if (amount2Element && amount2Element.dataset.originalAmount2 !== undefined) {

@@ -1638,13 +1638,13 @@ class CostingController extends Controller
             'materials' => 'nullable|array',
             'materials.*.part_no' => 'nullable|string',
             'materials.*.part_name' => 'nullable|string',
-            'materials.*.qty_req' => 'nullable|numeric',
+            'materials.*.qty_req' => 'nullable|string',
             'materials.*.unit' => 'nullable|string',
-            'materials.*.amount1' => 'nullable|numeric',
+            'materials.*.amount1' => 'nullable|string',
             'materials.*.unit_price_basis' => 'nullable|string',
-            'materials.*.qty_moq' => 'nullable|numeric',
+            'materials.*.qty_moq' => 'nullable|string',
             'materials.*.cn_type' => 'nullable|string',
-            'materials.*.import_tax' => 'nullable|numeric',
+            'materials.*.import_tax' => 'nullable|string',
             'manual_unpriced_prices' => 'nullable|array',
             'cycle_times' => 'nullable|array',
             'cycle_times.*.process' => 'nullable|string',
@@ -1681,13 +1681,13 @@ class CostingController extends Controller
                 'materials' => 'nullable|array',
                 'materials.*.part_no' => 'nullable|string',
                 'materials.*.part_name' => 'nullable|string',
-                'materials.*.qty_req' => 'nullable|numeric',
+                'materials.*.qty_req' => 'nullable|string',
                 'materials.*.unit' => 'nullable|string',
-                'materials.*.amount1' => 'nullable|numeric',
+                'materials.*.amount1' => 'nullable|string',
                 'materials.*.unit_price_basis' => 'nullable|string',
-                'materials.*.qty_moq' => 'nullable|numeric',
+                'materials.*.qty_moq' => 'nullable|string',
                 'materials.*.cn_type' => 'nullable|string',
-                'materials.*.import_tax' => 'nullable|numeric',
+                'materials.*.import_tax' => 'nullable|string',
                 'manual_unpriced_prices' => 'nullable|array',
             ],
             'unpriced_parts' => [
@@ -1986,7 +1986,7 @@ class CostingController extends Controller
 
             $manualUnpricedPrices = collect($request->input('manual_unpriced_prices', []))
                 ->mapWithKeys(function ($value, $key) {
-                    return [strtolower(trim((string) $key)) => floatval($value)];
+                    return [strtolower(trim((string) $key)) => $this->toFloatValue($value)];
                 });
             $partAggregation = [];
 
@@ -2047,7 +2047,7 @@ class CostingController extends Controller
                         ? strtolower($partNumber)
                         : ('__row_' . strtolower($rowNo !== '' ? $rowNo : (string) $rowIndex));
                     $partNameInput = trim((string) ($matData['part_name'] ?? ''));
-                    $qtyReqRaw = intval(round(floatval($matData['qty_req'] ?? 0)));
+                    $qtyReqRaw = intval(round($this->toFloatValue($matData['qty_req'] ?? 0)));
                     // Keep qty_req in a practical range to avoid exploding totals from malformed input.
                     $qtyReq = max(1, min(1000, $qtyReqRaw));
                     $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
@@ -2070,7 +2070,7 @@ class CostingController extends Controller
                     }
 
                     $qtyMoqRaw = trim((string) ($matData['qty_moq'] ?? ''));
-                    $moq = floatval($matData['qty_moq'] ?? 0);
+                    $moq = $this->toFloatValue($matData['qty_moq'] ?? 0);
                     if ($qtyMoqRaw === '' && $masterMaterial?->moq !== null) {
                         $moq = floatval($masterMaterial->moq);
                     }
@@ -2089,7 +2089,7 @@ class CostingController extends Controller
                     }
 
                     $importTaxRaw = trim((string) ($matData['import_tax'] ?? ''));
-                    $importTax = floatval($matData['import_tax'] ?? 0);
+                    $importTax = $this->toFloatValue($matData['import_tax'] ?? 0);
                     if ($importTaxRaw === '' && $masterMaterial?->add_cost_import_tax !== null) {
                         $importTax = floatval($masterMaterial->add_cost_import_tax);
                     }
@@ -2811,7 +2811,7 @@ class CostingController extends Controller
                 $partName = '';
             }
 
-            $qtyReq = intval(round(floatval($matData['qty_req'] ?? 0)));
+            $qtyReq = intval(round($this->toFloatValue($matData['qty_req'] ?? 0)));
             $amount1 = $this->toFloatValue($matData['amount1'] ?? 0);
             $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
             $unitPriceBasis = $this->toFloatValue($unitPriceBasisRaw);
