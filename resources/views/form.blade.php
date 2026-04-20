@@ -604,12 +604,48 @@
                 flex-direction: column-reverse;
             }
 
-            .form-page .form-actions .btn {
-                width: 100%;
-                justify-content: center;
-            }
+    
+        .form-page .form-actions .btn {
+            width: 100%;
+            justify-content: center;
         }
-    </style>
+    }
+
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        pointer-events: none;
+    }
+    .toast-container .alert {
+        pointer-events: auto;
+        min-width: 300px;
+        max-width: 450px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 0;
+        opacity: 0;
+        transform: translateX(120%);
+        animation: toast-slide-in 0.3s ease-out forwards;
+        cursor: pointer;
+    }
+    .toast-container .alert.toast-fadeOut {
+        animation: toast-fade-out 0.3s ease-in forwards !important;
+    }
+    @keyframes toast-slide-in {
+        from { transform: translateX(120%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes toast-fade-out {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(120%); opacity: 0; }
+    }
+</style>
+
+<div class="toast-container" id="mainToastContainer">
 
     @if(session('success'))
         <div class="alert alert-success">
@@ -653,8 +689,30 @@
             <span>{{ $errors->first() }}</span>
         </div>
     @endif
+</div>
 
-    <div class="alert alert-warning" id="unpricedTopBanner"
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('mainToastContainer');
+    if (container) {
+        const toasts = container.querySelectorAll('.alert');
+        toasts.forEach(toast => {
+            toast.addEventListener('click', () => {
+                toast.classList.add('toast-fadeOut');
+                setTimeout(() => toast.remove(), 300);
+            });
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    toast.classList.add('toast-fadeOut');
+                    setTimeout(() => toast.remove(), 300);
+                }
+            }, 4000);
+        });
+    }
+});
+</script>
+
+<div class="alert alert-warning" id="unpricedTopBanner"
         style="{{ (isset($trackingRevision) && $trackingRevision && isset($openUnpricedParts) && $openUnpricedParts->count() > 0) ? '' : 'display:none;' }}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3l-8.47-14.14a2 2 0 0 0-3.42 0z" />
