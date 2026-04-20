@@ -1339,6 +1339,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         data-part-number="{{ $item->part_number }}"
                                                         data-price="{{ $matchedPrice }}"
                                                         data-currency="{{ $matched->currency ?? '' }}"
+                                                        data-unit="{{ $matched->purchase_unit ?? '' }}"
+                                                        data-moq="{{ $matched->moq ?? 0 }}"
+                                                        data-cn="{{ $matched->cn ?? 'N' }}"
+                                                        data-supplier="{{ $matched->maker ?? '' }}"
+                                                        data-import-tax="{{ $matched->add_cost_import_tax ?? 0 }}"
                                                         {{ $isMatchedChecked ? 'checked' : '' }}>
                                                     <span>{{ rtrim(rtrim(number_format($matchedPrice, 4, ',', '.'), '0'), ',') }}</span>
                                                 </div>
@@ -1351,6 +1356,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         data-part-number="{{ $item->part_number }}"
                                                         data-price="{{ (float) $item->matched_price }}"
                                                         data-currency="{{ $item->matched_currency ?? 'IDR' }}"
+                                                        data-unit="{{ $matchedSource === 'wire' ? 'm' : ($item->matched_purchase_unit ?? '') }}"
+                                                        data-moq="{{ $item->matched_moq ?? 0 }}"
+                                                        data-cn="{{ $item->matched_cn ?? 'N' }}"
+                                                        data-supplier="{{ $item->matched_maker ?? '' }}"
+                                                        data-import-tax="{{ $item->matched_add_cost_import_tax ?? 0 }}"
                                                         checked>
                                                     <span>{{ rtrim(rtrim(number_format((float) $item->matched_price, 4, ',', '.'), '0'), ',') }}</span>
                                                 </div>
@@ -2273,7 +2283,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const selectedPrice = parseFloat(selectedOption.dataset.price || '0') || 0;
                     const selectedCurrency = selectedOption.dataset.currency || '';
-                    applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency);
+                    const selectedUnit = selectedOption.dataset.unit || '';
+                    const selectedMoq = parseFloat(selectedOption.dataset.moq || '0') || 0;
+                    const selectedCn = selectedOption.dataset.cn || 'N';
+                    const selectedSupplier = selectedOption.dataset.supplier || '';
+                    const selectedImportTax = parseFloat(selectedOption.dataset.importTax || '0') || 0;
+
+                    applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, selectedUnit, selectedMoq, selectedCn, selectedSupplier, selectedImportTax);
                 });
             });
         }
@@ -2282,7 +2298,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return String(value || '').trim().toLowerCase();
         }
 
-        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency) {
+        function applySelectedMatchedPrice(partNumber, selectedPrice, selectedCurrency, selectedUnit, selectedMoq, selectedCn, selectedSupplier, selectedImportTax) {
             const escapedPart = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
                 ? CSS.escape(partNumber)
                 : partNumber.replace(/([\\[\\]\\.\\:\\#\"'])/g, '\\\\$1');
