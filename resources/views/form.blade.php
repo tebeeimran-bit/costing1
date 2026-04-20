@@ -2350,8 +2350,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         cnSelect.value = selectedCn;
                     }
                 }
-                if (supplierInput && selectedSupplier) {
-                    supplierInput.value = selectedSupplier;
+                if (supplierInput) {
+                    supplierInput.value = selectedSupplier || '';
                 }
                 if (importTaxInput) {
                     importTaxInput.value = floatToInput(selectedImportTax);
