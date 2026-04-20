@@ -2315,6 +2315,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 const partInput = row.querySelector('.part-no');
                 const amountInput = row.querySelector('.amount1');
                 const currencySelect = row.querySelector('.currency');
+                const unitInput = row.querySelector('.unit-price-basis');
+                const moqInput = row.querySelector('.qty-moq');
+                const cnSelect = row.querySelector('.cn-type');
+                const supplierInput = row.querySelector('.supplier');
+                const importTaxInput = row.querySelector('.import-tax');
 
                 if (!(partInput instanceof HTMLInputElement) || !(amountInput instanceof HTMLInputElement)) {
                     return;
@@ -2331,6 +2336,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (hasOption) {
                         currencySelect.value = selectedCurrency;
                     }
+                }
+                
+                if (unitInput && selectedUnit) {
+                    unitInput.value = selectedUnit;
+                }
+                if (moqInput) {
+                    moqInput.value = floatToInput(selectedMoq);
+                }
+                if (cnSelect instanceof HTMLSelectElement && selectedCn) {
+                    const hasOption = Array.from(cnSelect.options).some((opt) => opt.value === selectedCn);
+                    if (hasOption) {
+                        cnSelect.value = selectedCn;
+                    }
+                }
+                if (supplierInput && selectedSupplier) {
+                    supplierInput.value = selectedSupplier;
+                }
+                if (importTaxInput) {
+                    importTaxInput.value = floatToInput(selectedImportTax);
                 }
 
                 calculateRow(amountInput);
