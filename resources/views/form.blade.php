@@ -1672,7 +1672,7 @@
         </div>
     </form>
 
-    <form action="{{ route('costing.import-partlist', absolute: false) }}" method="POST" id="partlistImportForm" enctype="multipart/form-data" style="display:none;">
+    <form action="{{ route('costing.import-partlist', absolute: false) }}" method="POST" id="partlistImportForm" enctype="multipart/form-data" style="position:absolute; width:0; height:0; overflow:hidden;">
         @csrf
         @if(isset($costingData) && $costingData)
             <input type="hidden" name="costing_data_id" value="{{ $costingData->id }}">
