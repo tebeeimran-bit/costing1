@@ -2213,17 +2213,8 @@ class CostingController extends Controller
                 }
             }
 
-            if ($trackingRevisionId && $shouldProcessMaterials && !$shouldProcessUnpricedOnly) {
-                UnpricedPart::where('document_revision_id', $trackingRevisionId)
-                    ->whereNull('resolved_at')
-                    ->update([
-                        'costing_data_id' => $costingData->id,
-                        'resolved_at' => now(),
-                        'resolution_source' => 'material_update_pending_rebuild',
-                    ]);
-            }
 
-            if ($trackingRevisionId && $shouldProcessUnpricedOnly) {
+            if ($trackingRevisionId) {
                 if ($shouldProcessMaterials) {
                     $trackedPartKeys = collect($partAggregation)->keys();
 
