@@ -1135,7 +1135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                             value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
                                     </td>
                                     <td class="calculated multiply-factor">1.0000</td>
-                                    <td class="calculated amount2" data-original-amount2="{{ $breakdown->amount2 ?? 0 }}">{{ number_format($breakdown->amount2 ?? 0, 4) }}</td>
+                                    <td class="calculated amount2" data-original-amount2="{{ $breakdown->amount2 ?? 0 }}">{{ number_format($breakdown->amount2 ?? 0, 4, ',', '.') }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
                                         <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
                                     <td class="calculated total-price">Rp {{ number_format((float) ($breakdown->amount1 ?? 0), 4, ',', '.') }}</td>
@@ -1340,7 +1340,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         data-price="{{ $matchedPrice }}"
                                                         data-currency="{{ $matched->currency ?? '' }}"
                                                         {{ $isMatchedChecked ? 'checked' : '' }}>
-                                                    <span>{{ number_format($matchedPrice, 4) }}</span>
+                                                    <span>{{ number_format($matchedPrice, 4, ',', '.') }}</span>
                                                 </div>
                                             @endforeach
                                         @else
@@ -1352,10 +1352,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                                         data-price="{{ (float) $item->matched_price }}"
                                                         data-currency="{{ $item->matched_currency ?? 'IDR' }}"
                                                         checked>
-                                                    <span>{{ number_format((float) $item->matched_price, 4) }}</span>
+                                                    <span>{{ number_format((float) $item->matched_price, 4, ',', '.') }}</span>
                                                 </div>
                                             @else
-                                                {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4) : number_format((float) ($item->detected_price ?? 0), 4) }}
+                                                {{ isset($item->matched_price) && $item->matched_price !== null ? number_format((float) $item->matched_price, 4, ',', '.') : number_format((float) ($item->detected_price ?? 0), 4, ',', '.') }}
                                             @endif
                                         @endif
                                     </td>
@@ -1382,10 +1382,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? number_format((float) $matched->moq, 2) : '-' }}</div>
+                                                <div>{{ isset($matched->moq) && $matched->moq !== null ? number_format((float) $matched->moq, 2, ',', '.') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? number_format((float) $item->matched_moq, 2) : '-' }}
+                                            {{ isset($item->matched_moq) && $item->matched_moq !== null ? number_format((float) $item->matched_moq, 2, ',', '.') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1409,10 +1409,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? number_format((float) $matched->add_cost_import_tax, 2) : '-' }}</div>
+                                                <div>{{ isset($matched->add_cost_import_tax) && $matched->add_cost_import_tax !== null ? number_format((float) $matched->add_cost_import_tax, 2, ',', '.') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? number_format((float) $item->matched_add_cost_import_tax, 2) : '-' }}
+                                            {{ isset($item->matched_add_cost_import_tax) && $item->matched_add_cost_import_tax !== null ? number_format((float) $item->matched_add_cost_import_tax, 2, ',', '.') : '-' }}
                                         @endif
                                     </td>
                                     <td>
@@ -1427,10 +1427,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
                                             @foreach($matchedMaterials as $matched)
-                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? number_format((float) $matched->price_before, 2) : '-' }}</div>
+                                                <div>{{ isset($matched->price_before) && $matched->price_before !== null ? number_format((float) $matched->price_before, 2, ',', '.') : '-' }}</div>
                                             @endforeach
                                         @else
-                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? number_format((float) $item->matched_price_before, 2) : '-' }}
+                                            {{ isset($item->matched_price_before) && $item->matched_price_before !== null ? number_format((float) $item->matched_price_before, 2, ',', '.') : '-' }}
                                         @endif
                                     </td>
                                     <td>
