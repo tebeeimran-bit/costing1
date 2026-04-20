@@ -2117,10 +2117,24 @@ class CostingController extends Controller
                     }
 
                     // Only update base_uom on actual master material records (not placeholder)
-                    if ($masterMaterial && $resolvedUnit !== '' && $resolvedUnit !== '-') {
-                        $currentBaseUom = strtoupper(trim((string) ($masterMaterial->base_uom ?? '')));
-                        if ($currentBaseUom !== $resolvedUnit) {
-                            $masterMaterial->base_uom = $resolvedUnit;
+                    
+                    if ($masterMaterial) {
+                        $needsSave = false;
+                        if ($resolvedUnit !== '' && $resolvedUnit !== '-') {
+                            $currentBaseUom = strtoupper(trim((string) ($masterMaterial->base_uom ?? '')));
+                            if ($currentBaseUom !== $resolvedUnit) {
+                                $masterMaterial->base_uom = $resolvedUnit;
+                                $needsSave = true;
+                            }
+                        }
+                        if ($resolvedSupplier !== '' && $resolvedSupplier !== 'EMPTY_SUPPLIER!!!') {
+                            $currentMaker = trim((string) ($masterMaterial->maker ?? ''));
+                            if ($currentMaker !== $resolvedSupplier) {
+                                $masterMaterial->maker = $resolvedSupplier;
+                                $needsSave = true;
+                            }
+                        }
+                        if ($needsSave) {
                             $masterMaterial->save();
                         }
                     }
