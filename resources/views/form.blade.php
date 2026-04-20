@@ -1053,10 +1053,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 </td>
                                 <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
                                     value="{{ $row['supplier'] ?? '' }}" placeholder="Supplier"></td>
-                                <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
-                                    value="{{ $row['import_tax'] ?? 0 }}" step="0.01" onchange="calculateRow(this)"></td>
-                                <td class="calculated multiply-factor">1.0000</td>
-                                <td class="calculated amount2" data-original-amount2="{{ $row['amount2'] ?? 0 }}">0.0000</td>
+                                <td><input type="text" class="form-input import-tax number-format" name="materials[{{ $index }}][import_tax]"
+                                    value="{{ rtrim(rtrim(number_format((float) ($row['import_tax'] ?? 0), 2, ',', '.'), '0'), ',') ?: '0' }}" onchange="calculateRow(this)"></td>
+                                <td class="calculated multiply-factor">1</td>
+                                <td class="calculated amount2" data-original-amount2="{{ $row['amount2'] ?? 0 }}">{{ rtrim(rtrim(number_format((float) ($row['amount2'] ?? 0), 4, ',', '.'), '0'), ',') ?: '0' }}</td>
                                 <td class="calculated currency2">{{ $rowCurrency }}</td>
                                 <td class="calculated unit-price2">{{ isset($row['unit']) ? strtoupper(trim((string) $row['unit'])) : '' }}</td>
                                 <td class="calculated total-price">Rp {{ rtrim(rtrim(number_format((float) ($row['amount1'] ?? 0), 4, ',', '.'), '0'), ',') }}</td>
@@ -1131,10 +1131,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $index }}][supplier]"
                                             value="{{ $breakdown->material->maker ?? '' }}" placeholder="Supplier"></td>
-                                    <td><input type="number" class="form-input import-tax" name="materials[{{ $index }}][import_tax]"
-                                            value="{{ $breakdown->import_tax_percent }}" step="0.01" onchange="calculateRow(this)">
+                                    <td><input type="text" class="form-input import-tax number-format" name="materials[{{ $index }}][import_tax]"
+                                            value="{{ rtrim(rtrim(number_format((float) ($breakdown->import_tax_percent ?? 0), 2, ',', '.'), '0'), ',') ?: '0' }}" onchange="calculateRow(this)">
                                     </td>
-                                    <td class="calculated multiply-factor">1.0000</td>
+                                    <td class="calculated multiply-factor">1</td>
                                     <td class="calculated amount2" data-original-amount2="{{ $breakdown->amount2 ?? 0 }}">{{ rtrim(rtrim(number_format($breakdown->amount2 ?? 0, 4, ',', '.'), '0'), ',') }}</td>
                                     <td class="calculated currency2">{{ $breakdown->currency ?? 'IDR' }}</td>
                                         <td class="calculated unit-price2">{{ isset($breakdown->material?->base_uom) ? strtoupper(trim((string) $breakdown->material->base_uom)) : '' }}</td>
@@ -1195,9 +1195,9 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </td>
                                     <td><input type="text" class="form-input supplier" name="materials[{{ $i }}][supplier]" value=""
                                             placeholder="Supplier"></td>
-                                        <td><input type="text" class="form-input import-tax number-format" name="materials[{{ $i }}][import_tax]" value="0" step="0.01"
+                                        <td><input type="text" class="form-input import-tax number-format" name="materials[{{ $i }}][import_tax]" value="0"
                                             onchange="calculateRow(this)"></td>
-                                    <td class="calculated multiply-factor">1.0000</td>
+                                    <td class="calculated multiply-factor">1</td>
                                     <td class="calculated amount2" data-original-amount2="0">0.0000</td>
                                     <td class="calculated currency2">IDR</td>
                                     <td class="calculated unit-price2">PCS</td>
@@ -1928,8 +1928,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate Multiply Factor
         // Logika: IF(qtyReq=0,0, IF(OR(cnFlag="C",(moq/(forecast*period*12*qtyReq/unitDivisor))<1), 1, moq/(forecast*period*12*qtyReq/unitDivisor)))
         function calculateMultiplyFactor(row) {
-            const qtyReq = parseFloat(row.querySelector('.qty-req').value) || 0;
-            const moq = parseFloat(row.querySelector('.qty-moq').value) || 0;
+            const qtyReq = parseInputNumber(row.querySelector(\'.qty-req\').value) || 0;
+            const moq = parseInputNumber(row.querySelector(\'.qty-moq\').value) || 0;
             const forecast = parseFloat(document.getElementById('forecast').value) || 0;
             const period = parseFloat(document.getElementById('projectPeriod').value) || 0;
             const unit = (row.querySelector('.unit').value || row.querySelector('.unit').textContent || '').toUpperCase();
@@ -2091,7 +2091,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 1. Calculate and set Multiply Factor (S4)
             const multiplyFactor = calculateMultiplyFactor(row);
-            row.querySelector('.multiply-factor').textContent = multiplyFactor.toFixed(4);
+            row.querySelector('.multiply-factor').textContent = floatToInput(Number(multiplyFactor.toFixed(4)));
 
             // GET INPUTS dengan Mapping Baru:
             // Amount 1 = Harga (Price Base)
@@ -2103,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Kita ambil value karena ini input text
             const uom = (row.querySelector('.unit').value || '').trim().toUpperCase(); // Ini M4 (untuk divisor)
 
-            const importTax = parseFloat(row.querySelector('.import-tax').value) || 0; // R4
+            const importTax = parseInputNumber(row.querySelector(\'.import-tax\').value) || 0; // R4
 
             // 2. Calculate Amount 2 (T4) logic
             // Rumus: (MultiplyFactor * (PriceBase + (PriceBase * Tax%))) / Divisor
@@ -2131,11 +2131,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Set Amount 2 value to text
             const amount2Element = row.querySelector('.amount2');
-            amount2Element.textContent = amount2.toFixed(4);
+            amount2Element.textContent = floatToInput(Number(amount2.toFixed(4)));
 
             // 3. Calculate Total Price
             // Total = Qty * Amount 2 * Exchange Rate
-            const qty = parseFloat(row.querySelector('.qty-req').value) || 0;
+            const qty = parseInputNumber(row.querySelector(\'.qty-req\').value) || 0;
             const currency = row.querySelector('.currency').value;
             const exchangeRate = getExchangeRate(currency);
 
@@ -2655,8 +2655,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <td><input type="text" class="form-input w-28 qty-moq number-format" name="materials[${rowCounter}][qty_moq]" value="0" step="0.0001" onchange="calculateRow(this)"></td>
                                     <td><select class="form-select cn-type" name="materials[${rowCounter}][cn_type]" onchange="calculateRow(this)"><option value="N">N</option><option value="C">C</option></select></td>
                                     <td><input type="text" class="form-input supplier" name="materials[${rowCounter}][supplier]" value="" placeholder="Supplier"></td>
-                                    <td><input type="text" class="form-input import-tax number-format" name="materials[${rowCounter}][import_tax]" value="0" step="0.01" onchange="calculateRow(this)"></td>
-                                    <td class="calculated multiply-factor">1.0000</td>
+                                    <td><input type="text" class="form-input import-tax number-format" name="materials[${rowCounter}][import_tax]" value="0" onchange="calculateRow(this)"></td>
+                                    <td class="calculated multiply-factor">1</td>
                         <td class="calculated amount2">0.0000</td>
                         <td class="calculated currency2">IDR</td>
                         <td class="calculated unit-price2">PCS</td>
@@ -4092,7 +4092,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 qtyReqInput.value = floatToInput(Math.round(qtyReq));
                 amount1Input.value = floatToInput(normalizedAmount1.toFixed(4));
                 qtyMoqInput.value = floatToInput(Number(moq.toFixed(4)));
-                amount2Element.textContent = Number(normalizedAmount2.toFixed(4)).toFixed(4);
+                amount2Element.textContent = floatToInput(Number(normalizedAmount2.toFixed(4)));
             });
         }
 
@@ -4119,7 +4119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (amount2Element && amount2Element.dataset.originalAmount2 !== undefined) {
-                    amount2Element.textContent = Number(amount2Element.dataset.originalAmount2 || 0).toFixed(4);
+                    amount2Element.textContent = floatToInput(Number(amount2Element.dataset.originalAmount2 || 0));
                 }
 
                 if (amount1Input && totalPriceElement && amount1Input.dataset.originalAmount1 !== undefined) {
