@@ -1928,8 +1928,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // Calculate Multiply Factor
         // Logika: IF(qtyReq=0,0, IF(OR(cnFlag="C",(moq/(forecast*period*12*qtyReq/unitDivisor))<1), 1, moq/(forecast*period*12*qtyReq/unitDivisor)))
         function calculateMultiplyFactor(row) {
-            const qtyReq = parseInputNumber(row.querySelector(\'.qty-req\').value) || 0;
-            const moq = parseInputNumber(row.querySelector(\'.qty-moq\').value) || 0;
+            const qtyReq = parseInputNumber(row.querySelector('.qty-req').value) || 0;
+            const moq = parseInputNumber(row.querySelector('.qty-moq').value) || 0;
             const forecast = parseFloat(document.getElementById('forecast').value) || 0;
             const period = parseFloat(document.getElementById('projectPeriod').value) || 0;
             const unit = (row.querySelector('.unit').value || row.querySelector('.unit').textContent || '').toUpperCase();
@@ -2103,7 +2103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Kita ambil value karena ini input text
             const uom = (row.querySelector('.unit').value || '').trim().toUpperCase(); // Ini M4 (untuk divisor)
 
-            const importTax = parseInputNumber(row.querySelector(\'.import-tax\').value) || 0; // R4
+            const importTax = parseInputNumber(row.querySelector('.import-tax').value) || 0; // R4
 
             // 2. Calculate Amount 2 (T4) logic
             // Rumus: (MultiplyFactor * (PriceBase + (PriceBase * Tax%))) / Divisor
@@ -2135,7 +2135,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // 3. Calculate Total Price
             // Total = Qty * Amount 2 * Exchange Rate
-            const qty = parseInputNumber(row.querySelector(\'.qty-req\').value) || 0;
+            const qty = parseInputNumber(row.querySelector('.qty-req').value) || 0;
             const currency = row.querySelector('.currency').value;
             const exchangeRate = getExchangeRate(currency);
 
