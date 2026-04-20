@@ -2308,7 +2308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
-                amountInput.value = selectedPrice > 0 ? String(selectedPrice) : '0';
+                amountInput.value = selectedPrice > 0 ? floatToInput(selectedPrice) : '0';
 
                 if (currencySelect instanceof HTMLSelectElement && selectedCurrency) {
                     const hasOption = Array.from(currencySelect.options).some((opt) => opt.value === selectedCurrency);
