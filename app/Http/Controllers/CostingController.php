@@ -3113,11 +3113,9 @@ class CostingController extends Controller
 
             $emptyStreak = 0;
 
-            // Primary requirement: row count follows NO column (D12+).
-            if (!$hasRowNumber) {
-                continue;
-            }
-
+            // Optional requirement: allow rows with no NO if it has signal data
+            // Removed strict !$hasRowNumber requirement to permit blanks in NO column.
+            
             $partNoUpper = strtoupper($partNo);
             $idCodeUpper = strtoupper($idCode);
             $partNameUpper = strtoupper($partName);
