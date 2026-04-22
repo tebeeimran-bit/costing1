@@ -958,7 +958,8 @@
         .material-table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 1600px;
+            table-layout: auto;
+            min-width: min-content;
         }
 
         .material-table th {
