@@ -1823,6 +1823,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let materialHistoryApplying = false;
         let isMaterialDirty = false;
         let isConfirmingUnsavedMaterial = false;
+        let materialSaveInProgress = false;
         const materialFilterState = {};
         const materialFilterableColumns = [1, 2, 3, 5, 6, 9, 11, 12];
         let materialFilterPopup = null;
@@ -2861,11 +2862,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function submitMaterialSectionAjax() {
             const form = document.getElementById('costingForm');
-            if (!form) return;
+            if (!form || materialSaveInProgress) return;
+
+            materialSaveInProgress = true;
 
             showAppLoading('Menyimpan perubahan...');
 
-            const formData = new FormData(form);
+            const formData = buildSectionFormData('material');
             formData.set('update_section', 'material');
 
             fetch(form.action, {
@@ -2877,35 +2880,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData,
             })
             .then(function (resp) {
-                // Server returns 302 redirect — any 2xx/3xx is success
+                // Success without full page reload to keep UX faster.
                 if (resp.ok || resp.status === 302 || resp.redirected) {
-                    window.location.reload();
+                    hideAppLoading();
+                    materialSaveInProgress = false;
+                    isMaterialDirty = false;
+                    markMaterialControlsUndoBase();
+                    openAppNotify('Perubahan material berhasil disimpan.');
                 } else {
                     return resp.text().then(function (txt) {
                         hideAppLoading();
+                        materialSaveInProgress = false;
                         openAppNotify('Gagal menyimpan: ' + (resp.status));
                     });
                 }
             })
             .catch(function () {
-                // Network error — data was likely saved, just reload
-                window.location.reload();
+                hideAppLoading();
+                materialSaveInProgress = false;
+                openAppNotify('Gagal menyimpan. Coba lagi.');
             });
         }
 
         function submitMaterialSection() {
-            const form = document.getElementById('costingForm');
-            const materialUpdateBtn = document.querySelector('.section-update-btn[data-section="material"]');
-            if (!form || !materialUpdateBtn) {
-                return;
-            }
-
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit(materialUpdateBtn);
-                return;
-            }
-
-            materialUpdateBtn.click();
+            submitMaterialSectionAjax();
         }
 
         function getMaterialStateSnapshot() {
@@ -3963,6 +3961,44 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        function buildSectionFormData(section) {
+            const form = document.getElementById('costingForm');
+            const formData = new FormData();
+            if (!form) return formData;
+
+            const fields = form.querySelectorAll('input, select, textarea');
+            fields.forEach((el) => {
+                if (!el.name) {
+                    return;
+                }
+
+                if (!shouldKeepFieldForSection(el.name, section)) {
+                    return;
+                }
+
+                if (el instanceof HTMLInputElement) {
+                    if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
+                        return;
+                    }
+                    if (el.type === 'file') {
+                        const files = el.files;
+                        if (files && files.length > 0) {
+                            Array.from(files).forEach((file) => formData.append(el.name, file));
+                        }
+                        return;
+                    }
+                    formData.append(el.name, el.value ?? '');
+                    return;
+                }
+
+                if (el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
+                    formData.append(el.name, el.value ?? '');
+                }
+            });
+
+            return formData;
+        }
+
         function showPartlistImportConfirmModal() {
             return new Promise((resolve) => {
                 const modal = document.getElementById('partlistImportConfirmModal');
@@ -4206,6 +4242,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (updateSectionInput) {
                         updateSectionInput.value = section;
+                    }
+
+                    if (section === 'material') {
+                        event.preventDefault();
+                        submitMaterialSectionAjax();
+                        return;
                     }
 
                     if (section) {
