@@ -3581,12 +3581,45 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Excel-like F2 behavior: enter edit mode
+                if (event.key === 'F2') {
+                    event.preventDefault();
+                    if (target.tagName === 'INPUT') {
+                        target.dataset.isEditing = '1';
+                        // Move cursor to the end of the text
+                        const len = target.value.length;
+                        target.setSelectionRange(len, len);
+                    }
+                    return;
+                }
+
+                // If in edit mode, allow Left/Right arrows to move cursor naturally
+                if (['ArrowLeft', 'ArrowRight'].includes(event.key) && target.dataset.isEditing === '1') {
+                    return;
+                }
+
                 if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
                     return;
                 }
 
                 event.preventDefault();
                 moveMaterialFocusByArrow(target, event.key);
+            });
+
+            // Double click to also enter edit mode like Excel
+            materialBody.addEventListener('dblclick', function(event) {
+                const target = event.target;
+                if (target instanceof HTMLInputElement && target.matches('input.form-input')) {
+                    target.dataset.isEditing = '1';
+                }
+            });
+
+            // Clear edit mode when leaving the cell
+            materialBody.addEventListener('focusout', function(event) {
+                const target = event.target;
+                if (target instanceof HTMLInputElement) {
+                    target.dataset.isEditing = '0';
+                }
             });
 
             const masterSelectAll = document.getElementById('materialSelectAllRows');
