@@ -1823,7 +1823,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let materialHistoryApplying = false;
         let isMaterialDirty = false;
         let isConfirmingUnsavedMaterial = false;
-        let materialSaveInProgress = false;
         const materialFilterState = {};
         const materialFilterableColumns = [1, 2, 3, 5, 6, 9, 11, 12];
         let materialFilterPopup = null;
@@ -1831,7 +1830,18 @@ document.addEventListener('DOMContentLoaded', () => {
         let materialSortState = { column: null, direction: null };
 
         // Materials data for dynamic selection (slim: only fields needed for JS lookup)
-        const materials = @json($materialsSlim);
+        const rawMaterials = @json($materialsSlim);
+        const materials = rawMaterials.map(m => ({
+            material_code: m[0],
+            material_description: m[1],
+            base_uom: m[2],
+            currency: m[3],
+            price: m[4],
+            moq: m[5],
+            cn: m[6],
+            maker: m[7],
+            add_cost_import_tax: m[8]
+        }));
         const materialMasterByCode = new Map();
         materials.forEach((item) => {
             const codeKey = String(item?.material_code || '').trim().toUpperCase();
@@ -1892,12 +1902,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 saveBtn.removeEventListener('click', handleSave);
                 isConfirmingUnsavedMaterial = false;
 
-                if (shouldSave) {
-                    const materialUpdateBtn = document.querySelector('.section-update-btn[data-section="material"]');
-                    if (materialUpdateBtn) {
-                        materialUpdateBtn.click();
-                    }
-                } else {
+                const proceedAction = () => {
                     isMaterialDirty = false;
                     // Automatically execute the action that was prevented if allowed
                     if (allowTargetAction && eventToCancel && eventToCancel.target) {
@@ -1908,6 +1913,23 @@ document.addEventListener('DOMContentLoaded', () => {
                             setTimeout(() => { target.focus(); }, 50);
                         }
                     }
+                };
+
+                if (shouldSave) {
+                    if (allowTargetAction && eventToCancel) {
+                        submitMaterialSectionAjax(() => {
+                            hideAppLoading();
+                            openAppNotify('Bagian Material berhasil disimpan.', 'success');
+                            proceedAction();
+                        });
+                    } else {
+                        const materialUpdateBtn = document.querySelector('.section-update-btn[data-section="material"]');
+                        if (materialUpdateBtn) {
+                            materialUpdateBtn.click();
+                        }
+                    }
+                } else {
+                    proceedAction();
                 }
             };
 
@@ -2860,15 +2882,13 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        function submitMaterialSectionAjax() {
+        function submitMaterialSectionAjax(onSuccess) {
             const form = document.getElementById('costingForm');
-            if (!form || materialSaveInProgress) return;
-
-            materialSaveInProgress = true;
+            if (!form) return;
 
             showAppLoading('Menyimpan perubahan...');
 
-            const formData = buildSectionFormData('material');
+            const formData = new FormData(form);
             formData.set('update_section', 'material');
 
             fetch(form.action, {
@@ -2880,30 +2900,55 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: formData,
             })
             .then(function (resp) {
-                // Success without full page reload to keep UX faster.
-                if (resp.ok || resp.status === 302 || resp.redirected) {
-                    hideAppLoading();
-                    materialSaveInProgress = false;
+                if (resp.ok) {
                     isMaterialDirty = false;
-                    markMaterialControlsUndoBase();
-                    openAppNotify('Perubahan material berhasil disimpan.');
+                    resp.json().then(function (data) {
+                        if (data.redirect && data.redirect !== window.location.href) {
+                            window.history.replaceState(null, '', data.redirect);
+                        }
+                        if (typeof onSuccess === 'function') {
+                            onSuccess(data);
+                        } else {
+                            window.location.reload();
+                        }
+                    }).catch(function() {
+                        if (typeof onSuccess === 'function') onSuccess();
+                        else window.location.reload();
+                    });
+                } else if (resp.status === 302 || resp.redirected) {
+                    isMaterialDirty = false;
+                    if (typeof onSuccess === 'function') {
+                        onSuccess();
+                    } else {
+                        window.location.reload();
+                    }
                 } else {
                     return resp.text().then(function (txt) {
                         hideAppLoading();
-                        materialSaveInProgress = false;
                         openAppNotify('Gagal menyimpan: ' + (resp.status));
                     });
                 }
             })
             .catch(function () {
                 hideAppLoading();
-                materialSaveInProgress = false;
-                openAppNotify('Gagal menyimpan. Coba lagi.');
+                openAppNotify('Gagal menghubungi server. Data mungkin sudah tersimpan, silakan muat ulang.', 'error');
             });
+
         }
 
         function submitMaterialSection() {
-            submitMaterialSectionAjax();
+            const form = document.getElementById('costingForm');
+            const materialUpdateBtn = document.querySelector('.section-update-btn[data-section="material"]');
+            if (!form || !materialUpdateBtn) {
+                return;
+            }
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit(materialUpdateBtn);
+                return;
+            }
+
+            materialUpdateBtn.click();
         }
 
         function getMaterialStateSnapshot() {
@@ -3961,44 +4006,6 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        function buildSectionFormData(section) {
-            const form = document.getElementById('costingForm');
-            const formData = new FormData();
-            if (!form) return formData;
-
-            const fields = form.querySelectorAll('input, select, textarea');
-            fields.forEach((el) => {
-                if (!el.name) {
-                    return;
-                }
-
-                if (!shouldKeepFieldForSection(el.name, section)) {
-                    return;
-                }
-
-                if (el instanceof HTMLInputElement) {
-                    if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
-                        return;
-                    }
-                    if (el.type === 'file') {
-                        const files = el.files;
-                        if (files && files.length > 0) {
-                            Array.from(files).forEach((file) => formData.append(el.name, file));
-                        }
-                        return;
-                    }
-                    formData.append(el.name, el.value ?? '');
-                    return;
-                }
-
-                if (el instanceof HTMLSelectElement || el instanceof HTMLTextAreaElement) {
-                    formData.append(el.name, el.value ?? '');
-                }
-            });
-
-            return formData;
-        }
-
         function showPartlistImportConfirmModal() {
             return new Promise((resolve) => {
                 const modal = document.getElementById('partlistImportConfirmModal');
@@ -4246,7 +4253,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (section === 'material') {
                         event.preventDefault();
-                        submitMaterialSectionAjax();
+                        submitMaterialSectionAjax(function(data) {
+                            hideAppLoading();
+                            openAppNotify('Bagian Material berhasil disimpan.', 'success');
+                            markMaterialControlsUndoBase();
+                            // Trigger unpriced banner update if part of response
+                            if (data && data.open_unpriced_count !== undefined) {
+                                updateUnpricedBanner(data.open_unpriced_count);
+                            }
+                        });
                         return;
                     }
 

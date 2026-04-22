@@ -1558,18 +1558,18 @@ class CostingController extends Controller
             }
         }
 
-        // Slim down materials JSON for the JS lookup (only needed fields)
+        // Slim down materials JSON for the JS lookup (only needed fields, using array to reduce size)
         $materialsSlim = $materials->map(function ($m) {
             return [
-                'material_code' => $m->material_code,
-                'material_description' => $m->material_description,
-                'base_uom' => $m->base_uom,
-                'currency' => $m->currency,
-                'price' => $m->price,
-                'moq' => $m->moq,
-                'cn' => $m->cn,
-                'maker' => $m->maker,
-                'add_cost_import_tax' => $m->add_cost_import_tax,
+                $m->material_code,
+                $m->material_description,
+                $m->base_uom,
+                $m->currency,
+                $m->price,
+                $m->moq,
+                $m->cn,
+                $m->maker,
+                $m->add_cost_import_tax,
             ];
         })->values();
 
