@@ -2118,7 +2118,7 @@ class CostingController extends Controller
 
                     // Only update base_uom on actual master material records (not placeholder)
                     
-                    if ($masterMaterial) {
+                    if (!$importFromPartlist && $masterMaterial) {
                         $needsSave = false;
                         if ($resolvedUnit !== '' && $resolvedUnit !== '-') {
                             $currentBaseUom = strtoupper(trim((string) ($masterMaterial->base_uom ?? '')));
@@ -2230,7 +2230,7 @@ class CostingController extends Controller
             }
 
 
-            if ($trackingRevisionId) {
+            if ($trackingRevisionId && !$importFromPartlist) {
                 if ($shouldProcessMaterials) {
                     $trackedPartKeys = collect($partAggregation)->keys();
 
