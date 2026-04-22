@@ -2049,9 +2049,9 @@ class CostingController extends Controller
                         ? strtolower($partNumber)
                         : ('__row_' . strtolower($rowNo !== '' ? $rowNo : (string) $rowIndex));
                     $partNameInput = trim((string) ($matData['part_name'] ?? ''));
-                    $qtyReqRaw = intval(round($this->toFloatValue($matData['qty_req'] ?? 0)));
-                    // Keep qty_req in a practical range to avoid exploding totals from malformed input.
-                    $qtyReq = max(1, min(1000, $qtyReqRaw));
+                    $qtyReqRaw = $this->toFloatValue($matData['qty_req'] ?? 0);
+                    // Keep qty_req in a practical range but allow 0
+                    $qtyReq = max(0, $qtyReqRaw);
                     $unitPriceBasisRaw = trim((string) ($matData['unit_price_basis_text'] ?? $matData['unit_price_basis'] ?? ''));
                     $unitPriceBasisNumeric = $this->toFloatValue($unitPriceBasisRaw);
                     $manualPrice = floatval($manualUnpricedPrices->get($partKey, 0));
