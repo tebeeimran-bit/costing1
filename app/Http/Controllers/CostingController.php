@@ -1986,13 +1986,19 @@ class CostingController extends Controller
                 $costingData = CostingData::create($payload);
             }
 
-            $manualUnpricedPrices = collect($request->input('manual_unpriced_prices', []))
+            $manualUnpricedPrices = collect($this->decodeJsonArrayInput($request->input('manual_unpriced_prices_json')))
                 ->mapWithKeys(function ($value, $key) {
                     return [strtolower(trim((string) $key)) => $this->toFloatValue($value)];
                 });
+            if ($manualUnpricedPrices->isEmpty()) {
+                $manualUnpricedPrices = collect($request->input('manual_unpriced_prices', []))
+                    ->mapWithKeys(function ($value, $key) {
+                        return [strtolower(trim((string) $key)) => $this->toFloatValue($value)];
+                    });
+            }
             $partAggregation = [];
 
-            $hasMaterialPayload = $request->has('materials') || !empty($importedMaterialRows);
+            $hasMaterialPayload = $request->has('materials') || $request->filled('materials_json') || !empty($importedMaterialRows);
             $shouldProcessMaterials = $updateSection === '' || $updateSection === 'material';
             $shouldProcessUnpricedOnly = $updateSection === 'unpriced_parts';
             // When the material section is explicitly submitted, always sync — even if
@@ -2009,6 +2015,13 @@ class CostingController extends Controller
             $materialsInput = $importFromPartlist
                 ? $importedMaterialRows
                 : $request->input('materials', []);
+
+            if ((!is_array($materialsInput) || empty($materialsInput)) && $request->filled('materials_json')) {
+                $decodedMaterials = $this->decodeJsonArrayInput($request->input('materials_json'));
+                if (!empty($decodedMaterials)) {
+                    $materialsInput = $decodedMaterials;
+                }
+            }
 
             // Pre-load all master materials in one query to avoid N+1 (was ~800 queries for 400 rows)
             $masterMaterialsCache = null;
@@ -3572,6 +3585,21 @@ class CostingController extends Controller
     private function parseNumericInput($value): float
     {
         return $this->toFloatValue($value);
+    }
+
+    private function decodeJsonArrayInput($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+
+        $value = trim((string) $value);
+        if ($value === '') {
+            return [];
+        }
+
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : [];
     }
 
     private function calculateMaterialCostFromBreakdowns(int $costingDataId, float $usdRate, float $jpyRate): float

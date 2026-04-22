@@ -2882,14 +2882,70 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
+        function buildMaterialSectionPayload(form) {
+            const payload = new FormData();
+            const appendIfPresent = (name, value) => {
+                if (value !== null && value !== undefined) {
+                    payload.append(name, value);
+                }
+            };
+
+            [
+                '_token',
+                'costing_data_id',
+                'tracking_revision_id',
+                'update_section',
+                'forecast',
+                'project_period',
+                'material_cost',
+                'labor_cost',
+                'overhead_cost',
+                'scrap_cost',
+                'revenue',
+                'qty_good',
+            ].forEach((name) => {
+                const el = form.querySelector(`[name="${name}"]`);
+                if (el) {
+                    appendIfPresent(name, el.value);
+                }
+            });
+
+            appendIfPresent('update_section', 'material');
+
+            const materials = [];
+            const materialRows = form.querySelectorAll('#materialTableBody tr');
+            materialRows.forEach((row) => {
+                const material = {};
+                row.querySelectorAll('input, select, textarea').forEach((control) => {
+                    const match = (control.name || '').match(/^materials\[(\d+)\]\[(.+)\]$/);
+                    if (!match) return;
+                    material[match[2]] = control.value;
+                });
+
+                if (Object.keys(material).length > 0) {
+                    materials.push(material);
+                }
+            });
+            appendIfPresent('materials_json', JSON.stringify(materials));
+
+            const manualPrices = {};
+            form.querySelectorAll('input[name^="manual_unpriced_prices["]').forEach((control) => {
+                const match = (control.name || '').match(/^manual_unpriced_prices\[(.+)\]$/);
+                if (!match) return;
+                manualPrices[match[1]] = control.value;
+            });
+            appendIfPresent('manual_unpriced_prices_json', JSON.stringify(manualPrices));
+
+            return payload;
+        }
+
         function submitMaterialSectionAjax(onSuccess) {
             const form = document.getElementById('costingForm');
             if (!form) return;
 
             showAppLoading('Menyimpan perubahan...');
 
-            const formData = new FormData(form);
-            formData.set('update_section', 'material');
+            const payload = buildMaterialSectionPayload(form);
 
             fetch(form.action, {
                 method: 'POST',
@@ -2897,7 +2953,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'application/json',
                 },
-                body: formData,
+                body: payload,
             })
             .then(function (resp) {
                 if (resp.ok) {
@@ -2923,7 +2979,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         window.location.reload();
                     }
                 } else {
-                    return resp.text().then(function (txt) {
+                    return resp.text().then(function () {
                         hideAppLoading();
                         openAppNotify('Gagal menyimpan: ' + (resp.status));
                     });
