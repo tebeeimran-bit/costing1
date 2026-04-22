@@ -894,14 +894,39 @@ class DatabaseController extends Controller
         ]);
 
         $ids = collect($validated['material_ids'])->map(fn ($id) => (int) $id)->unique()->values();
-        $deleted = Material::whereIn('id', $ids)->delete();
+        try {
+            $deleted = DB::transaction(function () use ($ids) {
+                DB::table('material_breakdowns')->whereIn('material_id', $ids)->delete();
+
+                return Material::whereIn('id', $ids)->delete();
+            });
+        } catch (\Throwable $e) {
+            \Log::error('DatabaseController@destroyPartsBulk failed', [
+                'ids' => $ids->all(),
+                'message' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Hapus massal gagal. Silakan coba lagi.');
+        }
 
         return back()->with('success', 'Hapus massal berhasil. Jumlah data terhapus: ' . $deleted . '.');
     }
 
     public function destroyPartsAll(Request $request)
     {
-        $deleted = Material::query()->delete();
+        try {
+            $deleted = DB::transaction(function () {
+                DB::table('material_breakdowns')->delete();
+
+                return Material::query()->delete();
+            });
+        } catch (\Throwable $e) {
+            \Log::error('DatabaseController@destroyPartsAll failed', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Hapus semua data gagal. Silakan coba lagi.');
+        }
 
         return back()->with('success', 'Semua data material berhasil dihapus. Jumlah data terhapus: ' . $deleted . '.');
     }
@@ -945,7 +970,19 @@ class DatabaseController extends Controller
     public function destroyPart($id)
     {
         $material = Material::findOrFail($id);
-        $material->delete();
+        try {
+            DB::transaction(function () use ($material) {
+                DB::table('material_breakdowns')->where('material_id', $material->id)->delete();
+                $material->delete();
+            });
+        } catch (\Throwable $e) {
+            \Log::error('DatabaseController@destroyPart failed', [
+                'material_id' => (int) $id,
+                'message' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', 'Material gagal dihapus. Silakan coba lagi.');
+        }
 
         $target = route('database.parts', absolute: false);
         session()->flash('success', 'Material berhasil dihapus!');
