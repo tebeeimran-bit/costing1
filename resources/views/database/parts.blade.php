@@ -201,11 +201,11 @@
                                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                                     </svg>
                                 </button>
-                                <form action="{{ route('database.parts.destroy', $material->id, false) }}" method="POST"
-                                    class="js-confirm-form" data-confirm-message="Apakah Anda yakin ingin menghapus material ini?">
+                                <form action="{{ route('database.parts.destroy', ['id' => $material->id], false) }}" method="POST"
+                                    class="js-delete-material-form" data-confirm-message="Apakah Anda yakin ingin menghapus material ini?">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn-action btn-delete" title="Hapus">
+                                    <button type="button" class="btn-action btn-delete js-delete-material-btn" title="Hapus">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             style="width: 16px; height: 16px;">
                                             <polyline points="3 6 5 6 21 6" />
@@ -1011,6 +1011,49 @@
             document.querySelectorAll('.js-open-edit-material').forEach((button) => {
                 button.addEventListener('click', function () {
                     openEditModal(this);
+                });
+            });
+
+            document.querySelectorAll('.js-delete-material-btn').forEach((button) => {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+
+                    const form = this.closest('form.js-delete-material-form');
+                    if (!form) return;
+
+                    const message = form.dataset.confirmMessage || 'Apakah Anda yakin ingin menghapus material ini?';
+                    openAppConfirm(message, function () {
+                        showAppLoading('Menghapus material...');
+
+                        const formData = new FormData(form);
+                        const encoded = new URLSearchParams();
+                        formData.forEach((value, key) => encoded.append(key, String(value)));
+
+                        fetch(form.action, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json',
+                            },
+                            body: encoded.toString(),
+                        })
+                        .then(function (resp) {
+                            if (resp.ok || resp.redirected || resp.status === 302) {
+                                window.location.reload();
+                                return;
+                            }
+
+                            return resp.text().then(function () {
+                                hideAppLoading();
+                                openAppNotify('Gagal menghapus material. Silakan coba lagi.');
+                            });
+                        })
+                        .catch(function () {
+                            hideAppLoading();
+                            openAppNotify('Terjadi gangguan jaringan saat menghapus material.');
+                        });
+                    });
                 });
             });
 

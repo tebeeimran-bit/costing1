@@ -967,7 +967,7 @@ class DatabaseController extends Controller
         return response('', 302, ['Location' => $target]);
     }
 
-    public function destroyPart($id)
+    public function destroyPart(Request $request, $id)
     {
         $material = Material::findOrFail($id);
         try {
@@ -986,6 +986,14 @@ class DatabaseController extends Controller
 
         $target = route('database.parts', absolute: false);
         session()->flash('success', 'Material berhasil dihapus!');
+
+        if ($request->expectsJson() || $request->ajax()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Material berhasil dihapus!',
+                'redirect' => $target,
+            ]);
+        }
 
         return response('', 302, ['Location' => $target]);
     }
