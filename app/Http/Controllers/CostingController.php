@@ -3561,6 +3561,9 @@ class CostingController extends Controller
             }
         } elseif ($hasComma && !$hasDot) {
             $normalized = str_replace(',', '.', $normalized);
+        } elseif ($hasDot && !$hasComma) {
+            // If it only has dots, assume they are ONE OR MORE thousand separators (e.g. from frontend)
+            $normalized = str_replace('.', '', $normalized);
         }
 
         return is_numeric($normalized) ? (float) $normalized : 0;
