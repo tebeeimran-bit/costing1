@@ -64,7 +64,9 @@ RUN echo "display_errors=On" >> /usr/local/etc/php/conf.d/app.ini && \
     echo "error_reporting=E_ALL" >> /usr/local/etc/php/conf.d/app.ini && \
     echo "log_errors=On" >> /usr/local/etc/php/conf.d/app.ini && \
     echo "upload_max_filesize=50M" >> /usr/local/etc/php/conf.d/app.ini && \
-    echo "post_max_size=50M" >> /usr/local/etc/php/conf.d/app.ini
+    echo "post_max_size=50M" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "max_input_vars=10000" >> /usr/local/etc/php/conf.d/app.ini && \
+    echo "max_multipart_body_parts=12000" >> /usr/local/etc/php/conf.d/app.ini
 
 # Configure nginx
 COPY docker/nginx.conf /etc/nginx/nginx.conf
