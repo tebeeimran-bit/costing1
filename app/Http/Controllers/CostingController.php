@@ -2231,9 +2231,57 @@ class CostingController extends Controller
 
 
             if ($trackingRevisionId && !$importFromPartlist) {
-                // Penghapusan sinkronisasi otomatis UnpricedPart dari form material, 
-                // data material akan tersimpan biasa ke breakdown tanpa mentrigger UnpricedPart
-                
+                // Jalankan deteksi manual Unpriced Part HANYA jika tombol update ditekan dari section unpriced_parts
+                if ($updateSection === 'unpriced_parts') {
+                    if ($costingData) {
+                        $partAggregation = $this->buildUnpricedAggregationFromBreakdowns((int) $costingData->id, collect());
+                        $trackedPartKeys = collect($partAggregation)->keys();
+                        $openItems = UnpricedPart::where('document_revision_id', $trackingRevisionId)
+                            ->whereNull('resolved_at')
+                            ->get()
+                            ->keyBy(fn ($item) => strtolower($item->part_number));
+
+                        foreach ($partAggregation as $partKey => $partInfo) {
+                            if ($partInfo['is_unpriced']) {
+                                UnpricedPart::updateOrCreate(
+                                    [
+                                        'document_revision_id' => $trackingRevisionId,
+                                        'part_number' => $partInfo['part_number'],
+                                        'resolved_at' => null,
+                                    ],
+                                    [
+                                        'costing_data_id' => $costingData->id,
+                                        'part_name' => $partInfo['part_name'] ?: null,
+                                        'detected_price' => $partInfo['detected_price'],
+                                        'manual_price' => null,
+                                        'notes' => 'Dideteksi via Update Rekapan Part Tanpa Harga.',
+                                    ]
+                                );
+                            } else {
+                                $existingOpen = $openItems->get($partKey);
+                                if ($existingOpen) {
+                                    $existingOpen->update([
+                                        'costing_data_id' => $costingData->id,
+                                        'manual_price' => null,
+                                        'resolved_at' => now(),
+                                        'resolution_source' => 'manual_or_master_price',
+                                    ]);
+                                }
+                            }
+                        }
+
+                        foreach ($openItems as $partKey => $openItem) {
+                            if (!$trackedPartKeys->contains($partKey)) {
+                                $openItem->update([
+                                    'costing_data_id' => $costingData->id,
+                                    'resolved_at' => now(),
+                                    'resolution_source' => 'part_removed_in_current_processing',
+                                ]);
+                            }
+                        }
+                    }
+                }
+
                 // Cek status khusus ketika Update Resume COGM  
                 $remainingUnpriced = UnpricedPart::where('document_revision_id', $trackingRevisionId)
                     ->whereNull('resolved_at')
