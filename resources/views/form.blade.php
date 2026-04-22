@@ -3953,8 +3953,75 @@ document.addEventListener('DOMContentLoaded', () => {
             form.submit();
         }
 
+        function bindMaterialTableColumnResizer() {
+            const table = document.getElementById('materialTable');
+            if (!table) return;
+
+            const headers = table.querySelectorAll('thead th');
+            headers.forEach((th, index) => {
+                th.title = 'Klik dua kali untuk menyesuaikan lebar kolom secara otomatis (Auto-fit)';
+                th.style.cursor = 'col-resize';
+                
+                th.addEventListener('dblclick', function() {
+                    let maxChars = th.textContent.trim().length;
+
+                    // Iterate over visible rows to find longest text content or input value
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        // Skip deleted form rows (hidden visually)
+                        if (row.style.display === 'none') return;
+                        
+                        const cell = row.children[index];
+                        if (!cell) return;
+
+                        let text = cell.textContent.trim();
+                        const input = cell.querySelector('input:not([type="hidden"]), select');
+                        
+                        if (input) {
+                            if (input.tagName === 'SELECT') {
+                                text = input.options[input.selectedIndex]?.text || '';
+                            } else {
+                                text = input.value || '';
+                            }
+                        }
+
+                        if (text.length > maxChars) {
+                            maxChars = text.length;
+                        }
+                    });
+
+                    // Base width approximation using ch unit (adding buffer for padding/dropdown arrow)
+                    let estimatedCh = maxChars + 6; 
+                    
+                    // Constrain min/max width limits to prevent breaking table
+                    if (estimatedCh > 65) estimatedCh = 65; 
+                    if (estimatedCh < 8) estimatedCh = 8;
+                    
+                    const newWidth = estimatedCh + 'ch';
+
+                    // Optional: remove hardcoded classes and apply inline style
+                    th.style.width = newWidth;
+                    th.style.minWidth = newWidth;
+                    
+                    rows.forEach(row => {
+                        const cell = row.children[index];
+                        if (!cell) return;
+                        
+                        // Inputs need to resize themselves accordingly
+                        const input = cell.querySelector('.form-input, .form-select');
+                        if (input) {
+                            input.classList.remove('w-28');
+                            input.style.width = '100%';
+                            input.style.minWidth = newWidth;
+                        }
+                    });
+                });
+            });
+        }
+
         // Initialize calculations on page load
         document.addEventListener('DOMContentLoaded', function () {
+            bindMaterialTableColumnResizer();
             initSectionToggles();
             bindMaterialTableBehaviors();
             initMaterialFilterPopup();
