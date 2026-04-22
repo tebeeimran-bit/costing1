@@ -777,7 +777,12 @@
                 }
             });
 
-            document.addEventListener('submit', function () {
+            document.addEventListener('submit', function (e) {
+                if (e.defaultPrevented) return;
+
+                var form = e.target;
+                if (form && form.dataset && form.dataset.skipLoadingOverlay === 'true') return;
+
                 var overlay = document.getElementById('page-loading-overlay');
                 if (overlay) {
                     overlay.style.display = 'flex';
