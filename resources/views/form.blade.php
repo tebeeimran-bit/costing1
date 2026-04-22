@@ -1831,17 +1831,20 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Convert JS float (e.g. 4000.25) to input format '4.000,25'
         function floatToInput(num) {
-            let str = String(Number(num));
-            str = str.replace('.', ',');
-            return formatNumberInput(str);
+            if (num === null || num === undefined || isNaN(Number(num))) return '0';
+            
+            let raw = String(Number(num));
+            return formatNumberInput(raw.replace('.', ','));
         }
 
         function formatNumberInput(value) {
-            if (!value) return '';
-            let raw = value.toString().replace(/[^0-9,]/g, '');
-            let parts = raw.split(',');
-            let integerPart = parts[0];
-            let decimalPart = parts.length > 1 ? ',' + parts[1] : '';
+            if (value === null || value === undefined) return '';
+            let valStr = value.toString();
+            if (valStr === '') return '';
+            
+            let parts = valStr.split(',');
+            let integerPart = parts[0].replace(/[^0-9\-]/g, ''); // keep numbers and negative
+            let decimalPart = parts.length > 1 ? ',' + parts[1].replace(/[^0-9]/g, '') : '';
             
             // Add thousand separators
             integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -1853,30 +1856,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 let startPos = e.target.selectionStart;
                 let oldVal = e.target.value;
                 
-                // Allow user to type comma if it's the last character
+                // Allow user to type comma if it's the last character and no other commas exist
                 if (oldVal.endsWith(',') && (oldVal.match(/,/g) || []).length === 1) {
+                    // Do not rewrite immediately to prevent cursor jumping when starting a decimal
                     return;
                 }
 
                 let newVal = formatNumberInput(oldVal);
                 e.target.value = newVal;
-                
-                // adjust cursor
-                if (startPos !== null) {
-                    let diff = newVal.length - oldVal.length;
-                    let newPos = startPos + diff;
-                    // basic heuristic, might jump to end on some browsers but works fine
-                    e.target.setSelectionRange(newPos, newPos);
-                }
             }
         });
         
         document.addEventListener('blur', function(e) {
             if (e.target && e.target.classList.contains('number-format')) {
-                // remove trailing commas on blur
-                let v = e.target.value;
-                if (v.endsWith(',')) {
-                    e.target.value = v.slice(0, -1);
+                // Formatting on blur cleanly
+                if (e.target.value) {
+                    let cleaned = e.target.value.replace(/,$/, '');
+                    e.target.value = formatNumberInput(cleaned);
                 }
                 
                 // also calculateRow if not already fired by browser
@@ -1995,6 +1991,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } else if (hasComma && !hasDot) {
                 str = str.replace(/,/g, '.');
+            } else if (hasDot && !hasComma) {
+                // If it only has dots, assume they are ALL thousand separators from our formatter
+                str = str.replace(/\./g, '');
             }
 
             return parseFloat(str) || 0;
