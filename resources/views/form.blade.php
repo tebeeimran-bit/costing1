@@ -930,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
 
         <!-- Section D: Material Breakdown Table -->
-        <div class="card form-section">
+        <div class="card form-section" id="materialFormSection">
             <div class="form-section-title">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -1785,6 +1785,30 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         </div>
     </div>
+
+    <!-- Modal Konfirmasi Unsaved Material -->
+    <div id="unsavedMaterialConfirmModal" class="confirm-modal is-hidden" style="z-index: 1000;" aria-hidden="true">
+        <div class="confirm-modal-card" role="dialog" aria-modal="true" aria-labelledby="unsavedMaterialConfirmTitle">
+            <div class="confirm-modal-head">
+                <span class="confirm-modal-icon" style="background: #fef08a; color: #b45309;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                </span>
+                <h3 id="unsavedMaterialConfirmTitle" class="confirm-modal-title" style="color: #b45309;">Perubahan Belum Disimpan</h3>
+            </div>
+            <div class="confirm-modal-body" style="font-size: 0.8rem;">
+                Anda memiliki perubahan pada section Material yang belum di-Update. Apakah Anda ingin meng-Update menyimpannya terlebih dahulu sebelum berpindah bagian? <br><br>
+                <em>Jika Anda memilih Abaikan & Pindah, maka data yang barusan diketik berpotensi hilang saat Reload/Update section lain.</em>
+            </div>
+            <div class="confirm-modal-actions">
+                <button type="button" class="btn btn-secondary" id="unsavedMaterialIgnoreBtn">Abaikan & Pindah</button>
+                <button type="button" class="btn btn-primary" id="unsavedMaterialSaveBtn" style="background: #eab308; border-color: #ca8a04; color: white;">Ya, Update Sekarang</button>
+            </div>
+        </div>
+    </div>
     </div>
 @endsection
 
@@ -1797,6 +1821,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let materialRedoHistory = [];
         const materialUndoLimit = 50;
         let materialHistoryApplying = false;
+        let isMaterialDirty = false;
+        let isConfirmingUnsavedMaterial = false;
         const materialFilterState = {};
         const materialFilterableColumns = [1, 2, 3, 5, 6, 9, 11, 12];
         let materialFilterPopup = null;
@@ -1850,6 +1876,76 @@ document.addEventListener('DOMContentLoaded', () => {
             integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
             return integerPart + decimalPart;
         }
+
+        function showUnsavedMaterialConfirmModal(eventToCancel, allowTargetAction) {
+            isConfirmingUnsavedMaterial = true;
+            const modal = document.getElementById('unsavedMaterialConfirmModal');
+            const ignoreBtn = document.getElementById('unsavedMaterialIgnoreBtn');
+            const saveBtn = document.getElementById('unsavedMaterialSaveBtn');
+            if (!modal) return;
+
+            const closeWith = (shouldSave) => {
+                modal.classList.add('is-hidden');
+                modal.setAttribute('aria-hidden', 'true');
+                ignoreBtn.removeEventListener('click', handleIgnore);
+                saveBtn.removeEventListener('click', handleSave);
+                isConfirmingUnsavedMaterial = false;
+
+                if (shouldSave) {
+                    const materialUpdateBtn = document.querySelector('.section-update-btn[data-section="material"]');
+                    if (materialUpdateBtn) {
+                        materialUpdateBtn.click();
+                    }
+                } else {
+                    isMaterialDirty = false;
+                    // Automatically execute the action that was prevented if allowed
+                    if (allowTargetAction && eventToCancel && eventToCancel.target) {
+                        const target = eventToCancel.target;
+                        if (target.click) {
+                            setTimeout(() => { target.click(); }, 50);
+                        } else if (target.focus) {
+                            setTimeout(() => { target.focus(); }, 50);
+                        }
+                    }
+                }
+            };
+
+            const handleIgnore = () => closeWith(false);
+            const handleSave = () => closeWith(true);
+
+            modal.classList.remove('is-hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            ignoreBtn.addEventListener('click', handleIgnore);
+            saveBtn.addEventListener('click', handleSave);
+        }
+
+        // Global Interceptor to prevent leaving material section
+        document.addEventListener('mousedown', function(event) {
+            if (!isMaterialDirty) return;
+            if (isConfirmingUnsavedMaterial) return;
+
+            const materialSection = document.getElementById('materialFormSection');
+            // If interaction is inside the Material section itself, allow it
+            if (materialSection && materialSection.contains(event.target)) {
+                return;
+            }
+
+            // Exceptions (like clicking the modal, document body, non-interactive elements)
+            if (event.target.closest('.confirm-modal')) {
+                return; // Let modal work
+            }
+
+            const unpricedBanner = event.target.closest('.unpriced-top-banner');
+            if (unpricedBanner) return;
+
+            // Only block interactive things indicating they are moving away (inputs, buttons outside of material)
+            const isInteractive = event.target.closest('input, select, textarea, button, a, .section-toggle');
+            if (isInteractive) {
+                event.preventDefault();
+                event.stopPropagation();
+                showUnsavedMaterialConfirmModal(event, true);
+            }
+        }, true);
 
         document.addEventListener('input', function(e) {
             if (e.target && e.target.classList.contains('number-format')) {
@@ -2870,6 +2966,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 materialUndoHistory.shift();
             }
 
+            // Flag as dirty to stop section jumping
+            isMaterialDirty = true;
             materialRedoHistory = [];
 
             updateMaterialUndoButtonState();
@@ -3484,6 +3582,7 @@ document.addEventListener('DOMContentLoaded', () => {
             materialBody.dataset.boundBehavior = '1';
 
             materialBody.addEventListener('input', function (event) {
+                isMaterialDirty = true;
                 const target = event.target;
                 if (!(target instanceof HTMLInputElement)) {
                     return;
