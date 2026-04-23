@@ -1598,9 +1598,12 @@ class CostingController extends Controller
     {
         $updateSection = trim((string) $request->input('update_section', ''));
         $importPartlistFileUploaded = $request->hasFile('import_partlist_file');
+        $importCogmFileUploaded = $request->hasFile('import_cogm_file');
         $importCycleTimeFileUploaded = $request->hasFile('import_cycle_time_file');
 
         if ($importPartlistFileUploaded && $updateSection === '') {
+            $updateSection = 'material';
+        } elseif ($importCogmFileUploaded && $updateSection === '') {
             $updateSection = 'material';
         } elseif ($importCycleTimeFileUploaded && $updateSection === '') {
             $updateSection = 'cycle_time';
@@ -1611,6 +1614,7 @@ class CostingController extends Controller
             'tracking_revision_id' => 'nullable|exists:document_revisions,id',
             'update_section' => 'nullable|string',
             'import_partlist' => 'nullable|boolean',
+            'import_cogm' => 'nullable|boolean',
             'import_cycle_time' => 'nullable|boolean',
             'wire_rate_id' => 'nullable|exists:wire_rates,id',
         ];
@@ -1728,6 +1732,10 @@ class CostingController extends Controller
             $rules['import_partlist_file'] = 'nullable';
         }
 
+        if ($updateSection === 'material' && ($request->boolean('import_cogm') || $importCogmFileUploaded)) {
+            $rules['import_cogm_file'] = 'nullable';
+        }
+
         if ($updateSection === 'cycle_time' && ($request->boolean('import_cycle_time') || $importCycleTimeFileUploaded)) {
             $rules['import_cycle_time_file'] = 'nullable';
         }
@@ -1738,6 +1746,11 @@ class CostingController extends Controller
             'import_partlist_file.uploaded' => 'Upload gagal. Kemungkinan ukuran file melebihi batas server. Naikkan upload_max_filesize dan post_max_size di PHP.',
             'import_partlist_file.mimes' => 'Format file harus .xlsx atau .xls sesuai template partlist.',
             'import_partlist_file.max' => 'Ukuran file partlist terlalu besar (maks 20MB).',
+            'import_cogm_file.required' => 'File COGM wajib dipilih.',
+            'import_cogm_file.file' => 'File COGM tidak valid.',
+            'import_cogm_file.uploaded' => 'Upload file COGM gagal. Kemungkinan ukuran file melebihi batas server. Naikkan upload_max_filesize dan post_max_size di PHP.',
+            'import_cogm_file.mimes' => 'Format file COGM harus .xlsx atau .xls.',
+            'import_cogm_file.max' => 'Ukuran file COGM terlalu besar (maks 20MB).',
             'import_cycle_time_file.required' => 'File Cycle Time wajib dipilih.',
             'import_cycle_time_file.file' => 'File Cycle Time tidak valid.',
             'import_cycle_time_file.uploaded' => 'Upload file Cycle Time gagal. Kemungkinan ukuran file melebihi batas server. Naikkan upload_max_filesize dan post_max_size di PHP.',
@@ -1764,6 +1777,9 @@ class CostingController extends Controller
         $importRequested = $updateSection === 'material' && ($request->boolean('import_partlist') || $importPartlistFileUploaded);
         $importFromPartlist = $updateSection === 'material' && $importPartlistFileUploaded;
         $importedMaterialRows = [];
+        $importCogmRequested = $updateSection === 'material' && ($request->boolean('import_cogm') || $importCogmFileUploaded);
+        $importFromCogm = $updateSection === 'material' && $importCogmFileUploaded;
+        $importedCogmRows = [];
         $importCycleTimeRequested = $updateSection === 'cycle_time' && ($request->boolean('import_cycle_time') || $importCycleTimeFileUploaded);
         $importFromCycleTime = $updateSection === 'cycle_time' && $importCycleTimeFileUploaded;
         $importedCycleTimeRows = [];
@@ -1809,6 +1825,48 @@ class CostingController extends Controller
 
             if (count($importedMaterialRows) === 0) {
                 return back()->with('warning', 'Data partlist tidak ditemukan. Pastikan data diisi mulai kolom D-J dari baris 12 ke bawah (sesuai template).')->withInput();
+            }
+        }
+
+        if ($importCogmRequested) {
+            $costingDataId = isset($validated['costing_data_id']) ? (int) $validated['costing_data_id'] : null;
+            if (!$costingDataId) {
+                return back()->with('warning', 'Simpan data costing terlebih dahulu sebelum import COGM.')->withInput();
+            }
+
+            $uploadedCogmFile = $request->file('import_cogm_file');
+            $uploadErrorCode = (int) ($_FILES['import_cogm_file']['error'] ?? UPLOAD_ERR_NO_FILE);
+
+            if ($uploadedCogmFile) {
+                if (!$uploadedCogmFile->isValid()) {
+                    $errorCode = (int) $uploadedCogmFile->getError();
+                    return back()->with('error', 'Upload file COGM gagal: ' . $this->uploadErrorCodeToMessage($errorCode))->withInput();
+                }
+
+                $ext = strtolower((string) $uploadedCogmFile->getClientOriginalExtension());
+                if (!in_array($ext, ['xlsx', 'xls'], true)) {
+                    return back()->with('error', 'Format file COGM harus .xlsx atau .xls.')->withInput();
+                }
+
+                if ($uploadedCogmFile->getSize() > (20 * 1024 * 1024)) {
+                    return back()->with('error', 'Ukuran file COGM terlalu besar (maks 20MB).')->withInput();
+                }
+            } elseif ($uploadErrorCode !== UPLOAD_ERR_NO_FILE) {
+                return back()->with('error', 'Upload file COGM gagal: ' . $this->uploadErrorCodeToMessage($uploadErrorCode))->withInput();
+            } else {
+                return back()->with('warning', 'Silakan pilih file COGM terlebih dahulu sebelum import.')->withInput();
+            }
+
+            $importResult = $this->loadCogmMaterialRows($costingDataId, $uploadedCogmFile);
+
+            if (!empty($importResult['error'])) {
+                return back()->with('error', $importResult['error'])->withInput();
+            }
+
+            $importedCogmRows = array_values($importResult['rows']);
+
+            if (count($importedCogmRows) === 0) {
+                return back()->with('warning', 'Data COGM tidak ditemukan. Pastikan kolom K-Q terisi mulai baris 12 ke bawah.')->withInput();
             }
         }
 
@@ -1999,6 +2057,9 @@ class CostingController extends Controller
             $partAggregation = [];
 
             $hasMaterialPayload = $request->has('materials') || $request->filled('materials_json') || !empty($importedMaterialRows);
+            if (!empty($importedCogmRows)) {
+                $hasMaterialPayload = true;
+            }
             $shouldProcessMaterials = $updateSection === '' || $updateSection === 'material';
             $shouldProcessUnpricedOnly = $updateSection === 'unpriced_parts';
             // When the material section is explicitly submitted, always sync — even if
@@ -2014,7 +2075,50 @@ class CostingController extends Controller
 
             $materialsInput = $importFromPartlist
                 ? $importedMaterialRows
-                : $request->input('materials', []);
+                : ($importFromCogm ? $importedCogmRows : $request->input('materials', []));
+
+            if ((!is_array($materialsInput) || empty($materialsInput)) && $request->filled('materials_json')) {
+                $decodedMaterials = $this->decodeJsonArrayInput($request->input('materials_json'));
+                if (!empty($decodedMaterials)) {
+                    $materialsInput = $decodedMaterials;
+                }
+            }
+
+            if ($importFromCogm && $costingData) {
+                $existingBreakdowns = MaterialBreakdown::where('costing_data_id', $costingData->id)
+                    ->orderBy('id')
+                    ->get();
+
+                if ($existingBreakdowns->isEmpty()) {
+                    return back()->with('warning', 'Tidak ada data material existing untuk diupdate dengan COGM.')->withInput();
+                }
+
+                $mergedMaterials = [];
+                foreach ($existingBreakdowns as $index => $breakdown) {
+                    $cogmRow = $importedCogmRows[$index] ?? [];
+                    $materialModel = $breakdown->relationLoaded('material') ? $breakdown->material : $breakdown->material()->first();
+
+                    $mergedMaterials[] = [
+                        'row_no' => $breakdown->row_no ?? ($index + 1),
+                        'part_no' => trim((string) ($breakdown->part_no ?? $materialModel?->material_code ?? '')),
+                        'id_code' => trim((string) ($breakdown->id_code ?? '')),
+                        'part_name' => trim((string) ($breakdown->part_name ?? $materialModel?->material_description ?? '')),
+                        'qty_req' => $this->toFloatValue($breakdown->qty_req ?? 0),
+                        'unit' => trim((string) ($breakdown->unit ?? $materialModel?->base_uom ?? '')),
+                        'pro_code' => trim((string) ($breakdown->pro_code ?? '')),
+                        'amount1' => array_key_exists('amount1', $cogmRow) && $cogmRow['amount1'] !== null && $cogmRow['amount1'] !== '' ? $cogmRow['amount1'] : ($breakdown->amount1 ?? 0),
+                        'unit_price_basis' => array_key_exists('unit_price_basis', $cogmRow) && $cogmRow['unit_price_basis'] !== null && $cogmRow['unit_price_basis'] !== '' ? $cogmRow['unit_price_basis'] : ($breakdown->unit_price_basis ?? 0),
+                        'unit_price_basis_text' => array_key_exists('unit_price_basis_text', $cogmRow) && $cogmRow['unit_price_basis_text'] !== null && $cogmRow['unit_price_basis_text'] !== '' ? $cogmRow['unit_price_basis_text'] : ($breakdown->unit_price_basis_text ?? ''),
+                        'currency' => array_key_exists('currency', $cogmRow) && $cogmRow['currency'] !== '' ? $cogmRow['currency'] : ($breakdown->currency ?? ($materialModel?->currency ?? 'IDR')),
+                        'qty_moq' => array_key_exists('qty_moq', $cogmRow) && $cogmRow['qty_moq'] !== null && $cogmRow['qty_moq'] !== '' ? $cogmRow['qty_moq'] : ($breakdown->qty_moq ?? 0),
+                        'cn_type' => array_key_exists('cn_type', $cogmRow) && $cogmRow['cn_type'] !== '' ? $cogmRow['cn_type'] : ($breakdown->cn_type ?? 'N'),
+                        'supplier' => array_key_exists('supplier', $cogmRow) && $cogmRow['supplier'] !== null ? $cogmRow['supplier'] : ($breakdown->supplier ?? ($materialModel?->maker ?? '')),
+                        'import_tax' => array_key_exists('import_tax', $cogmRow) && $cogmRow['import_tax'] !== null && $cogmRow['import_tax'] !== '' ? $cogmRow['import_tax'] : ($breakdown->import_tax_percent ?? 0),
+                    ];
+                }
+
+                $materialsInput = $mergedMaterials;
+            }
 
             if ((!is_array($materialsInput) || empty($materialsInput)) && $request->filled('materials_json')) {
                 $decodedMaterials = $this->decodeJsonArrayInput($request->input('materials_json'));
@@ -2352,6 +2456,8 @@ class CostingController extends Controller
             if ($importFromPartlist) {
                 $successMessage = 'Partlist berhasil diimport ke Material (' . count($importedMaterialRows) . ' baris).';
                 session()->flash('just_imported_partlist', true);
+            } elseif ($importFromCogm) {
+                $successMessage = 'COGM berhasil diimport ke Material (' . count($importedCogmRows) . ' baris).';
             } elseif ($importFromCycleTime) {
                 $successMessage = 'Cycle Time berhasil diimport (' . count($importedCycleTimeRows) . ' baris).';
             }
@@ -2359,7 +2465,7 @@ class CostingController extends Controller
             if ($updateSection === 'unpriced_parts') {
                 return redirect($redirectUrl)
                     ->with('success', $successMessage)
-                    ->withInput($request->except(['import_partlist_file']));
+                    ->withInput($request->except(['import_partlist_file', 'import_cogm_file']));
             }
 
             session()->flash('success', $successMessage);
@@ -2568,6 +2674,177 @@ class CostingController extends Controller
         } catch (\Throwable $e) {
             return ['rows' => [], 'error' => 'Gagal membaca file partlist: ' . $e->getMessage()];
         }
+    }
+
+    private function loadCogmMaterialRows(?int $costingDataId, $uploadedCogmFile = null): array
+    {
+        set_time_limit(180);
+
+        if (!$costingDataId) {
+            return ['rows' => [], 'error' => 'Simpan data costing terlebih dahulu sebelum import COGM.'];
+        }
+
+        $costingData = CostingData::find($costingDataId);
+        if (!$costingData) {
+            return ['rows' => [], 'error' => 'Data costing tidak ditemukan.'];
+        }
+
+        $existingBreakdowns = MaterialBreakdown::with('material')
+            ->where('costing_data_id', $costingDataId)
+            ->orderBy('id')
+            ->get();
+
+        if ($existingBreakdowns->isEmpty()) {
+            return ['rows' => [], 'error' => 'Tidak ada data material existing untuk diupdate dengan COGM.'];
+        }
+
+        $sourcePath = null;
+        $extension = '';
+
+        if ($uploadedCogmFile) {
+            $sourcePath = $uploadedCogmFile->getPathname();
+            $extension = strtolower((string) $uploadedCogmFile->getClientOriginalExtension());
+        }
+
+        if (!in_array($extension, ['xlsx', 'xls'], true)) {
+            return ['rows' => [], 'error' => 'Format COGM tidak didukung untuk import otomatis.'];
+        }
+
+        if (!$sourcePath || !is_readable($sourcePath)) {
+            return ['rows' => [], 'error' => 'File COGM tidak dapat diakses oleh server.'];
+        }
+
+        $fileSize = @filesize($sourcePath);
+        if ($fileSize === false || $fileSize <= 0) {
+            return ['rows' => [], 'error' => 'File COGM kosong atau rusak.'];
+        }
+
+        try {
+            $importedRows = $this->parseCogmXlsx((string) $sourcePath);
+            if (count($importedRows) === 0) {
+                return ['rows' => [], 'error' => 'Data COGM tidak terdeteksi dari file. Pastikan kolom K-Q terisi mulai baris 12 ke bawah.'];
+            }
+
+            $mergedRows = [];
+            foreach ($existingBreakdowns as $index => $breakdown) {
+                $cogmRow = $importedRows[$index] ?? [];
+                $materialModel = $breakdown->relationLoaded('material') ? $breakdown->material : $breakdown->material()->first();
+
+                $mergedRows[] = [
+                    'row_no' => $breakdown->row_no ?? ($index + 1),
+                    'part_no' => trim((string) ($breakdown->part_no ?? $materialModel?->material_code ?? '')),
+                    'id_code' => trim((string) ($breakdown->id_code ?? '')),
+                    'part_name' => trim((string) ($breakdown->part_name ?? $materialModel?->material_description ?? '')),
+                    'qty_req' => $this->toFloatValue($breakdown->qty_req ?? 0),
+                    'unit' => trim((string) ($breakdown->unit ?? $materialModel?->base_uom ?? '')),
+                    'pro_code' => trim((string) ($breakdown->pro_code ?? '')),
+                    'amount1' => array_key_exists('amount1', $cogmRow) && $cogmRow['amount1'] !== null && $cogmRow['amount1'] !== '' ? $cogmRow['amount1'] : ($breakdown->amount1 ?? 0),
+                    'unit_price_basis' => array_key_exists('unit_price_basis', $cogmRow) && $cogmRow['unit_price_basis'] !== null && $cogmRow['unit_price_basis'] !== '' ? $cogmRow['unit_price_basis'] : ($breakdown->unit_price_basis ?? 0),
+                    'unit_price_basis_text' => array_key_exists('unit_price_basis_text', $cogmRow) && $cogmRow['unit_price_basis_text'] !== null && $cogmRow['unit_price_basis_text'] !== '' ? $cogmRow['unit_price_basis_text'] : ($breakdown->unit_price_basis_text ?? ''),
+                    'currency' => array_key_exists('currency', $cogmRow) && $cogmRow['currency'] !== '' ? $cogmRow['currency'] : ($breakdown->currency ?? ($materialModel?->currency ?? 'IDR')),
+                    'qty_moq' => array_key_exists('qty_moq', $cogmRow) && $cogmRow['qty_moq'] !== null && $cogmRow['qty_moq'] !== '' ? $cogmRow['qty_moq'] : ($breakdown->qty_moq ?? 0),
+                    'cn_type' => array_key_exists('cn_type', $cogmRow) && $cogmRow['cn_type'] !== '' ? $cogmRow['cn_type'] : ($breakdown->cn_type ?? 'N'),
+                    'supplier' => array_key_exists('supplier', $cogmRow) && $cogmRow['supplier'] !== null ? $cogmRow['supplier'] : ($breakdown->supplier ?? ($materialModel?->maker ?? '')),
+                    'import_tax' => array_key_exists('import_tax', $cogmRow) && $cogmRow['import_tax'] !== null && $cogmRow['import_tax'] !== '' ? $cogmRow['import_tax'] : ($breakdown->import_tax_percent ?? 0),
+                ];
+            }
+
+            return ['rows' => $mergedRows, 'error' => null];
+        } catch (\Throwable $e) {
+            return ['rows' => [], 'error' => 'Gagal membaca file COGM: ' . $e->getMessage()];
+        }
+    }
+
+    private function parseCogmXlsx(string $filePath): array
+    {
+        if (!class_exists(IOFactory::class)) {
+            throw new \RuntimeException('Parser PhpSpreadsheet tidak tersedia.');
+        }
+
+        $reader = IOFactory::createReaderForFile($filePath);
+        $reader->setReadDataOnly(true);
+        $spreadsheet = $reader->load($filePath);
+        $bestRows = [];
+
+        foreach ($spreadsheet->getAllSheets() as $sheet) {
+            if (!$sheet instanceof Worksheet) {
+                continue;
+            }
+
+            $rows = $this->extractCogmRowsFromSheet($sheet);
+            if (count($rows) > count($bestRows)) {
+                $bestRows = $rows;
+            }
+        }
+
+        return $bestRows;
+    }
+
+    private function extractCogmRowsFromSheet(Worksheet $sheet): array
+    {
+        $highestDataRow = (int) $sheet->getHighestDataRow();
+        $highestRow = (int) $sheet->getHighestRow();
+
+        $scanEnd = max($highestDataRow, 12);
+        if ($scanEnd < 12 && $highestRow >= 12) {
+            $scanEnd = min($highestRow, 5000);
+        } else {
+            $scanEnd = min(max($scanEnd + 120, 250), 5000);
+        }
+
+        $rows = [];
+        $emptyStreak = 0;
+
+        for ($row = 12; $row <= $scanEnd; $row++) {
+            $amount1Raw = trim((string) $sheet->getCell('K' . $row)->getFormattedValue());
+            $unitPriceBasisRaw = trim((string) $sheet->getCell('L' . $row)->getFormattedValue());
+            $currencyRaw = trim((string) $sheet->getCell('M' . $row)->getFormattedValue());
+            $qtyMoqRaw = trim((string) $sheet->getCell('N' . $row)->getFormattedValue());
+            $cnRaw = trim((string) $sheet->getCell('O' . $row)->getFormattedValue());
+            $supplierRaw = trim((string) $sheet->getCell('P' . $row)->getFormattedValue());
+            $importTaxRaw = trim((string) $sheet->getCell('Q' . $row)->getFormattedValue());
+
+            $hasSignal = $amount1Raw !== ''
+                || $unitPriceBasisRaw !== ''
+                || $currencyRaw !== ''
+                || $qtyMoqRaw !== ''
+                || $cnRaw !== ''
+                || $supplierRaw !== ''
+                || $importTaxRaw !== '';
+
+            if (!$hasSignal) {
+                $emptyStreak++;
+                if ($emptyStreak >= 80) {
+                    break;
+                }
+                continue;
+            }
+
+            $emptyStreak = 0;
+
+            $currency = strtoupper($currencyRaw);
+            if (!in_array($currency, ['IDR', 'USD', 'JPY'], true)) {
+                $currency = $currency !== '' ? $currency : 'IDR';
+            }
+
+            $cnType = strtoupper($cnRaw);
+            if (!in_array($cnType, ['C', 'N'], true)) {
+                $cnType = 'N';
+            }
+
+            $rows[] = [
+                'amount1' => $amount1Raw !== '' ? $this->toFloatValue($amount1Raw) : null,
+                'unit_price_basis' => $unitPriceBasisRaw !== '' ? $this->toFloatValue($unitPriceBasisRaw) : null,
+                'unit_price_basis_text' => $unitPriceBasisRaw !== '' ? $unitPriceBasisRaw : null,
+                'currency' => $currency,
+                'qty_moq' => $qtyMoqRaw !== '' ? $this->toFloatValue($qtyMoqRaw) : null,
+                'cn_type' => $cnType,
+                'supplier' => $supplierRaw !== '' ? $supplierRaw : null,
+                'import_tax' => $importTaxRaw !== '' ? $this->toFloatValue($importTaxRaw) : null,
+            ];
+        }
+
+        return $rows;
     }
 
     private function loadCycleTimeRows($uploadedCycleTimeFile): array

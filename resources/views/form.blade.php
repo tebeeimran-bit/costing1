@@ -946,6 +946,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button type="button" class="btn btn-secondary btn-sm" onclick="triggerPartlistImport()">
                         Import Partlist
                     </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="triggerCogmImport()">
+                        Import COGM
+                    </button>
                     <button type="button" class="btn btn-secondary btn-sm" id="materialUndoBtn" onclick="undoMaterialTable()" disabled aria-label="Undo" title="Undo">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <polyline points="9 14 4 9 9 4"></polyline>
@@ -1771,6 +1774,32 @@ document.addEventListener('DOMContentLoaded', () => {
         <input type="hidden" name="forecast" id="importForecast" value="{{ $forecastValue ?? 0 }}">
         <input type="hidden" name="project_period" id="importProjectPeriod" value="{{ $costingData->project_period ?? 2 }}">
         <input type="file" name="import_partlist_file" id="importPartlistFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitPartlistImport(); }">
+    </form>
+
+    <form action="{{ route('costing.import-partlist', absolute: false) }}" method="POST" id="cogmImportForm" enctype="multipart/form-data" style="position:absolute; width:0; height:0; overflow:hidden;">
+        @csrf
+        @if(isset($costingData) && $costingData)
+            <input type="hidden" name="costing_data_id" value="{{ $costingData->id }}">
+        @endif
+        @if(isset($trackingRevisionId) && $trackingRevisionId)
+            <input type="hidden" name="tracking_revision_id" value="{{ $trackingRevisionId }}">
+        @endif
+        <input type="hidden" name="update_section" value="material">
+        <input type="hidden" name="import_cogm" value="1">
+        <input type="hidden" name="wire_rate_id" id="cogmImportWireRateId" value="{{ $selectedWireRateId }}">
+        <input type="hidden" name="business_category_id" id="cogmImportBusinessCategoryId" value="{{ $costingData->product->line ?? ($trackingProjectPrefill['business_category_id'] ?? '') }}">
+        <input type="hidden" name="customer_id" id="cogmImportCustomerId" value="{{ $costingData->customer_id ?? ($trackingProjectPrefill['customer_id'] ?? '') }}">
+        <input type="hidden" name="period" id="cogmImportPeriod" value="{{ $costingData->period ?? '' }}">
+        <input type="hidden" name="line" id="cogmImportLine" value="{{ $costingData->line ?? '' }}">
+        <input type="hidden" name="model" id="cogmImportModel" value="{{ $costingData->model ?? ($trackingProjectPrefill['model'] ?? '') }}">
+        <input type="hidden" name="assy_no" id="cogmImportAssyNo" value="{{ $costingData->assy_no ?? ($trackingProjectPrefill['assy_no'] ?? '') }}">
+        <input type="hidden" name="assy_name" id="cogmImportAssyName" value="{{ $costingData->assy_name ?? ($trackingProjectPrefill['assy_name'] ?? '') }}">
+        <input type="hidden" name="exchange_rate_usd" id="cogmImportRateUsd" value="{{ $costingData->exchange_rate_usd ?? ($activeWireRate->usd_rate ?? 15500) }}">
+        <input type="hidden" name="exchange_rate_jpy" id="cogmImportRateJpy" value="{{ $costingData->exchange_rate_jpy ?? ($activeWireRate->jpy_rate ?? 103) }}">
+        <input type="hidden" name="lme_rate" id="cogmImportLmeRate" value="{{ $costingData->lme_rate ?? ($activeWireRate->lme_active ?? '') }}">
+        <input type="hidden" name="forecast" id="cogmImportForecast" value="{{ $forecastValue ?? 0 }}">
+        <input type="hidden" name="project_period" id="cogmImportProjectPeriod" value="{{ $costingData->project_period ?? 2 }}">
+        <input type="file" name="import_cogm_file" id="importCogmFileInput" accept=".xls,.xlsx" onchange="if(this.files && this.files.length){ submitCogmImport(); }">
     </form>
 
     <div id="partlistImportConfirmModal" class="confirm-modal is-hidden" aria-hidden="true">
@@ -4184,6 +4213,67 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Submit the import form
             showAppLoading('Mengimport partlist...');
+
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+                return;
+            }
+
+            form.submit();
+        }
+
+        async function triggerCogmImport() {
+            const fileInput = document.getElementById('importCogmFileInput');
+            if (!fileInput) return;
+
+            fileInput.value = ''; 
+            fileInput.click();
+        }
+
+        function submitCogmImport() {
+            const form = document.getElementById('cogmImportForm');
+            const importForecast = document.getElementById('cogmImportForecast');
+            const importProjectPeriod = document.getElementById('cogmImportProjectPeriod');
+            const importWireRateId = document.getElementById('cogmImportWireRateId');
+            const forecastHidden = document.getElementById('forecast');
+            const projectPeriod = document.getElementById('projectPeriod');
+            const wireRateSelector = document.getElementById('wireRateSelector');
+
+            if (!form) return;
+
+            syncForecastHidden();
+
+            if (importForecast && forecastHidden) {
+                importForecast.value = forecastHidden.value || '0';
+            }
+
+            if (importProjectPeriod && projectPeriod) {
+                importProjectPeriod.value = projectPeriod.value || '0';
+            }
+
+            if (importWireRateId && wireRateSelector) {
+                importWireRateId.value = wireRateSelector.value || '';
+            }
+
+            const syncFields = {
+                'cogmImportBusinessCategoryId': 'select[name="business_category_id"]',
+                'cogmImportCustomerId': 'select[name="customer_id"]',
+                'cogmImportPeriod': '#periodInput',
+                'cogmImportLine': 'select[name="line"]',
+                'cogmImportModel': 'input[name="model"]',
+                'cogmImportAssyNo': 'input[name="assy_no"]',
+                'cogmImportAssyName': 'input[name="assy_name"]',
+                'cogmImportRateUsd': '#rateUSD',
+                'cogmImportRateJpy': '#rateJPY',
+                'cogmImportLmeRate': '#lmeRate',
+            };
+            for (const [hiddenId, mainSelector] of Object.entries(syncFields)) {
+                const hidden = document.getElementById(hiddenId);
+                const main = document.querySelector('#costingForm ' + mainSelector);
+                if (hidden && main) hidden.value = main.value || '';
+            }
+
+            showAppLoading('Mengimport COGM...');
 
             if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
