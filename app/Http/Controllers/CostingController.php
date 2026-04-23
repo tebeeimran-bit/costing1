@@ -2756,6 +2756,9 @@ class CostingController extends Controller
                     'manual_price' => $manualPrice > 0 ? $manualPrice : null,
                     'is_unpriced' => false,
                 ];
+            } elseif (empty($aggregation[$partKey]['part_name']) && !empty($partName)) {
+                // Update part_name if previously empty but current row has it
+                $aggregation[$partKey]['part_name'] = $partName;
             }
 
             $aggregation[$partKey]['is_unpriced'] = $aggregation[$partKey]['is_unpriced'] || $isUnpriced;

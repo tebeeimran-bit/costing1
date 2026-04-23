@@ -1323,7 +1323,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                             -
                                         @endif
                                     </td>
-                                    <td>{{ $item->part_name ?: '-' }}</td>
+                                    @php
+                                        $displayPartName = trim((string) ($item->part_name ?? ''));
+                                        if (isset($materialBreakdowns) && is_iterable($materialBreakdowns)) {
+                                            $matBreakdown = collect($materialBreakdowns)->firstWhere('part_no', trim($item->part_number));
+                                            if ($matBreakdown && !empty(trim((string) ($matBreakdown->part_name ?? '')))) {
+                                                $displayPartName = trim((string) $matBreakdown->part_name);
+                                            }
+                                        }
+                                    @endphp
+                                    <td>{{ $displayPartName ?: '-' }}</td>
                                     <td>{{ $item->qty }}</td>
                                     <td>
                                         @if($matchedMaterials->isNotEmpty())
