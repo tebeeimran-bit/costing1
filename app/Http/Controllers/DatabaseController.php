@@ -1732,4 +1732,21 @@ class DatabaseController extends Controller
 
         return back()->with('success', 'Dokumen project berhasil dihapus.');
     }
+
+    public function projectInformation()
+    {
+        return view('database.project-information');
+    }
+
+    public function uploadProjectInformation(Request $request)
+    {
+        $request->validate([
+            'project_name' => 'required|string|max:255',
+            'document_a00' => 'nullable|file|max:10240',
+            'document_a04' => 'nullable|file|max:10240',
+            'document_a05' => 'nullable|file|max:10240',
+        ]);
+
+        return back()->with('success', 'Dokumen A00, A04, atau A05 berhasil disimpan. (Fungsi upload sedang dikembangkan)');
+    }
 }

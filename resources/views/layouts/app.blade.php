@@ -228,6 +228,16 @@
                                 </svg>
                                 <span>Dokumen Project</span>
                             </a>
+                            <a href="{{ route('database.project-information', absolute: false) }}"
+                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.project-information*') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 22h14a2 2 0 0 0 2-2V7.5L14.5 2H6a2 2 0 0 0-2 2v4" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                    <path d="M2 15h10" />
+                                    <path d="M5 12l-3 3 3 3" />
+                                </svg>
+                                <span>Informasi Project</span>
+                            </a>
                             <a href="{{ route('products.index', absolute: false) }}"
                                 class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('products.*') ? 'active' : '' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

@@ -140,6 +140,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/database/project-documents', [DatabaseController::class, 'projectDocuments'])->name('database.project-documents');
         Route::put('/database/project-documents/{id}', [DatabaseController::class, 'updateProjectDocument'])->name('database.project-documents.update');
         Route::delete('/database/project-documents/{id}', [DatabaseController::class, 'destroyProjectDocument'])->name('database.project-documents.destroy');
+
+        // Project Information
+        Route::get('/database/project-information', [DatabaseController::class, 'projectInformation'])->name('database.project-information');
+        Route::post('/database/project-information/upload', [DatabaseController::class, 'uploadProjectInformation'])->name('database.project-information.upload');
     });
 
     // ── INPUT DATA ────────────────────────────────────────────────────────────
