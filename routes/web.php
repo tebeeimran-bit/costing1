@@ -96,6 +96,9 @@ Route::middleware('auth')->group(function () {
         Route::put('/database/wires/{id}', [DatabaseController::class, 'updateWire'])->name('database.wires.update');
         Route::delete('/database/wires/{id}', [DatabaseController::class, 'destroyWire'])->name('database.wires.destroy');
 
+        // Tubes
+        Route::get('/database/tubes', [DatabaseController::class, 'tubes'])->name('database.tubes');
+
         // Costing DB
         Route::get('/database/costing', [DatabaseController::class, 'costing'])->name('database.costing');
         Route::delete('/database/costing/{id}', [DatabaseController::class, 'destroyCosting'])->name('database.costing.destroy');

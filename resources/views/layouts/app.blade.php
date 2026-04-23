@@ -142,6 +142,17 @@
                                     <span>Wire</span>
                                 </a>
                             @endif
+                            <a href="{{ route('database.tubes', absolute: false) }}"
+                                class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.tubes*') ? 'active' : '' }}">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M7 4h10" />
+                                    <path d="M6 8h12" />
+                                    <path d="M7 12h10" />
+                                    <path d="M8 16h8" />
+                                    <path d="M9 20h6" />
+                                </svg>
+                                <span>Tube</span>
+                            </a>
                             <a href="{{ route('database.costing', absolute: false) }}"
                                 class="sidebar-nav-item sidebar-submenu-item {{ request()->routeIs('database.costing') ? 'active' : '' }}">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

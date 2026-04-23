@@ -429,6 +429,11 @@ class DatabaseController extends Controller
         return view('database.wires', compact('wires', 'wireRates', 'periodRates', 'selectedRateId', 'activeRate', 'wirePriceNotes'));
     }
 
+            public function tubes()
+            {
+                return view('database.tubes');
+            }
+
     public function switchWireRateMonth(Request $request)
     {
         $rateId = (int) $request->input('rate_id', 0);
