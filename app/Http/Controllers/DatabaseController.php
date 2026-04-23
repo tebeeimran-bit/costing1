@@ -846,6 +846,187 @@ class DatabaseController extends Controller
         return back()->with('success', $summary);
     }
 
+    public function downloadWiresTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Wires');
+
+        $headers = [
+            'item',
+            'machine_maintenance',
+            'fix_cost',
+        ];
+
+        foreach ($headers as $index => $header) {
+            $column = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValue($column . '1', $header);
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        $exampleWire = Wire::query()->orderBy('id')->first();
+        $example = [
+            trim((string) ($exampleWire?->item ?? 'AV 0.3f')),
+            trim((string) ($exampleWire?->machine_maintenance ?? '0')),
+            (float) ($exampleWire?->fix_cost ?? 0),
+        ];
+
+        foreach ($example as $index => $value) {
+            $column = Coordinate::stringFromColumnIndex($index + 1);
+            $sheet->setCellValue($column . '2', $value);
+        }
+
+        $tempPath = tempnam(sys_get_temp_dir(), 'wires_template_');
+        $writer = new Xlsx($spreadsheet);
+        $writer->save($tempPath);
+
+        return response()->download($tempPath, 'database-wires-template.xlsx')->deleteFileAfterSend(true);
+    }
+
+    public function importWiresExcel(Request $request)
+    {
+        $validated = $request->validateWithBag('importWires', [
+            'import_file' => 'required|file|mimes:xlsx|max:20480',
+        ], [
+            'import_file.required' => 'File Excel wajib dipilih.',
+            'import_file.mimes' => 'Format file harus .xlsx.',
+            'import_file.max' => 'Ukuran file maksimal 20MB.',
+        ]);
+
+        try {
+            $spreadsheet = IOFactory::load($validated['import_file']->getPathname());
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal membaca file Excel: ' . $e->getMessage());
+        }
+
+        $sheet = $spreadsheet->getActiveSheet();
+        $highestRow = (int) $sheet->getHighestDataRow();
+        $highestColIndex = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+
+        if ($highestRow < 2) {
+            return back()->with('warning', 'File template kosong. Isi minimal satu baris data.');
+        }
+
+        $headerMap = [];
+        for ($col = 1; $col <= $highestColIndex; $col++) {
+            $column = Coordinate::stringFromColumnIndex($col);
+            $headerRaw = (string) $sheet->getCell($column . '1')->getFormattedValue();
+            $normalizedHeader = $this->normalizeWireImportHeader($headerRaw);
+            if ($normalizedHeader !== null && !isset($headerMap[$normalizedHeader])) {
+                $headerMap[$normalizedHeader] = $col;
+            }
+        }
+
+        $requiredFields = ['item', 'machine_maintenance', 'fix_cost'];
+        $missingFields = [];
+        foreach ($requiredFields as $field) {
+            if (!$this->hasImportField($headerMap, $field)) {
+                $missingFields[] = $field;
+            }
+        }
+
+        if (!empty($missingFields)) {
+            return back()->withErrors([
+                'import_file' => 'Header wajib tidak ditemukan: ' . implode(', ', $missingFields) . '.',
+            ], 'importWires');
+        }
+
+        $wires = Wire::query()->select('id', 'item')->get();
+        $wireBuckets = [];
+        foreach ($wires as $wire) {
+            $key = $this->normalizeWireItemKey((string) $wire->item);
+            if ($key === '') {
+                continue;
+            }
+
+            if (!isset($wireBuckets[$key])) {
+                $wireBuckets[$key] = [];
+            }
+            $wireBuckets[$key][] = $wire;
+        }
+
+        $processed = 0;
+        $skipped = 0;
+        $updated = 0;
+        $failed = 0;
+        $issues = [];
+
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $item = trim((string) $this->readImportCell($sheet, $headerMap, 'item', $row));
+            $machineMaintenanceRaw = (string) $this->readImportCell($sheet, $headerMap, 'machine_maintenance', $row);
+            $fixCostRaw = (string) $this->readImportCell($sheet, $headerMap, 'fix_cost', $row);
+
+            if ($item === '' && trim($machineMaintenanceRaw) === '' && trim($fixCostRaw) === '') {
+                $skipped++;
+                continue;
+            }
+
+            $processed++;
+
+            if ($item === '') {
+                $failed++;
+                $issues[] = 'Baris ' . $row . ': item kosong.';
+                continue;
+            }
+
+            $itemKey = $this->normalizeWireItemKey($item);
+            $matchedWires = $wireBuckets[$itemKey] ?? [];
+
+            if (count($matchedWires) === 0) {
+                $failed++;
+                $issues[] = 'Baris ' . $row . ': item "' . $item . '" tidak ditemukan.';
+                continue;
+            }
+
+            if (count($matchedWires) > 1) {
+                $failed++;
+                $issues[] = 'Baris ' . $row . ': item "' . $item . '" duplikat di database.';
+                continue;
+            }
+
+            $machineMaintenance = $this->toNullableFloat($machineMaintenanceRaw);
+            if ($machineMaintenance === null) {
+                $failed++;
+                $issues[] = 'Baris ' . $row . ': machine_maintenance harus angka valid.';
+                continue;
+            }
+
+            $fixCost = $this->toNullableFloat($fixCostRaw);
+            if ($fixCost === null) {
+                $failed++;
+                $issues[] = 'Baris ' . $row . ': fix_cost harus angka valid.';
+                continue;
+            }
+
+            $wireId = (int) $matchedWires[0]->id;
+
+            DB::table('wires')
+                ->where('id', $wireId)
+                ->update([
+                    'machine_maintenance' => $this->formatWireNumericString($machineMaintenance),
+                    'fix_cost' => round($fixCost, 5),
+                    'price' => 0,
+                    'updated_at' => now(),
+                ]);
+
+            $updated++;
+        }
+
+        if ($updated > 0) {
+            $this->recalculateAllWirePrices();
+        }
+
+        $summary = "Import wire selesai. Diproses: {$processed}, berhasil: {$updated}, gagal: {$failed}, kosong dilewati: {$skipped}.";
+        $response = back()->with('success', $summary);
+
+        if ($failed > 0) {
+            $response = $response->with('warning', 'Sebagian baris gagal diproses. Periksa detail error di bawah.');
+            $response = $response->with('wireImportIssues', array_slice($issues, 0, 30));
+        }
+
+        return $response;
+    }
+
     private function normalizePartsImportHeader(string $value): ?string
     {
         $normalized = strtolower(trim($value));
@@ -880,6 +1061,42 @@ class DatabaseController extends Controller
         }
 
         return null;
+    }
+
+    private function normalizeWireImportHeader(string $value): ?string
+    {
+        $normalized = strtolower(trim($value));
+        if ($normalized === '') {
+            return null;
+        }
+
+        $normalized = str_replace(['-', ' ', '_'], '', $normalized);
+
+        $aliases = [
+            'item' => ['item', 'wireitem', 'namaitem'],
+            'machine_maintenance' => ['machinemaintenance', 'maintenance', 'machinemaint', 'machinecost'],
+            'fix_cost' => ['fixcost', 'fixedcost', 'fix'],
+        ];
+
+        foreach ($aliases as $target => $candidateHeaders) {
+            if (in_array($normalized, $candidateHeaders, true)) {
+                return $target;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeWireItemKey(string $value): string
+    {
+        $normalized = preg_replace('/\s+/', ' ', trim($value));
+        return Str::lower($normalized ?? '');
+    }
+
+    private function formatWireNumericString(float $value): string
+    {
+        $formatted = number_format($value, 5, '.', '');
+        return rtrim(rtrim($formatted, '0'), '.');
     }
 
     public function destroyPartsBulk(Request $request)

@@ -24,6 +24,40 @@
         </div>
     @endif
 
+    @if(session('warning'))
+        <div style="background: #fef3c7; color: #92400e; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #fde68a;">
+            {{ session('warning') }}
+        </div>
+    @endif
+
+    @if(session('error'))
+        <div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #fecaca;">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    @if($errors->importWires->any())
+        <div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #fecaca;">
+            <strong>Terdapat kesalahan saat import wire:</strong>
+            <ul style="margin: 0.5rem 0 0 1rem;">
+                @foreach($errors->importWires->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
+    @if(session('wireImportIssues'))
+        <div style="background: #fff7ed; color: #9a3412; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #fed7aa;">
+            <strong>Detail baris gagal (maks 30):</strong>
+            <ul style="margin: 0.5rem 0 0 1rem;">
+                @foreach((array) session('wireImportIssues') as $issue)
+                    <li>{{ $issue }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     @if($errors->wireCreate->any())
         <div style="background: #fee2e2; color: #991b1b; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; border: 1px solid #fecaca;">
             <strong>Terdapat kesalahan saat tambah wire:</strong>
@@ -316,13 +350,46 @@
             @endif
         </div>
 
-        <button type="button" class="btn-primary" onclick="openAddWireModal()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            Tambah Wire
-        </button>
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+            <a href="{{ route('database.wires.template', absolute: false) }}" class="btn-secondary">
+                Download Template Excel
+            </a>
+            <button type="button" class="btn-secondary" onclick="openImportWireModal()">
+                Update via Excel
+            </button>
+            <button type="button" class="btn-primary" onclick="openAddWireModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 18px; height: 18px;">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Tambah Wire
+            </button>
+        </div>
+    </div>
+
+    <div id="import-wire-modal" class="wire-modal {{ $errors->importWires->any() ? '' : 'is-hidden' }}" onclick="handleWireModalOverlay(event)">
+        <div class="wire-modal-content" style="width: min(560px, 100%);">
+            <div class="wire-modal-header">
+                <h3 class="wire-modal-title">Update Wire via Excel</h3>
+                <button type="button" class="btn-action btn-edit" onclick="closeImportWireModal()" aria-label="Tutup">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <form action="{{ route('database.wires.import', absolute: false) }}" method="POST" enctype="multipart/form-data" class="wire-form">
+                @csrf
+                <div style="font-size: 0.86rem; color: #475569; line-height: 1.45;">
+                    Gunakan file .xlsx sesuai template. Update dilakukan berdasarkan kolom <strong>item</strong>, bukan idcode.
+                </div>
+                <input type="file" name="import_file" accept=".xlsx" required class="form-input" style="padding: 0.6rem;">
+                <div class="wire-form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeImportWireModal()">Batal</button>
+                    <button type="submit" class="btn-primary">Import Excel</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="add-wire-modal" class="wire-modal {{ $errors->wireCreate->any() ? '' : 'is-hidden' }}" onclick="handleWireModalOverlay(event)">
@@ -752,6 +819,14 @@
             document.getElementById('price-notes-modal')?.classList.add('is-hidden');
         }
 
+        function openImportWireModal() {
+            document.getElementById('import-wire-modal')?.classList.remove('is-hidden');
+        }
+
+        function closeImportWireModal() {
+            document.getElementById('import-wire-modal')?.classList.add('is-hidden');
+        }
+
         function openAddWireModal() {
             document.getElementById('add-wire-modal')?.classList.remove('is-hidden');
         }
@@ -777,6 +852,7 @@
                 closeDeleteWireModal();
                 closeDeleteRateModal();
                 closePriceNotesModal();
+                closeImportWireModal();
             }
         }
 

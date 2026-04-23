@@ -86,6 +86,8 @@ Route::middleware('auth')->group(function () {
 
         // Wires
         Route::get('/database/wires', [DatabaseController::class, 'wires'])->name('database.wires');
+        Route::get('/database/wires/template', [DatabaseController::class, 'downloadWiresTemplate'])->name('database.wires.template');
+        Route::post('/database/wires/import', [DatabaseController::class, 'importWiresExcel'])->name('database.wires.import');
         Route::post('/database/wires/switch-rate-month', [DatabaseController::class, 'switchWireRateMonth'])->name('database.wires.switch-rate-month');
         Route::post('/database/wires/rates', [DatabaseController::class, 'storeWireRate'])->name('database.wires.rates.store');
         Route::put('/database/wires/rates/{id}', [DatabaseController::class, 'updateWireRate'])->name('database.wires.rates.update');
